@@ -1,20 +1,10 @@
-const PL=[["Andijon viloyati",[["Andijon sh.",40.78,72.34],["Asaka",40.64,72.24],["Shahrixon",40.71,72.05],["Xoʻjaobod",40.67,72.56],["Qoʻrgʻontepa",40.73,72.77],["Marhamat",40.50,72.32],["Paxtaobod",40.93,72.49],["Jalaquduq",40.72,72.68],["Izboskan",40.88,72.22]]],
-["Toshkent shahri",[["Toshkent sh.",41.31,69.28]]],["Toshkent viloyati",[["Chirchiq",41.47,69.58],["Angren",41.02,70.14],["Olmaliq",40.85,69.60],["Nurafshon",41.04,69.36],["Bekobod",40.22,69.27],["Yangiyoʻl",41.11,69.05]]],
-["Fargʻona viloyati",[["Fargʻona sh.",40.38,71.78],["Margʻilon",40.47,71.72],["Qoʻqon",40.53,70.94],["Quvasoy",40.30,71.98],["Rishton",40.36,71.28]]],
-["Namangan viloyati",[["Namangan sh.",41.00,71.67],["Chust",41.00,71.24],["Pop",40.87,71.11],["Chortoq",41.07,71.82],["Uchqoʻrgʻon",41.11,72.08]]],
-["Samarqand viloyati",[["Samarqand sh.",39.65,66.96],["Kattaqoʻrgʻon",39.90,66.26],["Urgut",39.40,67.25],["Bulungʻur",39.76,67.27]]],
-["Buxoro viloyati",[["Buxoro sh.",39.77,64.42],["Gʻijduvon",40.10,64.68],["Kogon",39.72,64.55],["Romitan",39.93,64.38]]],
-["Xorazm viloyati",[["Urganch",41.55,60.63],["Xiva",41.38,60.36],["Shovot",41.65,60.30]]],
-["Qashqadaryo viloyati",[["Qarshi",38.86,65.79],["Shahrisabz",39.06,66.83],["Gʻuzor",38.62,66.25]]],
-["Surxondaryo viloyati",[["Termiz",37.22,67.28],["Denov",38.27,67.90],["Sherobod",37.67,67.01]]],
-["Navoiy viloyati",[["Navoiy sh.",40.10,65.37],["Zarafshon",41.57,64.20],["Uchquduq",42.16,63.56]]],
-["Jizzax viloyati",[["Jizzax sh.",40.12,67.84],["Zomin",39.96,68.40]]],["Sirdaryo viloyati",[["Guliston",40.49,68.78],["Yangiyer",40.27,68.82]]],
-["Qoraqalpogʻiston",[["Nukus",42.46,59.60],["Moʻynoq",43.77,59.02],["Qoʻngʻirot",43.07,58.90]]]];
-const PLACES={};PL.forEach(([v,l])=>l.forEach(([n,a,b])=>PLACES[n]={vil:v,lat:a,lng:b}));
+const PLACES={};PL.forEach(([v,l])=>l.forEach(([n,a,b,f])=>PLACES[n]={vil:v,lat:a,lng:b,fb:f}));
 const REG=[...PL.map(x=>x[0]),...Object.keys(PLACES)];
+const ALL=[...PL.map(x=>({n:x[0],v:"Viloyat"})),...PL.flatMap(([v,l])=>l.map(x=>({n:x[0],v})))];
+const pl=n=>PLACES[n]||PLACES[n+" tumani"]||PLACES[n+" shahri"]||PLACES[String(n).replace(/ sh\.$/," shahri")];
 const nz=s=>String(s||"").toLowerCase().replace(/[ʻʼ'’`‘]/g,"");
-const vilOf=a=>a.vil||(PLACES[a.reg]||{}).vil||"";
-const hit=a=>{const q=nz(st.q);return nz(a.reg).includes(q)||nz(vilOf(a)).includes(q)};
+const vilOf=a=>a.vil||(pl(a.reg)||{}).vil||"";
+const hit=a=>{const q=nz(st.q).trim();return nz(a.reg).includes(q)||nz(vilOf(a)).includes(q)};
 const PUR={oila:["Oila qurish uchun","Jiddiy niyat bilan, nikoh maqsadida","1 Roʻzgʻor uchun<br>(Jiddiy oila qurish)"],nikoh:["Nikoh uchun (maxfiy)","Shaxsiy hayot hurmat qilinadi, maxfiy tarzda","2 Roʻzgʻor uchun<br>(Yashirin nikoh)"],tanish:["Tanishuv uchun","Oʻzingizga mos juftni erkin izlash","Oddiy munosabat<br>(Mos juft izlash)"]};
 const TPL={kelin:["👰","🧕","🌹","💐","🌸","🦋"],kuyov:["🤵","🧔","🦁","🦅","⚜️","🌙"]};
 const S=(k,d)=>{try{return JSON.parse(localStorage[k])}catch(e){return d}};
@@ -40,7 +30,7 @@ function home(){return `<div class="top"><span class="pill">Oʻz 🇺🇿</span>
 <div class="logo">Yaq<span>in</span></div><p class="sub">Mos juftingizni ishonch bilan toping</p>
 <div class="box"><div class="seg" style="margin-bottom:8px"><button class="${st.g=="kelin"?"on":""}" onclick="set('g','kelin')">Kelin nomzodlar</button><button class="${st.g=="kuyov"?"on":""}" onclick="set('g','kuyov')">Kuyov nomzodlar</button></div>
 <div class="seg pur" style="margin-bottom:8px">${Object.keys(PUR).map(k=>`<button class="${st.pur==k?"on":""}" onclick="set('pur','${k}')">${PUR[k][2]}</button>`).join("")}</div>
-<div class="row sr">${I("search",18)}<input class="in" style="padding-left:42px" id="q" list="rg" placeholder="Hudud yoki tuman.." value="${esc(st.q)}" oninput="st.q=this.value;res()"><datalist id="rg">${REG.map(r=>`<option>${r}`).join("")}</datalist></div>
+<div class="row"><div class="sr" style="flex:1;position:relative">${I("search",18)}<input class="in" style="padding-left:42px" id="q" autocomplete="off" placeholder="Hudud yoki tuman.." value="${esc(st.q)}" oninput="sug(this.value)" onkeydown="if(event.key=='Enter')srch()"><div id="sg" class="sg"></div></div><button class="go" style="flex:none;padding:0 18px" onclick="srch()">Qidirish</button></div>
 <div class="row"><button class="ghost" onclick="st.form='filter';draw()">${I("filter",16)} Filtrlar</button><button class="ghost" onclick="st.sort=st.sort=='new'?'age':'new';draw()">${I("sort",16)} Saralash: ${st.sort=="new"?"yangi":"yosh"}</button></div></div>
 <h3>Yangi eʼlonlar</h3><div id="res">${list().map(card).join("")||'<div class="empty">Hozircha eʼlon yoʻq. Birinchi boʻling!</div>'}</div>`}
 function res(){$("res").innerHTML=list().map(card).join("")||'<div class="empty">Hech narsa topilmadi</div>'}
@@ -111,7 +101,7 @@ async function pub(cost){keep();const p=st.p;if(!p.name||!p.age||p.age<18){uiAle
  if(cost&&!CFG.TEST_MODE){uiAlert("Toʻlov tizimi hali ulanmagan");return}
  if(cost&&!await uiConfirm("Sinov rejimi: "+cost.toLocaleString("ru")+" soʻm toʻlov olinmaydi. Davom etamizmi?","Davom etish"))return;
  const f=fb();if(!f)return;
- try{await f.addAd({name:p.name,age:p.age,reg:p.reg||"Andijon sh.",vil:(PLACES[p.reg||"Andijon sh."]||{}).vil||"",g:p.g,pur:p.pur,about:p.about||"",ava:p.ava,img:p.img||"",vip:!!p.vip});st.p=null;st.form=null;st.tab="home";draw()}catch(x){uiAlert("Eʼlon joylashmadi: "+x.message)}}
+ try{await f.addAd({name:p.name,age:p.age,reg:p.reg||"Andijon shahri",vil:(pl(p.reg||"Andijon shahri")||{}).vil||"",g:p.g,pur:p.pur,about:p.about||"",ava:p.ava,img:p.img||"",vip:!!p.vip});st.p=null;st.form=null;st.tab="home";draw()}catch(x){uiAlert("Eʼlon joylashmadi: "+x.message)}}
 function draw(){const a=document.activeElement&&document.activeElement.id;
  const v={home,fav:favs,circ:circles,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
@@ -129,14 +119,14 @@ function mapV(){return `<h3 style="margin:8px 0">Xarita</h3><div class="seg" sty
 <div class="row"><button class="ghost" onclick="st.dr.on=!st.dr.on;draw()">${I("pin",16)} ${st.dr.on?"Chizish yoqilgan: xaritaga bosing":"Hududni chizish"}</button><button class="ghost" onclick="st.dr={on:false,pts:[]};draw()">${I("x",16)} Tozalash</button></div>
 <div id="map"></div><p class="sub" style="font-size:12px;margin:0 0 8px">Nomzodlar aniq manzilsiz, faqat hudud boʻyicha koʻrsatiladi</p><div id="mres"></div>`}
 function inPoly(pt,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[i],[x,y]=P[j];if((a>pt[0])!=(x>pt[0])&&pt[1]<(y-b)*(pt[0]-a)/(x-a)+b)c=!c}return c}
-function showPlace(n){$("mres").innerHTML=`<h3>${esc(n)}</h3>`+(list().filter(a=>a.reg==n).map(card).join("")||'<div class="empty">Nomzod yoʻq</div>')}
-function polyRes(){const P=st.dr.pts;if(P.length<3){$("mres").innerHTML="";return}const l=list().filter(a=>PLACES[a.reg]&&inPoly([PLACES[a.reg].lat,PLACES[a.reg].lng],P));$("mres").innerHTML=`<h3>Belgilangan hududda: ${l.length} ta nomzod</h3>`+(l.map(card).join("")||'<div class="empty">Bu hududda nomzod yoʻq</div>')}
+function showPlace(n){const l=list().filter(a=>{const p=pl(a.reg);return p&&p.lat+","+p.lng==n});$("mres").innerHTML=`<h3>${esc([...new Set(l.map(a=>a.reg))].join(", "))}</h3>`+(l.map(card).join("")||'<div class="empty">Nomzod yoʻq</div>')}
+function polyRes(){const P=st.dr.pts;if(P.length<3){$("mres").innerHTML="";return}const l=list().filter(a=>pl(a.reg)&&inPoly([pl(a.reg).lat,pl(a.reg).lng],P));$("mres").innerHTML=`<h3>Belgilangan hududda: ${l.length} ta nomzod</h3>`+(l.map(card).join("")||'<div class="empty">Bu hududda nomzod yoʻq</div>')}
 function initMap(){const el=$("map");if(!el||!window.L){if(el)el.innerHTML='<div class="empty">Xarita yuklanmadi (internetni tekshiring)</div>';return}
  if(MAP){MAP.remove();MAP=null}
  const m=MAP=L.map(el).setView(st.mv||[41.3,64.6],st.mz||5);
  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:18,attribution:"© OpenStreetMap © CARTO"}).addTo(m);
- const g={};list().forEach(a=>{if(PLACES[a.reg])(g[a.reg]=g[a.reg]||[]).push(a)});
- Object.entries(g).forEach(([n,l])=>{const p=PLACES[n];L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html:`<div class="mk">${l.length}</div>`,iconSize:[36,36]})}).addTo(m).on("click",()=>{if(!st.dr.on)showPlace(n)})});
+ const g={};list().forEach(a=>{const p=pl(a.reg);if(p)(g[p.lat+","+p.lng]=g[p.lat+","+p.lng]||[]).push(a)});
+ Object.entries(g).forEach(([n,l])=>{const p=n.split(",").map(Number);L.marker(p,{icon:L.divIcon({className:"",html:`<div class="mk">${l.length}</div>`,iconSize:[36,36]})}).addTo(m).on("click",()=>{if(!st.dr.on)showPlace(n)})});
  const P=st.dr.pts;if(P.length)DL=(P.length>2?L.polygon(P,{color:"#f0b34a",fillOpacity:.2}):L.polyline(P,{color:"#f0b34a"})).addTo(m);
  polyRes();
  m.on("click",e=>{if(!st.dr.on)return;st.dr.pts.push([e.latlng.lat,e.latlng.lng]);if(DL)m.removeLayer(DL);DL=(st.dr.pts.length>2?L.polygon(st.dr.pts,{color:"#f0b34a",fillOpacity:.2}):L.polyline(st.dr.pts,{color:"#f0b34a"})).addTo(m);polyRes()});
@@ -150,4 +140,10 @@ function modal(o){return new Promise(res=>{const d=document.createElement("div")
 const uiAlert=(msg,title)=>modal({msg:String(msg),title:title||(/yuborildi|koʻtarildi/i.test(msg)?"Tayyor":"Diqqat")});
 const uiConfirm=(msg,ok,danger)=>modal({msg,title:"Tasdiqlang",ok:ok||"Ha",cancel:"Bekor qilish",danger});
 const uiPrompt=(title,ph,val)=>modal({title,ph,val,input:1,ok:"Saqlash",cancel:"Bekor qilish"});
+
+function sug(v){st.q=v;res();const q=nz(v).trim(),b=$("sg");if(!q){b.innerHTML="";return}
+ const s=ALL.filter(p=>nz(p.n).includes(q)).sort((x,y)=>(nz(y.n).startsWith(q)-nz(x.n).startsWith(q))||(nz(y.n).split(" ").some(w=>w.startsWith(q))-nz(x.n).split(" ").some(w=>w.startsWith(q)))).slice(0,8);
+ window.SG=s;b.innerHTML=s.map((p,i)=>`<button onclick="pickSug(${i})">${I("pin",14)}<b>${esc(p.n)}</b><small>${esc(p.v)}</small></button>`).join("")}
+function pickSug(i){const p=window.SG[i];st.q=p.n;$("q").value=p.n;$("sg").innerHTML="";res()}
+function srch(){$("sg").innerHTML="";$("q").blur();res();$("res").scrollIntoView({behavior:"smooth"})}
 draw();
