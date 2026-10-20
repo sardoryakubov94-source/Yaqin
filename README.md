@@ -10,6 +10,6 @@ Mos juftni topish ilovasi (PWA + Firebase). Build kerak emas: oddiy HTML/CSS/JS.
 
 ## Holat
 - Haqiqiy: kirish/roʻyxatdan oʻtish, Google, parolni tiklash, profil, eʼlonlar (umumiy baza), rasm yuklash.
-- Hali ulanmagan: real vaqtli chat, guruhlar (`js/config.js`: CHAT_LIVE), push bildirishnoma.
+- Real vaqtli chat (shaxsiy rasmga ruxsat bilan) va guruhlar ulangan. Hali yoʻq: push bildirishnoma, bloklash, admin panel.
 - Toʻlov: `TEST_MODE=true` boʻlsa VIP/qoʻshimcha eʼlon pulsiz. Haqiqiy Click/Payme uchun server (Cloud Function) kerak; shundan keyin `TEST_MODE=false` va VIP/narxni faqat server belgilaydigan qiling.
 - Play Market: PWA → Bubblewrap/PWABuilder (TWA). Maxfiylik siyosati, shikoyat/bloklash va 18+ cheklovi shart.

@@ -1,1 +1,1 @@
-window.CFG={TEST_MODE:true,CHAT_LIVE:false};
+window.CFG={TEST_MODE:true,CHAT_LIVE:true};
