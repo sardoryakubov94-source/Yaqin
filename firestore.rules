@@ -4,7 +4,7 @@ service cloud.firestore {
     function signed() { return request.auth != null; }
     match /users/{uid} {
       allow read: if signed();
-      allow create, update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups']);
+      allow create, update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs']);
       allow delete: if false;
     }
     match /ads/{id} {
@@ -55,6 +55,13 @@ service cloud.firestore {
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
       }
+    }
+    match /swipes/{id} {
+      allow read: if signed() && resource.data.uid == request.auth.uid;
+      allow create, update: if signed() && request.resource.data.uid == request.auth.uid;
+    }
+    match /ads/{id}/priv/{d} {
+      allow read, write: if signed() && get(/databases/$(db)/documents/ads/$(id)).data.uid == request.auth.uid;
     }
   }
 }
