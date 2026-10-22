@@ -103,7 +103,7 @@ let UC,UG,UM,UP;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
 addEventListener("fb-ready",()=>{FB.onUser(u=>{const was=st.user&&st.user.uid;st.user=u;if(!u&&st.form=="logout")st.form=null;if(u&&st.form=="auth")st.form=null;syncAds();
  if(!u){stopAll();st.chat=null}else if(was!=u.uid){stopAll();UC=FB.chats(u.uid,l=>{st.chats=l.sort((a,b)=>b.lastT-a.lastT);syncShared();if(st.chat&&st.chat.t=="c")draw();else if(st.tab=="msg"&&!st.form)draw()});UG=FB.groups(l=>{st.groups=l;if(st.tab=="circ"&&!st.form&&!st.chat)draw()});FB.mySwipes().then(m=>{st.swiped=m}).catch(()=>{});if(!u.prefs&&!st.skipSv){st.skipSv=1;st.sv=null;st.form="survey"}FB.priv().then(x=>{st.priv=x;if(st.tab=="prof"&&!st.form)draw()}).catch(()=>{})}
- draw()});FB.ads(l=>{st.raw=l;syncAds();if(!st.form&&!st.chat)draw()})});
+ draw()});FB.ads(l=>{st.raw=l;syncAds();if(st.tab=="map"&&MAP&&!st.form&&!st.chat)drawMarkers();else if(!st.form&&!st.chat)draw()})});
 
 st.dr={on:false,pts:[]};let MAP,DL;
 function purSeg(){return `<div class="seg pur" style="margin-bottom:8px">${Object.keys(PUR).map(k=>`<button class="${st.pur==k?"on":""}" onclick="set('pur','${k}')">${PUR[k][2]}</button>`).join("")}</div>`}
@@ -211,4 +211,20 @@ function fly(v){const el=$("sc");if(!el||flying)return;flying=true;stamp(el,v?20
 async function decide(v){const a=st.deck[st.di];if(!a)return;st.di++;renderDeck();st.swiped[a.id]=v;
  try{await FB.swipe(a,v);if(v){if(!st.fav.includes(a.id)){st.fav.push(a.id);save()}toast("Yurak yuborildi, sevimlilarga qoʻshildi");await FB.like(a,st.user)}}catch(x){console.error(x)}}
 function svReset(){for(const k in st.swiped)if(st.swiped[k]===0)delete st.swiped[k];st.deck=pool();st.di=0;renderDeck()}
+
+let MKL;
+const pcol={color:"#f0b34a",fillOpacity:.2};
+const mkPoly=P=>P.length>2?L.polygon(P,pcol):L.polyline(P,pcol);
+function drawMarkers(){if(!MAP||!window.L)return;if(MKL)MKL.remove();MKL=L.layerGroup().addTo(MAP);const g={};list().forEach(a=>{const p=pl(a.reg);if(p)(g[p.lat+","+p.lng]=g[p.lat+","+p.lng]||[]).push(a)});
+ Object.entries(g).forEach(([n,l])=>{L.marker(n.split(",").map(Number),{icon:L.divIcon({className:"",html:`<div class="mk">${l.length}</div>`,iconSize:[36,36]})}).addTo(MKL).on("click",()=>{if(!st.dr.on)showPlace(n)})});polyRes()}
+function initMap(){const el=$("map");if(!el)return;if(!window.L){el.innerHTML='<div class="empty">Xarita kutubxonasi yuklanmadi. Internetni tekshiring va sahifani yangilang.</div>';return}
+ try{if(MAP){try{MAP.remove()}catch(e){}MAP=null;MKL=null;DL=null}
+ const m=MAP=L.map(el,{zoomControl:true}).setView(st.mv||[41.3,64.6],st.mz||5);
+ let fails=0,prov=0;const T=[["https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png","© OpenStreetMap © CARTO"],["https://tile.openstreetmap.org/{z}/{x}/{y}.png","© OpenStreetMap"]];
+ const addT=()=>{const t=L.tileLayer(T[prov][0],{maxZoom:18,attribution:T[prov][1]}).addTo(m);t.on("tileerror",()=>{if(++fails==4&&prov==0){prov=1;m.removeLayer(t);addT()}})};addT();
+ drawMarkers();
+ const P=st.dr.pts;if(P.length)DL=mkPoly(P).addTo(m);
+ m.on("click",e=>{if(!st.dr.on)return;st.dr.pts.push([e.latlng.lat,e.latlng.lng]);if(DL)m.removeLayer(DL);DL=mkPoly(st.dr.pts).addTo(m);polyRes()});
+ m.on("moveend",()=>{st.mv=[m.getCenter().lat,m.getCenter().lng];st.mz=m.getZoom()});
+ setTimeout(()=>{if(MAP===m)m.invalidateSize()},200)}catch(e){el.innerHTML='<div class="empty">Xarita xatosi: '+esc(e.message)+'</div>'}}
 draw();
