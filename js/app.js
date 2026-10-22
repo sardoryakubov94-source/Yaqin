@@ -96,7 +96,7 @@ async function pub(cost){keep();const p=st.p;if(!p.name||!p.age||p.age<18){uiAle
  if(cost&&!CFG.TEST_MODE){uiAlert("Toʻlov tizimi hali ulanmagan");return}
  if(cost&&!await uiConfirm("Sinov rejimi: "+cost.toLocaleString("ru")+" soʻm toʻlov olinmaydi. Davom etamizmi?","Davom etish"))return;
  const f=fb();if(!f)return;
- const free=!st.user.freeUsed;try{await f.addAd({name:p.anon?"Anonim":p.name,age:p.age,reg:p.reg||"Andijon shahri",vil:(pl(p.reg||"Andijon shahri")||{}).vil||"",g:p.g,pur:p.pur,about:p.anon?"":(p.about||""),ava:p.ava,img:p.img||"",vip:false,status:free?"active":"pending",anon:!!p.anon,ints:p.ints||[],profileDetails:p.anon?{}:(p.details||{}),_priv:p.anon?{name:p.name,about:p.about||""}:null},free);st.p=null;st.form=null;st.tab="home";toast(free?"Bepul eʼlon faollashtirildi":"Pulli eʼlon admin tasdigʻiga yuborildi");draw()}catch(x){uiAlert("Eʼlon joylashmadi: "+x.message)}}
+ const free=!st.user.freeUsed&&cost===0;try{await f.addAd({name:p.anon?"Anonim":p.name,age:p.age,reg:p.reg||"Andijon shahri",vil:(pl(p.reg||"Andijon shahri")||{}).vil||"",g:p.g,pur:p.pur,about:p.anon?"":(p.about||""),ava:p.ava,img:p.img||"",vip:false,status:free?"active":"pending",anon:!!p.anon,ints:p.ints||[],profileDetails:p.anon?{}:(p.details||{}),_priv:p.anon?{name:p.name,about:p.about||""}:null},free);st.p=null;st.form=null;st.tab="home";toast(free?"Bepul eʼlon faollashtirildi":"Pulli eʼlon admin tasdigʻiga yuborildi");draw()}catch(x){uiAlert("Eʼlon joylashmadi: "+x.message)}}
 function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("mi")?$("mi").value:null;
  const v={home,fav:favs,circ:groupsV,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
