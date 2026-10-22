@@ -94,7 +94,7 @@ function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("
  const v={home,fav:favs,circ:groupsV,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
  const ov=st.form?formV():st.chat?chatV():st.sw?swipeV():"";if(ov)$("app").insertAdjacentHTML("beforeend",ov);
- const N=[["home",I("home",24),"Bosh"],["fav",I("heart",24),"Sevimli"],["circ",I("users",24),"Guruhlar"],["+","+",""],["map",I("map",24),"Xarita"],["msg",I("chat",24),"Xabarlar"],["prof",I("user",24),"Profil"]];
+ const N=[["home",I("home",24),"Bosh"],["msg",I("chat",24),"Xabarlar"],["fav",I("heart",24),"Sevimli"],["+","+",""],["map",I("map",24),"Xarita"],["circ",I("users",24),"Guruhlar"],["prof",I("user",24),"Profil"]];
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',30)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m)m.scrollTop=m.scrollHeight;if(a==="q"&&$("q")){$("q").focus()}
  if(st.sw&&!st.form&&!st.chat)renderDeck();if(mv!=null&&$("mi"))$("mi").value=mv;if(st.tab=="map")initMap()}
