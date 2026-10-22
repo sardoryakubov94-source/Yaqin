@@ -1,1 +1,1 @@
-{"hosting":{"public":".","ignore":["firebase.json","**/.*","**/node_modules/**","README.md","*.rules"]},"firestore":{"rules":"firestore.rules"},"storage":{"rules":"storage.rules"}}
+{"hosting": {"public": ".", "ignore": ["**/.*", "*.rules", "functions/**", "README.md", "**/node_modules/**", "firebase.json"]}, "firestore": {"rules": "firestore.rules"}, "storage": {"rules": "storage.rules"}, "functions": {"source": "functions"}}

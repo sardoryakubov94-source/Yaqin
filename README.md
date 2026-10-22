@@ -25,3 +25,13 @@ Mos juftni topish ilovasi (PWA + Firebase). Build kerak emas: oddiy HTML/CSS/JS.
 - Admin panel → Sozlama: "Ishonch telefoni" kiritiladi (Yordam sahifasida ko‘rinadi).
 - Bildirishnomalar `notifs` kolleksiyasida: to‘lov natijasi, yordam javobi, yoqtirishlar. Yangilari ajralib turadi.
 - Telefon bildirishnomasi ilova ochiq yoki orqa fonda turganda ishlaydi. Ilova butunlay yopiq bo‘lganda push uchun FCM va Cloud Functions (Blaze tarifi) kerak.
+
+## Cloud Functions (push va VIP eslatmasi)
+Blaze tarifi kerak. Qadamlar:
+1. Firebase Console → Project settings → Cloud Messaging → Web Push certificates → **Generate key pair**. Chiqqan kalitni `js/config.js` dagi `VAPID` ga qo'ying.
+2. `cd functions && npm install && cd .. && firebase deploy --only functions,firestore:rules`
+3. Funksiyalar: `pushNotif` (har bildirishnomaga push), `pushChat` (yangi chat xabari), `vipExpiry` (har kuni VIP muddati tugaganlarni oddiy qiladi va eslatma yuboradi).
+Foydalanuvchi bildirishnomalar oynasida "Yoqish" ni bosgach, qurilma tokeni `fcm/{uid}` ga yoziladi.
+
+## Bloklash
+Chat menyusidan "Bloklash": bloklangan foydalanuvchi yoza olmaydi (Rules darajasida), eʼlonlari ham ko'rinmaydi. Profilda "Bloklanganlar" bo'limidan blokdan chiqariladi.

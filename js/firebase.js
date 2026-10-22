@@ -50,6 +50,11 @@ window.FB={
  supThread:(uid,cb)=>D.onSnapshot(D.doc(db,"support",uid),s=>cb(s.exists()?s.data():null),()=>cb(null)),
  threads:cb=>D.onSnapshot(D.query(D.collection(db,"support"),D.orderBy("lastT","desc"),D.limit(100)),s=>cb(s.docs.map(d=>({...d.data(),uid:d.id}))),e=>console.error(e)),
  async supSend(uid,text,as,me){const t=Date.now(),last=text.slice(0,80);await D.addDoc(D.collection(db,"support",uid,"msgs"),{from:as,text,t});await D.setDoc(D.doc(db,"support",uid),as=="user"?{uid,name:me.name,email:me.email,contact:me.phone||"",last,lastT:t,lastBy:"user"}:{last,lastT:t,lastBy:"admin"},{merge:true});if(as=="admin")await D.addDoc(D.collection(db,"notifs"),{to:uid,type:"support",title:"Yordam xizmati javob berdi",text:text.slice(0,120),t,read:false})},
+ block:(to,name)=>D.setDoc(D.doc(db,"blocks",`${U().uid}_${to}`),{by:U().uid,to,name:name||"",t:Date.now()}),
+ unblock:to=>D.deleteDoc(D.doc(db,"blocks",`${U().uid}_${to}`)),
+ blocksBy:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"blocks"),D.where("by","==",uid)),s=>cb(s.docs.map(d=>d.data())),e=>console.error(e)),
+ blocksTo:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"blocks"),D.where("to","==",uid)),s=>cb(s.docs.map(d=>d.data().by)),e=>console.error(e)),
+ async regPush(vapid){const M=await import(G+"firebase-messaging.js"),reg=await navigator.serviceWorker.ready,tok=await M.getToken(M.getMessaging(app),{vapidKey:vapid,serviceWorkerRegistration:reg});if(tok)await D.setDoc(D.doc(db,"fcm",U().uid),{tokens:D.arrayUnion(tok)},{merge:true});return tok},
  async photo(data){const url=await up(`avatars/${U().uid}.jpg`,data);await D.setDoc(uref(U().uid),{img:url},{merge:true});return url}
 };
 dispatchEvent(new Event("fb-ready"));
