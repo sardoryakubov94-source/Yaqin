@@ -107,7 +107,7 @@ addEventListener("fb-ready",()=>{FB.onUser(u=>{const was=st.user&&st.user.uid;st
 
 st.dr={on:false,pts:[]};let MAP,DL;
 function purSeg(){return `<div class="seg pur" style="margin-bottom:8px">${Object.keys(PUR).map(k=>`<button class="${st.pur==k?"on":""}" onclick="set('pur','${k}')">${PUR[k][2]}</button>`).join("")}</div>`}
-function mapV(){return `<h3 style="margin:8px 0">Xarita</h3><div class="seg" style="margin-bottom:8px"><button class="${st.g=="kelin"?"on":""}" onclick="set('g','kelin')">Kelin nomzodlar</button><button class="${st.g=="kuyov"?"on":""}" onclick="set('g','kuyov')">Kuyov nomzodlar</button></div>${purSeg()}
+function mapV(){return `<h3 style="margin:8px 0">Xarita</h3><div class="mnote"><span class="mi">${I("pin",26)}</span><div><b>Juftingizni <em>Yaqin</em>ingizdan toping</b><p>Nomzodlar hududlar boʻyicha koʻrsatiladi. Xaritadagi raqamni bosing yoki oʻz hududingizni chizib belgilang.</p></div></div><div class="seg" style="margin-bottom:8px"><button class="${st.g=="kelin"?"on":""}" onclick="set('g','kelin')">Kelin nomzodlar</button><button class="${st.g=="kuyov"?"on":""}" onclick="set('g','kuyov')">Kuyov nomzodlar</button></div>${purSeg()}
 <div class="row"><button class="ghost" onclick="st.dr.on=!st.dr.on;draw()">${I("pin",16)} ${st.dr.on?"Chizish yoqilgan: xaritaga bosing":"Hududni chizish"}</button><button class="ghost" onclick="st.dr={on:false,pts:[]};draw()">${I("x",16)} Tozalash</button></div>
 <div id="map"></div><p class="sub" style="font-size:12px;margin:0 0 8px">Nomzodlar aniq manzilsiz, faqat hudud boʻyicha koʻrsatiladi</p><div id="mres"></div>`}
 function inPoly(pt,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[i],[x,y]=P[j];if((a>pt[0])!=(x>pt[0])&&pt[1]<(y-b)*(pt[0]-a)/(x-a)+b)c=!c}return c}
