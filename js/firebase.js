@@ -5,7 +5,7 @@ const cfg=(await import("./firebase-config.js")).default;
 try{
 const app=initializeApp(cfg),auth=A.getAuth(app),db=D.getFirestore(app),sto=S.getStorage(app);auth.languageCode="uz";
 const U=()=>auth.currentUser,uref=u=>D.doc(db,"users",u);
-async function profile(u){const s=await D.getDoc(uref(u.uid)),d=s.exists()?s.data():{};return{uid:u.uid,email:u.email,name:d.name||u.displayName||u.email.split("@")[0],phone:d.phone||"",img:d.img||u.photoURL||"",groups:d.groups||[],prefs:d.prefs||null}}
+async function profile(u){const s=await D.getDoc(uref(u.uid)),d=s.exists()?s.data():{};return{uid:u.uid,email:u.email,name:d.name||u.displayName||u.email.split("@")[0],phone:d.phone||"",img:d.img||u.photoURL||"",groups:d.groups||[],prefs:d.prefs||null,favs:d.favs||null,freeUsed:!!d.freeUsed}}
 async function up(path,data){const r=S.ref(sto,path);await S.uploadString(r,data,"data_url");return S.getDownloadURL(r)}
 window.FB={
  onUser:cb=>A.onAuthStateChanged(auth,async u=>cb(u?await profile(u):null)),
@@ -14,7 +14,7 @@ window.FB={
  async google(){const u=(await A.signInWithPopup(auth,new A.GoogleAuthProvider())).user;if(!(await D.getDoc(uref(u.uid))).exists())await D.setDoc(uref(u.uid),{name:u.displayName||"",phone:"",email:u.email,img:u.photoURL||"",t:Date.now()});return profile(u)},
  reset:e=>A.sendPasswordResetEmail(auth,e),out:()=>A.signOut(auth),
  ads:cb=>D.onSnapshot(D.query(D.collection(db,"ads"),D.orderBy("t","desc"),D.limit(200)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
- async addAd(d){const u=U(),{_priv,...ad}=d;let img=ad.img;if(img&&img.startsWith("data:"))img=await up(`ads/${u.uid}/${Date.now()}.jpg`,img);const r=await D.addDoc(D.collection(db,"ads"),{...ad,img:img||"",uid:u.uid,t:Date.now()});if(_priv)await D.setDoc(D.doc(db,"ads",r.id,"priv","info"),_priv);return r},
+ async addAd(d,free){const u=U(),{_priv,...ad}=d;let img=ad.img;if(img&&img.startsWith("data:"))img=await up(`ads/${u.uid}/${Date.now()}.jpg`,img);const r=D.doc(D.collection(db,"ads")),data={...ad,img:img||"",uid:u.uid,t:Date.now()};if(free){const b=D.writeBatch(db);b.set(r,data);b.set(uref(u.uid),{freeUsed:true},{merge:true});await b.commit()}else await D.setDoc(r,data);if(_priv)await D.setDoc(D.doc(db,"ads",r.id,"priv","info"),_priv);return r.id},
  upAd:(id,x)=>D.updateDoc(D.doc(db,"ads",id),x),async delAd(id){try{await D.deleteDoc(D.doc(db,"ads",id,"priv","info"))}catch(e){}await D.deleteDoc(D.doc(db,"ads",id))},
  saveUser:x=>D.setDoc(uref(U().uid),x,{merge:true}),
  chats:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"chats"),D.where("members","array-contains",uid)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
@@ -34,6 +34,16 @@ window.FB={
  async mySwipes(){const s=await D.getDocs(D.query(D.collection(db,"swipes"),D.where("uid","==",U().uid))),m={};s.docs.forEach(d=>{const x=d.data();m[x.adId]=x.v});return m},
  swipe:(ad,v)=>D.setDoc(D.doc(db,"swipes",`${U().uid}_${ad.id}`),{uid:U().uid,adId:ad.id,v,t:Date.now()}),
  async like(ad,me){const ex=(await D.getDoc(D.doc(db,"chats",`${ad.id}_${me.uid}`))).exists(),id=await this.openChat(ad,me);if(!ex)await this.send("chats",id,"❤️ Sizning eʼloningizni yoqtirdi",me.name,"like");return id},
+ async pay(x,me){const r=await D.addDoc(D.collection(db,"payments"),{...x,uid:me.uid,name:me.name,email:me.email,status:"pending",t:Date.now()});return r.id},
+ myPays:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"payments"),D.where("uid","==",uid)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
+ allPays:cb=>D.onSnapshot(D.query(D.collection(db,"payments"),D.orderBy("t","desc"),D.limit(100)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
+ async decide(p,ok){const b=D.writeBatch(db),n=Date.now(),v={vip:true,vipUntil:n+30*864e5};b.update(D.doc(db,"payments",p.id),{status:ok?"approved":"rejected",by:U().uid,dt:n});if(ok&&p.adId){const m={ad:{status:"active",t:n},ad_vip:{status:"active",t:n,...v},vip:{...v,t:n},raise:{t:n}}[p.kind];if(m)b.update(D.doc(db,"ads",p.adId),m)}await b.commit()},
+ reports:cb=>D.onSnapshot(D.query(D.collection(db,"reports"),D.orderBy("t","desc"),D.limit(100)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
+ delReport:id=>D.deleteDoc(D.doc(db,"reports",id)),
+ settings:cb=>D.onSnapshot(D.doc(db,"settings","payment"),s=>cb(s.exists()?s.data():{}),()=>cb({})),
+ saveSettings:x=>D.setDoc(D.doc(db,"settings","payment"),x),
+ async isAdmin(){try{return (await D.getDoc(D.doc(db,"admins",U().uid))).exists()}catch(e){return false}},
+ async counts(){const c=async n=>(await D.getCountFromServer(D.collection(db,n))).data().count;return{users:await c("users"),ads:await c("ads"),groups:await c("groups")}},
  async photo(data){const url=await up(`avatars/${U().uid}.jpg`,data);await D.setDoc(uref(U().uid),{img:url},{merge:true});return url}
 };
 dispatchEvent(new Event("fb-ready"));

@@ -13,3 +13,9 @@ Mos juftni topish ilovasi (PWA + Firebase). Build kerak emas: oddiy HTML/CSS/JS.
 - Real vaqtli chat (shaxsiy rasmga ruxsat bilan) va guruhlar ulangan. Hali yoʻq: push bildirishnoma, bloklash, admin panel.
 - Toʻlov: `TEST_MODE=true` boʻlsa VIP/qoʻshimcha eʼlon pulsiz. Haqiqiy Click/Payme uchun server (Cloud Function) kerak; shundan keyin `TEST_MODE=false` va VIP/narxni faqat server belgilaydigan qiling.
 - Play Market: PWA → Bubblewrap/PWABuilder (TWA). Maxfiylik siyosati, shikoyat/bloklash va 18+ cheklovi shart.
+
+## Admin va toʻlov
+1. Firebase Console → Authentication → Users: oʻzingizning UID ni nusxalang.
+2. Firestore → collection `admins` → Document ID = UID, maydon: `ok` = true. Shundan keyin Profilda "Admin panel" chiqadi.
+3. Admin panel → Sozlama: karta raqamlari va narxlarni kiriting (kod ichida karta raqami saqlanmaydi).
+4. Toʻlov oqimi: foydalanuvchi toʻlov soʻraydi → rekvizit oynasi → toʻlaydi → admin "Tasdiqlash" bosadi → eʼlon faollashadi / VIP / yuqoriga koʻtariladi.

@@ -2,24 +2,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
     function signed() { return request.auth != null; }
+    function isAdmin() { return signed() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
+    function chatOf(cid) { return get(/databases/$(db)/documents/chats/$(cid)).data; }
+    function member(gid) { return exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.auth.uid)); }
+
+    match /admins/{uid} { allow get: if signed() && request.auth.uid == uid; }
+    match /settings/{id} { allow read: if signed(); allow write: if isAdmin(); }
+
     match /users/{uid} {
-      allow read: if signed();
-      allow create, update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs']);
+      allow get: if signed() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed']);
+      allow update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed'])
+        && (!resource.data.get('freeUsed', false) || request.resource.data.get('freeUsed', false) == true);
       allow delete: if false;
     }
+
     match /ads/{id} {
       allow read: if true;
       allow create: if signed() && request.resource.data.uid == request.auth.uid
         && request.resource.data.age is int && request.resource.data.age >= 18 && request.resource.data.age <= 80
         && request.resource.data.name is string && request.resource.data.name.size() <= 40
         && request.resource.data.about is string && request.resource.data.about.size() <= 500
-        && request.resource.data.g in ['kelin','kuyov'] && request.resource.data.pur in ['oila','nikoh','tanish'];
-      allow update: if signed() && resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid;
-      allow delete: if signed() && resource.data.uid == request.auth.uid;
+        && request.resource.data.g in ['kelin','kuyov'] && request.resource.data.pur in ['oila','nikoh','tanish']
+        && request.resource.data.vip == false
+        && ((request.resource.data.status == 'pending')
+          || (request.resource.data.status == 'active'
+              && !get(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false)
+              && getAfter(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false) == true));
+      allow update: if isAdmin();
+      allow delete: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
     }
-    match /priv/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }
-    match /reports/{id} { allow create: if signed(); }
-    function chatOf(cid) { return get(/databases/$(db)/documents/chats/$(cid)).data; }
+    match /ads/{id}/priv/{d} {
+      allow read, write: if signed() && get(/databases/$(db)/documents/ads/$(id)).data.uid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{pid} {
+      allow create: if signed() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending'
+        && request.resource.data.amount is int && request.resource.data.amount > 0 && request.resource.data.amount <= 1000000;
+      allow read: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+    match /reports/{id} { allow create: if signed(); allow read, delete: if isAdmin(); }
+    match /priv/{uid} { allow read, write: if signed() && request.auth.uid == uid; }
+    match /swipes/{id} {
+      allow read: if signed() && resource.data.uid == request.auth.uid;
+      allow create, update: if signed() && request.resource.data.uid == request.auth.uid;
+    }
+
     match /chats/{cid} {
       allow get: if signed() && (resource == null || request.auth.uid in resource.data.members);
       allow list: if signed() && request.auth.uid in resource.data.members;
@@ -38,14 +69,14 @@ service cloud.firestore {
         allow write: if signed() && request.auth.uid == chatOf(cid).owner;
       }
     }
-    function member(gid) { return exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.auth.uid)); }
+
     match /groups/{gid} {
       allow read: if signed();
       allow create: if signed() && request.resource.data.owner == request.auth.uid && request.resource.data.name is string
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40 && request.resource.data.n == 1;
       allow update: if signed() && (request.auth.uid == resource.data.owner
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n']) && (request.resource.data.n == resource.data.n + 1 || request.resource.data.n == resource.data.n - 1)));
-      allow delete: if signed() && request.auth.uid == resource.data.owner;
+      allow delete: if signed() && (request.auth.uid == resource.data.owner || isAdmin());
       match /members/{uid} {
         allow read: if signed();
         allow create, delete: if signed() && request.auth.uid == uid;
@@ -55,13 +86,6 @@ service cloud.firestore {
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
       }
-    }
-    match /swipes/{id} {
-      allow read: if signed() && resource.data.uid == request.auth.uid;
-      allow create, update: if signed() && request.resource.data.uid == request.auth.uid;
-    }
-    match /ads/{id}/priv/{d} {
-      allow read, write: if signed() && get(/databases/$(db)/documents/ads/$(id)).data.uid == request.auth.uid;
     }
   }
 }
