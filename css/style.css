@@ -100,3 +100,10 @@ label{display:block;color:var(--m);margin:12px 0 6px;font-size:13px}
 .pcard{border-radius:22px;padding:18px;margin:14px 0;color:#fff}.pcard.uz{background:linear-gradient(135deg,#1a4a8a,#2f80c8)}.pcard.hm{background:linear-gradient(135deg,#7a2a10,#f0953a)}
 .pcard small{letter-spacing:3px;font-weight:700}.pn{font:700 22px/1.2 monospace;letter-spacing:2px;margin:18px 0}.pf{display:flex;justify-content:space-between;align-items:center;font-weight:600}
 .pf button{background:#ffffff33;border-radius:12px;width:44px;height:44px;display:grid;place-items:center;color:#fff}
+.tb{display:flex;gap:8px}.tbn{width:46px;height:46px;flex:none;position:relative;padding:0}
+.bd{position:absolute;top:-6px;right:-4px;background:#e5554a;color:#fff;font-size:11px;font-weight:800;border-radius:10px;padding:1px 6px}
+.tbd{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--a)}
+.nt{display:flex;gap:10px;padding:14px;border-radius:16px;margin-bottom:8px;background:var(--c);opacity:.65}
+.nt.new{background:linear-gradient(135deg,#3a2f22,#2c2347);border:1px solid var(--a);opacity:1}.nt.new b{color:var(--a)}
+.nt p{color:var(--m);font-size:13px;margin:3px 0;line-height:1.4}.nt small{color:#7a7596;font-size:11px}
+.nh{font-weight:800;color:var(--m);margin:14px 0 8px;font-size:12px;letter-spacing:1px}

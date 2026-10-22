@@ -87,5 +87,23 @@ service cloud.firestore {
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
       }
     }
+
+    match /notifs/{id} {
+      allow read: if signed() && resource.data.to == request.auth.uid;
+      allow create: if signed() && request.resource.data.to is string
+        && (isAdmin() || (request.resource.data.type == 'like' && request.resource.data.from == request.auth.uid && request.resource.data.to != request.auth.uid));
+      allow update: if signed() && resource.data.to == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if signed() && resource.data.to == request.auth.uid;
+    }
+    match /support/{uid} {
+      allow get: if signed() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if signed() && ((request.auth.uid == uid && request.resource.data.lastBy == 'user' && request.resource.data.uid == uid) || isAdmin());
+      match /msgs/{mid} {
+        allow read: if signed() && (request.auth.uid == uid || isAdmin());
+        allow create: if signed() && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && ((request.auth.uid == uid && request.resource.data.from == 'user') || (isAdmin() && request.resource.data.from == 'admin'));
+      }
+    }
   }
 }

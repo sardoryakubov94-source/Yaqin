@@ -19,3 +19,9 @@ Mos juftni topish ilovasi (PWA + Firebase). Build kerak emas: oddiy HTML/CSS/JS.
 2. Firestore → collection `admins` → Document ID = UID, maydon: `ok` = true. Shundan keyin Profilda "Admin panel" chiqadi.
 3. Admin panel → Sozlama: karta raqamlari va narxlarni kiriting (kod ichida karta raqami saqlanmaydi).
 4. Toʻlov oqimi: foydalanuvchi toʻlov soʻraydi → rekvizit oynasi → toʻlaydi → admin "Tasdiqlash" bosadi → eʼlon faollashadi / VIP / yuqoriga koʻtariladi.
+
+## Yordam xizmati va bildirishnomalar
+- Foydalanuvchi yozishmalari `support/{uid}` da saqlanadi; admin panel → Yordam bo‘limida ko‘rinadi va javob beriladi.
+- Admin panel → Sozlama: "Ishonch telefoni" kiritiladi (Yordam sahifasida ko‘rinadi).
+- Bildirishnomalar `notifs` kolleksiyasida: to‘lov natijasi, yordam javobi, yoqtirishlar. Yangilari ajralib turadi.
+- Telefon bildirishnomasi ilova ochiq yoki orqa fonda turganda ishlaydi. Ilova butunlay yopiq bo‘lganda push uchun FCM va Cloud Functions (Blaze tarifi) kerak.
