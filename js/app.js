@@ -52,7 +52,7 @@ const ERR={"auth/email-already-in-use":"Bu email allaqachon roʻyxatdan oʻtgan"
 const em=e=>ERR[e.code]??("Xatolik: "+(e.code||e.message));
 function done(u){st.user=u;syncAds();st.form=null;draw()}
 async function authGo(){const f=fb();if(!f)return;const e=$("ae").value.trim(),p=$("ap").value;
- if(!/^\S+@\S+\.\S+$/.test(e)||p.length<6){uiAlert("Email va kamida 6 belgili parol kiriting");return}
+ if(!/^\S+@\S+\.\S+$/.test(e)||p.length<6){uiAlert("Email va kamida 6 belgili parol kiriting");return}if(st.am=="up"&&!$("ag").checked){uiAlert("Davom etish uchun 18 yoshdan oshganingizni tasdiqlang va shartlarga rozilik bering.");return}
  try{if(st.am=="up"){const n=$("an").value.trim();if(!n){uiAlert("Ismingizni kiriting");return}done(await f.signUp(e,p,n,$("aph").value.trim()))}else done(await f.signIn(e,p))}catch(x){const m=em(x);if(m)uiAlert(m)}}
 async function gAuth(){const f=fb();if(!f)return;try{done(await f.google())}catch(x){const m=em(x);if(m)uiAlert(m)}}
 async function forgot(){const e=$("ae").value.trim();if(!e){uiAlert("Avval emailni kiriting");return}const f=fb();if(!f)return;try{await f.reset(e);uiAlert("Parolni tiklash havolasi emailingizga yuborildi")}catch(x){uiAlert(em(x))}}
@@ -63,7 +63,7 @@ function authV(){const up=st.am=="up";return `<div class="ov" style="overflow:au
 ${up?`<label>ISM</label><input class="in" id="an" autocomplete="name"><label>TELEFON</label><input class="in" id="aph" type="tel" placeholder="+998">`:""}
 <label>EMAIL</label><input class="in" id="ae" type="email" autocomplete="email"><label>PAROL</label><div class="sr"><input class="in" id="ap" type="password" autocomplete="${up?"new-password":"current-password"}"><span style="position:absolute;right:14px;top:50%;margin-top:-10px;color:var(--m)" onclick="const i=$('ap');i.type=i.type=='password'?'text':'password'">${I("eye",20)}</span></div>
 ${up?"":`<div style="text-align:right;margin-top:10px"><button class="ghost" style="display:inline-flex" onclick="forgot()">Parolni unutdingizmi?</button></div>`}
-<button class="go" style="width:100%;margin-top:16px" onclick="authGo()">${up?"Roʻyxatdan oʻtish":"Kirish"}</button></div></div></div>`}
+${up?`<label style="display:flex;gap:10px;align-items:flex-start;color:var(--t);font-size:13px;margin-top:14px;line-height:1.4"><input type="checkbox" id="ag" style="margin-top:3px"><span>Men 18 yoshdan oshganman va <a href="terms.html" target="_blank" style="color:var(--a)">Foydalanish shartlari</a> hamda <a href="privacy.html" target="_blank" style="color:var(--a)">Maxfiylik siyosati</a> bilan roziman</span></label>`:""}<button class="go" style="width:100%;margin-top:16px" onclick="authGo()">${up?"Roʻyxatdan oʻtish":"Kirish"}</button></div></div></div>`}
 function outV(){return `<div class="ov" style="background:#000b;justify-content:flex-end"><div style="background:var(--c);border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom))"><h3 style="margin:0 0 6px">Tizimdan chiqish</h3><p style="color:var(--m)">Rostdan ham profildan chiqishni istaysizmi?</p><div class="row" style="margin-top:16px"><button class="ghost" onclick="st.form=null;draw()">Yoʻq</button><button class="go" style="background:#e5554a;color:#fff" onclick="FB.out();st.form=null;st.tab='home';draw()">Ha, chiqish</button></div></div></div>`}
 function fav(id){const i=st.fav.indexOf(id);i<0?st.fav.push(id):st.fav.splice(i,1);save();draw()}
 async function raise(id){if(!CFG.TEST_MODE){uiAlert("Toʻlov tizimi hali ulanmagan");return}if(!await uiConfirm("Sinov rejimi: toʻlov olinmaydi. Eʼlon yuqoriga koʻtarilsinmi?","Koʻtarish"))return;const f=fb();if(f)try{await f.upAd(id,{t:Date.now()})}catch(x){uiAlert(x.message)}}
@@ -125,13 +125,13 @@ function initMap(){const el=$("map");if(!el||!window.L){if(el)el.innerHTML='<div
  m.on("moveend",()=>{st.mv=[m.getCenter().lat,m.getCenter().lng];st.mz=m.getZoom()})}
 
 function modal(o){return new Promise(res=>{const d=document.createElement("div");d.className="md";
- d.innerHTML=`<div class="mb"><h3>${esc(o.title||"")}</h3><p>${esc(o.msg||"")}</p>${o.input?`<input class="in" value="${esc(o.val||"")}" placeholder="${esc(o.ph||"")}">`:""}<div class="row">${o.cancel?`<button class="ghost">${o.cancel}</button>`:""}<button class="go${o.danger?" dg":""}">${o.ok||"OK"}</button></div></div>`;
+ d.innerHTML=`<div class="mb"><h3>${esc(o.title||"")}</h3><p>${esc(o.msg||"")}</p>${o.input?`<input class="in" type="${o.type||"text"}" value="${esc(o.val||"")}" placeholder="${esc(o.ph||"")}">`:""}<div class="row">${o.cancel?`<button class="ghost">${o.cancel}</button>`:""}<button class="go${o.danger?" dg":""}">${o.ok||"OK"}</button></div></div>`;
  document.body.appendChild(d);const bs=d.querySelectorAll("button"),inp=d.querySelector("input"),done=v=>{d.remove();res(v)},no=()=>done(o.input?null:false);
  bs[bs.length-1].onclick=()=>done(o.input?inp.value:true);if(o.cancel)bs[0].onclick=no;
  d.onclick=e=>{if(e.target==d&&o.cancel)no()};if(inp){inp.focus();inp.onkeydown=e=>{if(e.key=="Enter")bs[bs.length-1].click()}}})}
 const uiAlert=(msg,title)=>modal({msg:String(msg),title:title||(/yuborildi|koʻtarildi/i.test(msg)?"Tayyor":"Diqqat")});
 const uiConfirm=(msg,ok,danger)=>modal({msg,title:"Tasdiqlang",ok:ok||"Ha",cancel:"Bekor qilish",danger});
-const uiPrompt=(title,ph,val)=>modal({title,ph,val,input:1,ok:"Saqlash",cancel:"Bekor qilish"});
+const uiPrompt=(title,ph,val,type)=>modal({title,ph,val,type,input:1,ok:"Saqlash",cancel:"Bekor qilish"});
 
 function sug(v){st.q=v;res();const q=nz(v).trim(),b=$("sg");if(!q){b.innerHTML="";return}
  const s=ALL.filter(p=>nz(p.n).includes(q)).sort((x,y)=>(nz(y.n).startsWith(q)-nz(x.n).startsWith(q))||(nz(y.n).split(" ").some(w=>w.startsWith(q))-nz(x.n).split(" ").some(w=>w.startsWith(q)))).slice(0,8);
@@ -254,7 +254,7 @@ async function payFor(kind,id,amount,note,msg){const f=fb();if(!f)return;if(!awa
 function raise(id){return payFor("raise",id,PR.raise,"eʼlon yuqoriga koʻtariladi",`Eʼlonni yuqoriga koʻtarish: ${fmt(PR.raise)} soʻm. Toʻlov maʼlumotlari ochiladi.`)}
 function vipAd(id){return payFor("vip",id,PR.vip,"eʼlon VIP TOP boʻladi",`VIP TOP (30 kun): ${fmt(PR.vip)} soʻm. Toʻlov maʼlumotlari ochiladi.`)}
 function price(){return `<div class="price"><b>Narxlar</b><p style="color:var(--m);margin-top:6px">1-eʼlon: <b style="color:var(--a)">BEPUL</b><br>Keyingi eʼlonlar: ${fmt(PR.ad)} soʻm<br>VIP TOP eʼlon (30 kun): ${fmt(PR.vip)} soʻm<br>Eʼlonni yuqoriga koʻtarish: ${fmt(PR.raise)} soʻm</p></div>`}
-function myAd(a){const tag=a.status=="pending"?'<span class="tag" style="background:#e5554a55">Toʻlov kutilmoqda</span>':(a.vip?'<span class="tag vt">VIP</span>':"");return `<div class="card"><div class="av">${av(a)}</div><div class="inf"><b>${esc(a.anon?"Anonim nomzod":a.name)}, ${a.age}</b> ${tag}<p>${esc(a.reg)} · ${PUR[a.pur][0]}</p><div class="acts">${a.status=="pending"?"":`<button class="ghost" onclick="raise('${a.id}')">${I("up",14)} Koʻtarish</button>${a.vip?"":`<button class="ghost" onclick="vipAd('${a.id}')">VIP</button>`}`}<button class="ghost" style="color:#e5554a" onclick="delAd('${a.id}')">${I("x",14)} Oʻchirish</button></div></div></div>`}
+function myAd(a){const tag=a.status=="pending"?'<span class="tag" style="background:#e5554a55">Toʻlov kutilmoqda</span>':(a.vip?'<span class="tag vt">VIP</span>':"");return `<div class="card"><div class="av">${av(a)}</div><div class="inf"><b>${esc(a.anon?"Anonim nomzod":a.name)}, ${a.age}</b> ${tag}<p>${esc(a.reg)} · ${PUR[a.pur][0]}</p><div class="acts">${a.status=="pending"?"":`<button class="ghost" onclick="raise('${a.id}')">${I("up",14)} Koʻtarish</button>${a.vip?"":`<button class="ghost" onclick="vipAd('${a.id}')">VIP</button>`}`}<button class="ghost" style="color:#e5554a" onclick="delAd('${a.id}')">${I("x",14)} Oʻchirish</button><button class="ghost" onclick="openEdit('${a.id}')">Tahrirlash</button></div></div></div>`}
 function prof(){const u=st.user,m=st.mine;
  if(!u)return `<h3>Profil</h3><div class="box" style="text-align:center"><p class="sub">Eʼlon berish va suhbatlashish uchun kiring yoki roʻyxatdan oʻting</p><button class="go" style="width:100%" onclick="st.am='in';st.form='auth';draw()">Kirish / Roʻyxatdan oʻtish</button></div>`+price();
  const stat=(n,l)=>`<div class="price" style="text-align:center;margin:0"><b style="font-size:22px;color:var(--a)">${n}</b><p style="color:var(--m);font-size:12px">${l}</p></div>`,pend=st.pays.filter(x=>x.status=="pending").length;
@@ -331,4 +331,20 @@ async function enablePush(){if(!("Notification" in window)){uiAlert("Brauzeringi
 addEventListener("fb-ready",()=>{FB.onUser(u=>{if(!u){[UB1,UB2].forEach(f=>f&&f());UB1=UB2=null;st.bl=[];st.blby=[];st.bFor=null;return}if(st.bFor==u.uid)return;st.bFor=u.uid;
  UB1=FB.blocksBy(u.uid,l=>{st.bl=l;syncAds();if(!st.form&&!st.chat)draw()});UB2=FB.blocksTo(u.uid,l=>{st.blby=l;syncAds();if(!st.form&&!st.chat)draw()});
  if("Notification" in window&&Notification.permission=="granted"&&CFG.VAPID)FB.regPush(CFG.VAPID).catch(()=>{})})});
+
+/* ===== tahrirlash, hisobni oʻchirish, huquqiy havolalar ===== */
+st.editId=null;
+function postBtn(){st.editId=null;st.p=null;if(need()){st.form="post";draw()}}
+const oldFormV=formV;
+formV=function(){let h=oldFormV();if(st.editId&&st.form=="post")h=h.replace(/<div class="price"><label style="margin:0">.*?<\/p><\/div>/s,"").replace("Joylashtirish","Saqlash").replace("Eʼlon berish","Eʼlonni tahrirlash");return h};
+const pub0=pub;pub=function(){return st.editId?saveEdit():pub0()};
+async function openEdit(id){const a=st.mine.find(x=>x.id==id);if(!a)return;let pr={};if(a.anon){try{pr=await FB.adPriv(id)}catch(e){}}
+ st.editId=id;st.p={g:a.g,pur:a.pur,ava:a.ava||"👰",img:a.img||null,name:a.anon?(pr.name||""):a.name,age:a.age,reg:a.reg,about:a.anon?(pr.about||""):(a.about||""),anon:!!a.anon,ints:[...(a.ints||[])],vip:false};st.form="post";draw()}
+async function saveEdit(){keep();const p=st.p;if(!p.name||!p.age||p.age<18){uiAlert("Ism va yosh (18+) kiriting");return}const f=fb();if(!f)return;const reg=p.reg||"Andijon shahri";
+ try{await f.updAd(st.editId,{name:p.anon?"Anonim":p.name,age:p.age,reg,vil:(pl(reg)||{}).vil||"",g:p.g,pur:p.pur,about:p.anon?"":(p.about||""),ava:p.ava,img:p.img||"",anon:!!p.anon,ints:p.ints||[]},p.anon?{name:p.name,about:p.about||""}:null);st.editId=null;st.p=null;st.form=null;toast("Eʼlon saqlandi");draw()}catch(x){uiAlert("Saqlanmadi: "+x.message)}}
+async function delAcc(){const f=fb();if(!f)return;if(!await uiConfirm("Hisobingiz, barcha eʼlonlaringiz, shaxsiy rasmlaringiz va bildirishnomalaringiz butunlay oʻchiriladi. Bu amalni qaytarib boʻlmaydi.","Hisobni oʻchirish",true))return;
+ let pw="";if(f.hasPw()){pw=await uiPrompt("Parolni kiriting","Joriy parol","","password");if(!pw)return}
+ try{await f.delAccount(pw);st.tab="home";toast("Hisob oʻchirildi");draw()}catch(x){uiAlert(/wrong-password|invalid-credential/.test(x.code||"")?"Parol notoʻgʻri":"Hisob oʻchirilmadi: "+(x.code||x.message))}}
+const oldProf3=prof;
+prof=function(){const h=oldProf3();if(!st.user)return h;return h+`<div style="text-align:center;margin:20px 0 6px;font-size:13px"><a href="privacy.html" target="_blank" style="color:var(--m)">Maxfiylik siyosati</a> · <a href="terms.html" target="_blank" style="color:var(--m)">Foydalanish shartlari</a></div><button class="ghost" style="width:100%;margin-top:8px;color:#e5554a;font-size:13px" onclick="delAcc()">Hisobni oʻchirish</button>`};
 draw();

@@ -55,6 +55,17 @@ window.FB={
  blocksBy:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"blocks"),D.where("by","==",uid)),s=>cb(s.docs.map(d=>d.data())),e=>console.error(e)),
  blocksTo:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"blocks"),D.where("to","==",uid)),s=>cb(s.docs.map(d=>d.data().by)),e=>console.error(e)),
  async regPush(vapid){const M=await import(G+"firebase-messaging.js"),reg=await navigator.serviceWorker.ready,tok=await M.getToken(M.getMessaging(app),{vapidKey:vapid,serviceWorkerRegistration:reg});if(tok)await D.setDoc(D.doc(db,"fcm",U().uid),{tokens:D.arrayUnion(tok)},{merge:true});return tok},
+ async adPriv(id){const s=await D.getDoc(D.doc(db,"ads",id,"priv","info"));return s.exists()?s.data():{}},
+ async updAd(id,x,priv){let img=x.img;if(img&&img.startsWith("data:"))img=await up(`ads/${U().uid}/${Date.now()}.jpg`,img);await D.updateDoc(D.doc(db,"ads",id),{...x,img:img||""});if(priv)await D.setDoc(D.doc(db,"ads",id,"priv","info"),priv)},
+ hasPw:()=>U().providerData.some(p=>p.providerId=="password"),
+ async delAccount(pw){const u=U(),uid=u.uid;
+  if(this.hasPw())await A.reauthenticateWithCredential(u,A.EmailAuthProvider.credential(u.email,pw));else await A.reauthenticateWithPopup(u,new A.GoogleAuthProvider());
+  const ads=await D.getDocs(D.query(D.collection(db,"ads"),D.where("uid","==",uid)));
+  for(const d of ads.docs){try{await D.deleteDoc(D.doc(db,"ads",d.id,"priv","info"))}catch(e){}const im=d.data().img;if(im&&im.startsWith("http"))try{await S.deleteObject(S.ref(sto,im))}catch(e){}await D.deleteDoc(d.ref)}
+  for(const [c,k] of [["swipes","uid"],["notifs","to"]]){const s=await D.getDocs(D.query(D.collection(db,c),D.where(k,"==",uid)));for(const d of s.docs)try{await D.deleteDoc(d.ref)}catch(e){}}
+  for(const p of [["priv",uid],["fcm",uid],["users",uid]])try{await D.deleteDoc(D.doc(db,...p))}catch(e){}
+  try{await S.deleteObject(S.ref(sto,`avatars/${uid}.jpg`))}catch(e){}
+  await A.deleteUser(u)},
  async photo(data){const url=await up(`avatars/${U().uid}.jpg`,data);await D.setDoc(uref(U().uid),{img:url},{merge:true});return url}
 };
 dispatchEvent(new Event("fb-ready"));

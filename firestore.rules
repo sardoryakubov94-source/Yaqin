@@ -5,6 +5,8 @@ service cloud.firestore {
     function isAdmin() { return signed() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
     function chatOf(cid) { return get(/databases/$(db)/documents/chats/$(cid)).data; }
     function otherOf(cid) { return chatOf(cid).owner == request.auth.uid ? chatOf(cid).asker : chatOf(cid).owner; }
+    function validAd(d) { return d.age is int && d.age >= 18 && d.age <= 80 && d.name is string && d.name.size() <= 40
+      && d.about is string && d.about.size() <= 500 && d.g in ['kelin','kuyov'] && d.pur in ['oila','nikoh','tanish']; }
     function member(gid) { return exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.auth.uid)); }
 
     match /admins/{uid} { allow get: if signed() && request.auth.uid == uid; }
@@ -16,7 +18,7 @@ service cloud.firestore {
       allow create: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed']);
       allow update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed'])
         && (!resource.data.get('freeUsed', false) || request.resource.data.get('freeUsed', false) == true);
-      allow delete: if false;
+      allow delete: if signed() && request.auth.uid == uid;
     }
 
     match /ads/{id} {
@@ -31,7 +33,9 @@ service cloud.firestore {
           || (request.resource.data.status == 'active'
               && !get(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false)
               && getAfter(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false) == true));
-      allow update: if isAdmin();
+      allow update: if isAdmin() || (signed() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','age','reg','vil','about','ava','img','ints','pur','g','anon'])
+        && validAd(request.resource.data));
       allow delete: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
     }
     match /ads/{id}/priv/{d} {
@@ -50,6 +54,7 @@ service cloud.firestore {
     match /swipes/{id} {
       allow read: if signed() && resource.data.uid == request.auth.uid;
       allow create, update: if signed() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signed() && resource.data.uid == request.auth.uid;
     }
 
     match /chats/{cid} {
