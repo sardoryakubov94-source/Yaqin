@@ -6,7 +6,20 @@ const nz=s=>String(s||"").toLowerCase().replace(/[ʻʼ'’`‘]/g,"");
 const vilOf=a=>a.vil||(pl(a.reg)||{}).vil||"";
 const hit=a=>{const q=nz(st.q).trim();return nz(a.reg).includes(q)||nz(vilOf(a)).includes(q)};
 const PUR={oila:["Oila qurish uchun","Jiddiy niyat bilan, nikoh maqsadida","<b class=\"l1\">1 Roʻzgʻorga</b><small class=\"l2\">(Jiddiy oila qurish)</small>"],nikoh:["Nikoh uchun (maxfiy)","Shaxsiy hayot hurmat qilinadi, maxfiy tarzda","<b class=\"l1\">2 Roʻzgʻorga</b><small class=\"l2\">(Yashirin nikoh)</small>"],tanish:["Tanishuv uchun","Oʻzingizga mos juftni erkin izlash","<b class=\"l1\">Oddiy munosabat</b><small class=\"l2\">(Mos juft izlash)</small>"]};
-const TPL={kelin:["👰","🧕","🌹","💐","🌸","🦋"],kuyov:["🤵","🧔","🦁","🦅","⚜️","🌙"]};
+const TPL={kelin:[],kuyov:[]};
+const AVBANDS=[{id:"young",label:"18–25 yosh"},{id:"middle",label:"30–45 yosh"},{id:"mature",label:"45–60 yosh"}];
+function avatarSvg(g,band,v){
+ const w=g==="kelin",young=band==="young",old=band==="mature",hair=w?(v?"#292033":"#4a2b24"):(v?"#252b39":"#3b2a23"),bg=w?(v?"#e9b9d0":"#c8a6ed"):(v?"#71c8c1":"#82b4e9"),shirt=w?(v?"#30374c":"#f5e9ee"):(v?"#27354c":"#e7edf6");
+ const face="<path d=\"M35 45Q50 35 65 45L63 68Q60 83 50 85Q40 83 37 68Z\" fill=\"#efc1a0\"/>";
+ const hairshape=w?"<path d=\"M25 53Q18 18 50 17Q82 18 75 53L79 81Q68 69 68 44Q50 56 32 44Q31 69 21 80Z\"/>":"<path d=\"M28 45Q25 17 50 19Q76 16 73 45L65 38Q48 31 35 40Z\"/>";
+ const beard=!w&&!young?"<path d=\"M37 67Q50 86 63 67L60 78Q50 86 40 78Z\"/>":"";
+ const lines=old?"<path d=\"M39 62h5m12 0h5M42 70q8 4 16 0\" stroke=\"#b98270\" fill=\"none\" stroke-width=\"1.4\"/>":"";
+ const svg="<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><linearGradient id=\"g\"><stop stop-color=\""+bg+"\"/><stop offset=\"1\" stop-color=\"#493b68\"/></linearGradient></defs><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"url(#g)\"/><path d=\"M14 100Q20 75 39 74H61Q80 75 86 100\" fill=\""+shirt+"\"/><path d=\"M42 70h16v14H42z\" fill=\"#efc1a0\"/>"+hairshape+face+"<ellipse cx=\"39\" cy=\"58\" rx=\"2.2\" ry=\"2.8\" fill=\"#302731\"/><ellipse cx=\"61\" cy=\"58\" rx=\"2.2\" ry=\"2.8\" fill=\"#302731\"/><path d=\"M44 69q6 5 12 0\" stroke=\"#a75f68\" stroke-width=\"2\" fill=\"none\"/>"+lines+beard+"</svg>";
+ return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg);
+}
+function ageBand(age){return age>=46?"mature":age>=30?"middle":"young"}
+function chooseGender(g){keep();st.p.g=g;st.p.ava=avatarSvg(g,ageBand(st.p.age||22),0);st.p.img=null;draw()}
+function chooseAvatar(src){keep();st.p.ava=src;st.p.img=null;draw()}
 const S=(k,d)=>{try{return JSON.parse(localStorage[k])}catch(e){return d}};
 const save=()=>{try{localStorage.yq=JSON.stringify({fav:st.fav,seen:st.seen})}catch(e){}};
 const base=S("yq",{});
@@ -72,10 +85,8 @@ function set(k,v){st[k]=v;draw()}
 function formV(){if(st.form=="notif")return notifV();if(st.form=="support")return supV();if(st.form=="admin")return adminV();if(st.form=="survey")return surveyV();if(st.form=="auth")return authV();if(st.form=="logout")return outV();if(st.form=="filter")return `<div class="ov"><div class="hd"><button onclick="st.form=null;draw()">${I("back",22)}</button><b>Filtrlar</b></div><div class="sheet"><label>Yosh (dan)</label><input class="in" id="fa" type="number" value="${st.f.min||""}"><label>Yosh (gacha)</label><input class="in" id="fb" type="number" value="${st.f.max||""}"><button class="go" style="width:100%;margin-top:16px" onclick="st.f={min:+$('fa').value||0,max:+$('fb').value||0};st.form=null;draw()">Qoʻllash</button></div></div>`;
  const p=st.p=st.p||{g:"kelin",pur:"oila",mode:"self",ava:"👰",vip:false,anon:false,ints:[]};const n=S("yq",{}).x;const free=!st.user.freeUsed;const cost=(free?0:PR.ad)+(p.vip?PR.vip:0);
  return `<div class="ov"><div class="hd"><button onclick="st.form=null;draw()">${I("back",22)}</button><b>Eʼlon berish</b></div><div class="sheet">
-<label>Kim uchun eʼlon?</label><div class="seg"><button class="${p.g=="kelin"?"on":""}" onclick="pf('g','kelin');p.ava=TPL.kelin[0]">Kelin nomzod</button><button class="${p.g=="kuyov"?"on":""}" onclick="pf('g','kuyov');p.ava=TPL.kuyov[0]">Kuyov nomzod</button></div>
-<label>Maqsad</label><div class="chips">${Object.keys(PUR).map(k=>`<button class="chip ${p.pur==k?"on":""}" onclick="pf('pur','${k}')"><b>${PUR[k][0]}</b></button>`).join("")}</div>
-<label>Eʼlon turi</label><div class="seg"><button class="${!p.anon?"on":""}" onclick="pf('anon',false)">Ochiq eʼlon</button><button class="${p.anon?"on":""}" onclick="pf('anon',true)">Anonim eʼlon</button></div><p class="sub" style="text-align:left;font-size:12px;margin:6px 0 0">${p.anon?"Faqat avatar koʻrinadi. Ism, tavsif va shaxsiy rasmlar suhbatda siz ruxsat bergandan keyin ochiladi.":"Ism, rasm va maʼlumotlar hammaga koʻrinadi. Rasmli eʼlonlar Juft topish boʻlimida ham chiqadi."}</p>
-<label>Avatar (hamma koʻradi) — shablon tanlang yoki galereyadan yuklang</label><div class="tpl">${TPL[p.g].map(e=>`<button class="${p.ava==e&&!p.img?"on":""}" onclick="pf('ava','${e}');p.img=null">${e}</button>`).join("")}<button onclick="$('file').click()">${I('img',22)}</button></div><input type="file" id="file" accept="image/*" hidden onchange="pick(this)">
+<label>Kim uchun eʼlon?</label><div class="seg"><button class="${p.g=="kelin"?"on":""}" onclick="chooseGender('kelin')">Ayol</button><button class="${p.g=="kuyov"?"on":""}" onclick="chooseGender('kuyov')">Erkak</button></div>
+<label>Professional avatar — jins va yoshga mos tanlang</label><div class="avatar-age-tabs">${AVBANDS.map(b=>`<button class="${(p.avBand||ageBand(p.age||22))==b.id?"on":""}" onclick="st.p.avBand='${b.id}';draw()">${b.label}</button>`).join("")}</div><div class="avatar-grid">${[0,1].map(v=>{const src=avatarSvg(p.g,p.avBand||ageBand(p.age||22),v);return `<button class="avatar-option ${p.ava==src&&!p.img?"on":""}" onclick="chooseAvatar('${src}')"><img src="${src}" alt="Avatar"><span>${v?"2-variant":"1-variant"}</span></button>`}).join("")}<button class="avatar-option upload-avatar" onclick="$('file').click()">${I("img",22)}<span>Galereyadan yuklash</span></button></div><input type="file" id="file" accept="image/*" hidden onchange="pick(this)">
 <label>Ism</label><input class="in" id="fn" value="${esc(p.name||"")}"><label>Yosh</label><input class="in" id="fy" type="number" value="${p.age||""}">
 <label>Hudud</label><select class="in" id="fr">${PL.map(([v,l])=>`<optgroup label="${v}">${l.map(x=>`<option ${p.reg==x[0]?"selected":""}>${x[0]}</option>`).join("")}</optgroup>`).join("")}</select>
 <label>Oʻzingiz haqingizda</label><textarea class="in" id="fo" rows="3">${esc(p.about||"")}</textarea>
