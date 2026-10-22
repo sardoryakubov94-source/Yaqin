@@ -107,3 +107,27 @@ label{display:block;color:var(--m);margin:12px 0 6px;font-size:13px}
 .nt.new{background:linear-gradient(135deg,#3a2f22,#2c2347);border:1px solid var(--a);opacity:1}.nt.new b{color:var(--a)}
 .nt p{color:var(--m);font-size:13px;margin:3px 0;line-height:1.4}.nt small{color:#7a7596;font-size:11px}
 .nh{font-weight:800;color:var(--m);margin:14px 0 8px;font-size:12px;letter-spacing:1px}
+
+
+/* Tinder-style animated preview for the home screen */
+.swipe-hero{min-height:245px;gap:8px;padding:20px 16px 20px 20px;cursor:pointer;isolation:isolate}
+.swipe-hero .hero-copy{position:relative;z-index:2;flex:1;min-width:0}
+.swipe-hero .hero-copy h3{font-size:clamp(22px,5vw,27px);line-height:1.12}
+.swipe-hero .hero-copy p{max-width:230px;font-size:13px;line-height:1.45}
+.hero-preview{position:relative;flex:0 0 42%;height:190px;max-width:190px;min-width:118px;align-self:center}
+.preview-card{position:absolute;inset:5px 7px 5px 7px;border-radius:17px;overflow:hidden;background:#f6d4d7;border:2px solid #fff9;box-shadow:0 8px 22px #45162a55;transform-origin:50% 90%}
+.preview-card img{width:100%;height:100%;object-fit:cover;display:block}
+.preview-card-back{transform:rotate(12deg) translate(8px,-1px) scale(.91);animation:previewBack 4.8s ease-in-out infinite}
+.preview-card-mid{transform:rotate(-8deg) translate(-4px,2px) scale(.96);animation:previewMid 4.8s ease-in-out infinite}
+.preview-card-front{animation:previewSwipe 4.8s cubic-bezier(.5,0,.8,.4) infinite}
+.preview-stamp{position:absolute;top:13px;left:7px;border:2px solid #fff;color:#fff;background:#e94e86d9;border-radius:8px;padding:3px 6px;font-size:9px;font-weight:900;transform:rotate(-12deg)}
+.preview-heart,.preview-nope{position:absolute;z-index:4;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#fff;color:#e94e86;box-shadow:0 4px 12px #6d214555}
+.preview-heart{right:0;bottom:13px;animation:heartPop 2.4s ease-in-out infinite}
+.preview-nope{left:0;top:18px;color:#6e2c50;font-size:25px;font-weight:800;animation:nopePop 2.4s ease-in-out infinite}
+@keyframes previewSwipe{0%,12%{transform:translateX(0) rotate(0);opacity:1}30%{transform:translateX(48px) rotate(13deg);opacity:1}42%,53%{transform:translateX(125px) rotate(23deg);opacity:0}54%{transform:translateX(-105px) rotate(-18deg);opacity:0}66%,83%{transform:translateX(0) rotate(0);opacity:1}100%{transform:translateX(0) rotate(0);opacity:1}}
+@keyframes previewMid{0%,35%{transform:rotate(-8deg) translate(-4px,2px) scale(.96)}48%{transform:rotate(0) translate(0,0) scale(1)}62%,100%{transform:rotate(-8deg) translate(-4px,2px) scale(.96)}}
+@keyframes previewBack{0%,45%{transform:rotate(12deg) translate(8px,-1px) scale(.91)}58%{transform:rotate(0) translate(0,0) scale(1)}72%,100%{transform:rotate(12deg) translate(8px,-1px) scale(.91)}}
+@keyframes heartPop{0%,25%,100%{transform:scale(1)}35%,48%{transform:scale(1.18)}}
+@keyframes nopePop{0%,35%,100%{opacity:.55;transform:scale(.9) rotate(-8deg)}15%,25%{opacity:1;transform:scale(1.08) rotate(-8deg)}}
+@media(max-width:390px){.swipe-hero{padding:16px 11px 16px 16px;min-height:220px}.hero-preview{flex-basis:39%;min-width:105px;height:170px}.swipe-hero .hero-copy p{font-size:12px}.swipe-hero .hero-copy h3{font-size:22px}.swipe-hero .hb{padding:9px 16px}}
+@media(prefers-reduced-motion:reduce){.preview-card,.preview-heart,.preview-nope{animation:none!important}}
