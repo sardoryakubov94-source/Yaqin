@@ -34,7 +34,8 @@ service cloud.firestore {
               && !get(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false)
               && getAfter(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false) == true));
       allow update: if isAdmin() || (signed() && resource.data.uid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','age','reg','vil','about','ava','img','ints','pur','g','anon'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','age','reg','vil','about','ava','img','ints','pur','g','anon','profileDetails'])
+        && (!('profileDetails' in request.resource.data) || (request.resource.data.profileDetails is map && request.resource.data.profileDetails.keys().hasOnly(['housing','living','work','car','education'])))
         && validAd(request.resource.data));
       allow delete: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
     }
