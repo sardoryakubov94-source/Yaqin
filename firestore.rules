@@ -98,7 +98,13 @@ service cloud.firestore {
       match /msgs/{mid} {
         allow read: if signed() && member(gid);
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
-          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && (request.resource.data.get('kind', '') != 'media'
+            || (request.resource.data.mediaType in ['image','video']
+              && request.resource.data.mediaPath is string
+              && request.resource.data.mediaPath.matches('group-media/.*')
+              && (get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid
+                || get(/databases/$(db)/documents/groups/$(gid)).data.get('mediaUploadMode', 'owner') == 'members')));
         allow delete: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
       }
       match /joinRequests/{uid} {
