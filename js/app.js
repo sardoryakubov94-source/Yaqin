@@ -26,7 +26,7 @@ function list(){let l=st.ads.filter(a=>a.g==st.g&&a.pur==st.pur&&(!st.q||hit(a))
  l.sort((a,b)=>st.sort=="age"?a.age-b.age:(b.vip-a.vip)||b.t-a.t);return l}
 function detailsLine(a){if(a.anon||!a.profileDetails)return "";const d=a.profileDetails,labels={housing:{own:"Oʻz uyi bor",parents:"Ota-onasi bilan yashaydi",rent:"Ijarada",other:"Uy-joy: boshqa"},living:{alone:"Yolgʻiz yashaydi",parents:"Ota-onasi bilan",family:"Oila aʼzolari bilan",roommates:"Boshqa kishilar bilan",other:"Yashash: boshqa"},work:{state:"Davlat ishida",private:"Xususiy ishda",business:"Tadbirkor",self:"Oʻzini oʻzi band qilgan",looking:"Ish qidirmoqda",other:"Ish: boshqa"},car:{yes:"Avtomobili bor",no:"Avtomobili yoʻq"},education:{secondary:"Oʻrta maʼlumot",college:"Oʻrta maxsus",higher:"Oliy maʼlumot",student:"Talaba",other:"Maʼlumot: boshqa"}};const bits=Object.keys(labels).filter(k=>d[k]&&labels[k][d[k]]).map(k=>labels[k][d[k]]);return bits.length?`<div class="ad-details">${bits.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:""}
 function card(a){const f=st.fav.includes(a.id);return `<div class="card ${a.vip?"vip":""}"><div class="av">${av(a)}</div><div class="inf"><b>${esc(a.anon?"Anonim nomzod":a.name)}, ${a.age}</b> ${demoTag(a)}${a.vip?'<span class="tag vt">VIP</span>':""}<p>${I("pin",13)} ${esc(a.reg)} · <span class="tag">${PUR[a.pur][0]}</span></p>${st.tab=="map"&&st.myLoc&&distanceText(a)?`<p class="dist-line">↔ Sizdan taxminan <b>${distanceText(a)}</b></p>`:""}<p>${a.anon?I("lock",13)+" Maʼlumotlar suhbatda ruxsat bilan ochiladi":esc(a.about)}</p>${detailsLine(a)}<div class="acts"><button class="go" onclick="openAd('${a.id}')">Suhbat boshlash</button>${a.mine?"":`<button class="ghost" aria-label="Shikoyat" onclick="reportAd('${a.id}')">${I("flag",18)}</button>`}<button class="ghost" onclick="fav('${a.id}')">${f?I("heart",18,1):I("heart",18)}</button></div></div></div>`}
-function home(){return `<div class="top"><span class="pill">Oʻz 🇺🇿</span><div class="tb"><button class="ghost tbn" onclick="openNotif()">${I("bell",20)}<span class="bd" id="nb" style="display:${unN()?"block":"none"}">${unN()>9?"9+":unN()}</span></button><button class="ghost tbn" onclick="openSup(st.user&&st.user.uid)">${I("headset",20)}<span class="tbd" id="sd" style="display:${supDot()?"block":"none"}"></span></button><button class="ghost tbn" onclick="st.user?(st.form='logout'):(st.am='in',st.form='auth');draw()">${I(st.user?"logout":"user",20)}</button></div></div>
+function home(){return `<div class="top"><button class="pill" type="button" onclick="toggleLang()" aria-label="Язык интерфейса">${YQ_LANG==="ru"?"Рус 🇷🇺":"Oʻz 🇺🇿"}</button><div class="tb"><button class="ghost tbn" onclick="openNotif()">${I("bell",20)}<span class="bd" id="nb" style="display:${unN()?"block":"none"}">${unN()>9?"9+":unN()}</span></button><button class="ghost tbn" onclick="openSup(st.user&&st.user.uid)">${I("headset",20)}<span class="tbd" id="sd" style="display:${supDot()?"block":"none"}"></span></button><button class="ghost tbn" onclick="st.user?(st.form='logout'):(st.am='in',st.form='auth');draw()">${I(st.user?"logout":"user",20)}</button></div></div>
 <div class="ban"><small>CHEKLANGAN TAKLIF</small><p style="margin-top:8px">Birinchi eʼlon <b>BEPUL</b> joylashtiriladi!</p></div>
 <div class="logo">Yaq<span>in</span></div><p class="sub">Mos juftingizni ishonch bilan toping</p>
 <div class="box"><div class="seg" style="margin-bottom:8px"><button class="${st.g=="kelin"?"on":""}" onclick="set('g','kelin')">Kelin nomzodlar</button><button class="${st.g=="kuyov"?"on":""}" onclick="set('g','kuyov')">Kuyov nomzodlar</button></div>
@@ -103,6 +103,46 @@ async function pub(cost){keep();const p=st.p;if(!p.name||!p.age||p.age<18){uiAle
  if(cost&&!await uiConfirm("Sinov rejimi: "+cost.toLocaleString("ru")+" soʻm toʻlov olinmaydi. Davom etamizmi?","Davom etish"))return;
  const f=fb();if(!f)return;
  const free=!st.user.freeUsed&&cost===0;try{await f.addAd({name:p.anon?"Anonim":p.name,age:p.age,reg:p.reg||"Andijon shahri",vil:(pl(p.reg||"Andijon shahri")||{}).vil||"",g:p.g,pur:p.pur,about:p.anon?"":(p.about||""),img:await prepPhoto(p),ava:p.ava||("ph:"+(p.g==="kelin"?"kelin":"kuyov")+":1"),vip:false,status:free?"active":"pending",anon:!!p.anon,ints:p.ints||[],profileDetails:p.anon?{}:(p.details||{}),_priv:p.anon?{name:p.name,about:p.about||""}:null},free);st.p=null;st.form=null;st.tab="home";toast(free?"Bepul eʼlon faollashtirildi":"Pulli eʼlon admin tasdigʻiga yuborildi");draw()}catch(x){uiAlert("Eʼlon joylashmadi: "+x.message)}}
+
+/* Uzbek/Russian interface localization */
+let YQ_LANG=S("yqLang","uz")==="ru"?"ru":"uz";
+function toggleLang(){YQ_LANG=YQ_LANG==="uz"?"ru":"uz";try{localStorage.setItem("yqLang",YQ_LANG)}catch(e){}draw()}
+const YQ_RU={
+"Bosh":"Главная","Xabarlar":"Сообщения","Sevimli":"Избранное","Xarita":"Карта","Guruhlar":"Группы","Profil":"Профиль",
+"Oʻz 🇺🇿":"Рус 🇷🇺","CHEKLANGAN TAKLIF":"ОГРАНИЧЕННОЕ ПРЕДЛОЖЕНИЕ","Birinchi eʼlon":"Первое объявление",
+"joylashtiriladi!":"размещается БЕСПЛАТНО!","Mos juftingizni ishonch bilan toping":"Найдите подходящую пару с уверенностью",
+"Kelin nomzodlar":"Невесты","Kuyov nomzodlar":"Женихи","Oila qurish uchun":"Для создания семьи","Nikoh uchun (maxfiy)":"Для брака (конфиденциально)","Tanishuv uchun":"Для знакомства",
+"1 Roʻzgʻorga":"1 Для семьи","(Jiddiy oila qurish)":"(Серьёзные намерения)","2 Roʻzgʻorga":"2 Для брака","(Yashirin nikoh)":"(Тайный брак)","Oddiy munosabat":"Обычные отношения","(Mos juft izlash)":"(Поиск пары)",
+"Hudud yoki tuman..":"Область или район…","Qidirish":"Поиск","Filtrlar":"Фильтры","Saralash: yangi":"Сортировка: новые","Saralash: yosh":"Сортировка: по возрасту",
+"JUFT TOPISH":"ПОИСК ПАРЫ","Ochiq eʼlonlar":"Открытые анкеты","Qiziqishlaringiz va hududingizga mos nomzodlarni algoritmimiz tavsiya qiladi. Oʻzingizga mos insonni tez va oson toping.":"Наш алгоритм подберёт кандидатов по вашим интересам и региону. Найдите подходящего человека быстро и легко.",
+"Eʼlon shu yerda koʻrinishi uchun uni ochiq joylashtiring va qiziqishlaringizni toʻldiring.":"Чтобы анкета появилась здесь, опубликуйте её открыто и заполните интересы.",
+"Boshlash":"Начать","YOQDI ♥":"НРАВИТСЯ ♥","KEYINGISI ✕":"ДАЛЬШЕ ✕","Yangi eʼlonlar":"Новые анкеты","Hozircha eʼlon yoʻq. Birinchi boʻling!":"Пока нет анкет. Будьте первым!","Hech narsa topilmadi":"Ничего не найдено",
+"Suhbat boshlash":"Начать общение","Maʼlumotlar suhbatda ruxsat bilan ochiladi":"Данные откроются в чате с разрешения","Sevimlilar":"Избранное","Sevimlilar roʻyxati boʻsh":"Список избранного пуст",
+"Eʼlon berish va suhbatlashish uchun kiring yoki roʻyxatdan oʻting":"Войдите или зарегистрируйтесь, чтобы публиковать анкеты и общаться","Kirish / Roʻyxatdan oʻtish":"Войти / Зарегистрироваться",
+"Faol eʼlonlarim":"Мои активные анкеты","Jami eʼlonlarim":"Всего моих анкет","Telefon raqami":"Номер телефона","Kiritilmagan":"Не указан","Tahrirlash":"Изменить",
+"Qiziqish va mos nomzod sozlamalari":"Интересы и настройки подбора","Narxlar":"Цены","1-eʼlon:":"1-я анкета:","Keyingi eʼlonlar:":"Следующие анкеты:","VIP TOP eʼlon:":"VIP TOP анкета:","Eski eʼlonni yuqoriga koʻtarish:":"Поднять старую анкету:",
+"Mening eʼlonlarim":"Мои анкеты","Sizda hali eʼlon yoʻq":"У вас пока нет анкет","Tizimdan chiqish":"Выйти",
+"Profil":"Профиль","Oʻzi haqida":"О себе","Nomzod oʻzi haqida maʼlumot kiritmagan.":"Кандидат не добавил информацию о себе.","Orqaga qaytish":"Назад","Xabar yozish":"Написать сообщение",
+"Yopish":"Закрыть","Yosh":"Возраст","Hudud":"Регион","Ism":"Имя","Erkak":"Мужчина","Ayol":"Женщина",
+"Roʻyxatdan oʻtish":"Регистрация","Kirish":"Войти","Parol":"Пароль","Email":"Электронная почта","Davom etish":"Продолжить","Bekor qilish":"Отмена","Saqlash":"Сохранить","Oʻchirish":"Удалить",
+"Yangi guruh ochish":"Создать группу","Guruh nomi":"Название группы","Guruh turi":"Тип группы","Guruh yaratish":"Создать группу","Xabar yuborish":"Отправить сообщение",
+"Bloklash":"Заблокировать","Blokdan chiqarish":"Разблокировать","Maxfiylik siyosati":"Политика конфиденциальности","Foydalanish shartlari":"Условия использования",
+"Yurak yuborildi, sevimlilarga qoʻshildi":"Лайк отправлен, добавлено в избранное","Ochiq eʼlon":"Открытая анкета","Anonim eʼlon":"Анонимная анкета",
+"Ism va yosh (18+) kiriting":"Укажите имя и возраст (18+)","Faqat rasm fayli tanlang":"Выберите файл изображения","Rasm ochilmadi, boshqasini tanlang":"Не удалось открыть изображение, выберите другое",
+"Qidiruv natijalari":"Результаты поиска","Barchasi":"Все","Yangi":"Новые","Yosh boʻyicha":"По возрасту","Andijon shahri":"город Андижан"
+};
+function applyYaqinLang(root){
+ if(YQ_LANG!=="ru"||!root)return;
+ const dict=YQ_RU,walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+ while(n=walk.nextNode()){const raw=n.nodeValue,trim=raw.trim();if(!trim)continue;let val=dict[trim];
+  if(!val){const m=trim.match(/^Saralash:\\s*(yangi|yosh)$/);if(m)val=m[1]==="yangi"?"Сортировка: новые":"Сортировка: по возрасту"}
+  if(val)n.nodeValue=raw.replace(trim,val);
+ }
+ root.querySelectorAll("input[placeholder],textarea[placeholder],[aria-label],[title]").forEach(el=>{
+  ["placeholder","aria-label","title"].forEach(k=>{const v=el.getAttribute(k);if(v&&dict[v])el.setAttribute(k,dict[v])});
+ });
+}
+
 function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("mi")?$("mi").value:null;
  const v={home,fav:favs,circ:groupsV,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
@@ -110,7 +150,7 @@ function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("
  const N=[["home",I("home",24),"Bosh"],["msg",I("chat",24),"Xabarlar"],["fav",I("heart",24),"Sevimli"],["+","+",""],["map",I("map",24),"Xarita"],["circ",I("users",24),"Guruhlar"],["prof",I("user",24),"Profil"]];
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',38)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m)m.scrollTop=m.scrollHeight;if(a==="q"&&$("q")){$("q").focus()}
- if(st.sw&&!st.form&&!st.chat&&!st.swProfile)renderDeck();if(mv!=null&&$("mi"))$("mi").value=mv;if(st.tab=="map")initMap()}
+ if(st.sw&&!st.form&&!st.chat&&!st.swProfile)renderDeck();if(mv!=null&&$("mi"))$("mi").value=mv;if(st.tab=="map")initMap();applyYaqinLang($("app"));applyYaqinLang($("nav"))}
 function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.uid&&!a.isDemo}))}
 let UC,UG,UM,UP,GROOM,GPART,GC=null;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
