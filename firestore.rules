@@ -89,12 +89,15 @@ service cloud.firestore {
       allow delete: if signed() && (request.auth.uid == resource.data.owner || isAdmin());
       match /members/{uid} {
         allow read: if signed();
-        allow create, delete: if signed() && request.auth.uid == uid;
+        allow create: if signed() && request.auth.uid == uid;
+        allow delete: if signed() && (request.auth.uid == uid
+          || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
       }
       match /msgs/{mid} {
         allow read: if signed() && member(gid);
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
+        allow delete: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
       }
     }
 
