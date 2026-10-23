@@ -101,7 +101,7 @@ window.FB={
  blocksTo:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"blocks"),D.where("to","==",uid)),s=>cb(s.docs.map(d=>d.data().by)),e=>console.error(e)),
  async regPush(vapid){const M=await import(G+"firebase-messaging.js"),reg=await navigator.serviceWorker.ready,tok=await M.getToken(M.getMessaging(app),{vapidKey:vapid,serviceWorkerRegistration:reg});if(tok)await D.setDoc(D.doc(db,"fcm",U().uid),{tokens:D.arrayUnion(tok)},{merge:true});return tok},
  async adPriv(id){const s=await D.getDoc(D.doc(db,"ads",id,"priv","info"));return s.exists()?s.data():{}},
- async updAd(id,x,priv){let img=x.img;if(img&&img.startsWith("data:"))img=await up(`ads/${U().uid}/${Date.now()}.jpg`,img);await D.updateDoc(D.doc(db,"ads",id),{...x,img:img||""});if(priv)await D.setDoc(D.doc(db,"ads",id,"priv","info"),priv)},
+ async updAd(id,x,priv){const d={...x};if(d.img&&d.img.startsWith("data:")){const uploaded=await uploadOpeninary(d.img,"ads");d.imgPath=uploaded.path;d.imgProvider="openinary";d.img=""}await D.updateDoc(D.doc(db,"ads",id),d);if(priv)await D.setDoc(D.doc(db,"ads",id,"priv","info"),priv)},
  hasPw:()=>U().providerData.some(p=>p.providerId=="password"),
  async delAccount(pw){const u=U(),uid=u.uid;
   if(this.hasPw())await A.reauthenticateWithCredential(u,A.EmailAuthProvider.credential(u.email,pw));else await A.reauthenticateWithPopup(u,new A.GoogleAuthProvider());
