@@ -11,12 +11,19 @@ const ORIGINS = [
   "http://localhost:5000",
   "http://localhost:8080",
 ];
+// Custom HTTPS domains are allowed too. The API still validates Firebase identity
+// and Firestore permissions server-side; CORS is not used as authentication.
+function isAllowedOrigin(origin) {
+  if (ORIGINS.includes(origin)) return true;
+  try { const u = new URL(origin); return u.protocol === "https:" && u.origin === origin; }
+  catch { return false; }
+}
 
 export default {
   async fetch(req, env) {
     const reqOrigin = req.headers.get("Origin") || "";
     const cors = {
-      "Access-Control-Allow-Origin": ORIGINS.includes(reqOrigin) ? reqOrigin : ORIGINS[0],
+      "Access-Control-Allow-Origin": isAllowedOrigin(reqOrigin) ? reqOrigin : ORIGINS[0],
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Vary": "Origin",
@@ -30,7 +37,7 @@ export default {
     // Openinary: short-lived upload signature. The API key never leaves this Worker.
     if (new URL(req.url).pathname === "/api/openinary/sign") {
       if (req.method !== "POST") return fail("Method not allowed", 405);
-      if (!ORIGINS.includes(reqOrigin)) return fail("Bu saytga ruxsat berilmagan.", 403);
+      if (!isAllowedOrigin(reqOrigin)) return fail("Bu saytga ruxsat berilmagan.", 403);
       if (!env.OPENINARY_API_KEY) return fail("OPENINARY_API_KEY Worker Secret sifatida sozlanmagan.", 500);
 
       const idToken = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
