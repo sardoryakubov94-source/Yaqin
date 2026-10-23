@@ -107,7 +107,12 @@ service cloud.firestore {
               && request.resource.data.mediaUrl is string
               && request.resource.data.mediaUrl.matches('https://firebasestorage.googleapis.com/.*')
               && (get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid
-                || get(/databases/$(db)/documents/groups/$(gid)).data.get('mediaUploadMode', 'owner') == 'members')));
+                || get(/databases/$(db)/documents/groups/$(gid)).data.get('mediaUploadMode', 'owner') == 'members')))
+          && ((!('visibleAt' in request.resource.data) && !('expiresAt' in request.resource.data))
+            || (get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
+              && (!('visibleAt' in request.resource.data) || request.resource.data.visibleAt is int)
+              && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt is int)
+              && (!('visibleAt' in request.resource.data && 'expiresAt' in request.resource.data) || request.resource.data.expiresAt > request.resource.data.visibleAt)));
         allow delete: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
       }
       match /joinRequests/{uid} {
