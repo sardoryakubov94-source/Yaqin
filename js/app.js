@@ -230,16 +230,21 @@ const pcol={color:"#f0b34a",fillOpacity:.2};
 const mkPoly=P=>P.length>2?L.polygon(P,pcol):L.polyline(P,pcol);
 function drawMarkers(){if(!MAP||!window.L)return;if(MKL)MKL.remove();MKL=L.layerGroup().addTo(MAP);const g={};list().forEach(a=>{const p=pl(a.reg);if(p)(g[p.lat+","+p.lng]=g[p.lat+","+p.lng]||[]).push(a)});
  Object.entries(g).forEach(([n,l])=>{L.marker(n.split(",").map(Number),{icon:L.divIcon({className:"",html:`<div class="mk">${l.length}</div>`,iconSize:[36,36]})}).addTo(MKL).on("click",()=>{if(!st.dr.on)showPlace(n)})});polyRes()}
-function initMap(){const el=$("map");if(!el)return;if(!window.L){el.innerHTML='<div class="empty">Xarita kutubxonasi yuklanmadi. Internetni tekshiring va sahifani yangilang.</div>';return}
- try{if(MAP){try{MAP.remove()}catch(e){}MAP=null;MKL=null;DL=null}
- const m=MAP=L.map(el,{zoomControl:true}).setView(st.mv||[41.3,64.6],st.mz||5);
- let fails=0,prov=0;const T=[["https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png","© OpenStreetMap © CARTO"],["https://tile.openstreetmap.org/{z}/{x}/{y}.png","© OpenStreetMap"]];
- const addT=()=>{const t=L.tileLayer(T[prov][0],{maxZoom:18,attribution:T[prov][1]}).addTo(m);t.on("tileerror",()=>{if(++fails==4&&prov==0){prov=1;m.removeLayer(t);addT()}})};addT();
- drawMarkers();
- const P=st.dr.pts;if(P.length)DL=mkPoly(P).addTo(m);
- m.on("click",e=>{if(!st.dr.on)return;st.dr.pts.push([e.latlng.lat,e.latlng.lng]);if(DL)m.removeLayer(DL);DL=mkPoly(st.dr.pts).addTo(m);polyRes()});
- m.on("moveend",()=>{st.mv=[m.getCenter().lat,m.getCenter().lng];st.mz=m.getZoom()});
- setTimeout(()=>{if(MAP===m)m.invalidateSize()},200)}catch(e){el.innerHTML='<div class="empty">Xarita xatosi: '+esc(e.message)+'</div>'}}
+function initMap(){const el=$("map");if(!el)return;
+ if(!window.L){el.innerHTML='<div class="empty">Xarita kutubxonasi yuklanmadi. Internetni tekshiring va sahifani yangilang.</div>';return}
+ try{
+  if(MAP){try{MAP.off();MAP.remove()}catch(e){}MAP=null;MKL=null;DL=null}
+  const m=MAP=L.map(el,{zoomControl:true}).setView(st.mv||[41.3,64.6],st.mz||5);
+  const T=[["https://tile.openstreetmap.org/{z}/{x}/{y}.png","© OpenStreetMap contributors"],["https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png","© OpenStreetMap © CARTO"]];
+  let prov=0,fails=0,layer;
+  const addT=()=>{fails=0;layer=L.tileLayer(T[prov][0],{maxZoom:18,attribution:T[prov][1]});layer.on("tileerror",()=>{if(++fails>=4&&prov===0){prov=1;try{m.removeLayer(layer)}catch(e){}addT()}});layer.addTo(m)};
+  addT();
+  drawMarkers();
+  const P=st.dr.pts;if(P.length)DL=mkPoly(P).addTo(m);
+  m.on("click",e=>{if(!st.dr.on)return;st.dr.pts.push([e.latlng.lat,e.latlng.lng]);if(DL)m.removeLayer(DL);DL=mkPoly(st.dr.pts).addTo(m);polyRes()});
+  m.on("moveend",()=>{st.mv=[m.getCenter().lat,m.getCenter().lng];st.mz=m.getZoom()});
+  setTimeout(()=>{if(MAP===m)m.invalidateSize()},250)
+ }catch(e){el.innerHTML='<div class="empty">Xarita xatosi: '+esc(e.message)+'</div>'}}
 
 /* ===== toʻlov, admin, sevimlilar sinxronlash ===== */
 let PR={ad:10000,vip:20000,raise:10000},UA1,UA2,UPY,US;
