@@ -271,3 +271,10 @@ img,svg,video,canvas{max-width:100%}
 /* Kuzatuv rejimi (admin, aʼzo boʻlmasdan) */
 .send.obs>*{display:none!important}
 .send.obs::before{content:"👁 Kuzatuv rejimi: aʼzolar sizni koʻrmaydi, xabar yuborib boʻlmaydi";display:block;width:100%;text-align:center;color:var(--m);font-size:12px;padding:10px}
+
+/* Guruh xabar qatori: sana-vaqt maydonlari alohida qatorda, ekranga sigʻadi */
+.send{flex-wrap:wrap;box-sizing:border-box;max-width:100%}
+.send #mi{flex:1 1 0;min-width:0}
+.send .sch{order:-1;flex:1 1 calc(50% - 6px);min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--m)}
+.send .sch input{width:100%;max-width:none;min-width:0;box-sizing:border-box;font-size:12px;padding:8px 10px}
+.send button{flex:none}
