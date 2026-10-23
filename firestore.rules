@@ -83,9 +83,10 @@ service cloud.firestore {
     match /groups/{gid} {
       allow read: if signed();
       allow create: if signed() && request.resource.data.owner == request.auth.uid && request.resource.data.name is string
-        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40 && request.resource.data.n == 1;
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40 && request.resource.data.n == 1
+        && request.resource.data.get('visibility', 'open') in ['open','closed'];
       allow update: if isAdmin() || (signed() && ((request.auth.uid == resource.data.owner
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibility','visibilityUpdatedAt','mediaUploadMode','mediaPolicyAt','premiumUntil','premiumBy','premiumAt']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibility','visibilityUpdatedAt','mediaUploadMode','mediaPolicyAt']))
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n']) && (request.resource.data.n == resource.data.n + 1 || request.resource.data.n == resource.data.n - 1))));
       allow delete: if signed() && (request.auth.uid == resource.data.owner || isAdmin());
       match /members/{uid} {
