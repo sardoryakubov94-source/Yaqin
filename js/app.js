@@ -419,9 +419,10 @@ prof=function(){const h=oldProf3();if(!st.user)return h;return h+`<div style="te
 draw();
 
 /* Android/brauzer ortga tugmasi: avval oynani yopish, soʻng bosh sahifaga qaytish, bosh sahifada esa ikki marta bosib chiqish. */
-let backPressedAt=0;
+let backPressedAt=0,allowExitBack=false;
 function armYaqinBack(){try{history.pushState({yaqinBackTrap:true},"",location.href)}catch(e){}}
 addEventListener("popstate",()=>{
+ if(allowExitBack){allowExitBack=false;return}
  const now=Date.now();
  if(st.form||st.chat||st.swProfile||st.sw){
   if(st.chat)closeChat();
@@ -433,7 +434,7 @@ addEventListener("popstate",()=>{
   backPressedAt=0;armYaqinBack();return;
  }
  if(now-backPressedAt<2000){
-  backPressedAt=0;
+  backPressedAt=0;allowExitBack=true;
   history.back();
   return;
  }
