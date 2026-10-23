@@ -33,6 +33,7 @@ service cloud.firestore {
           || (request.resource.data.status == 'active'
               && !get(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false)
               && getAfter(/databases/$(db)/documents/users/$(request.auth.uid)).data.get('freeUsed', false) == true));
+      allow create: if isAdmin() && request.resource.data.isDemo == true && request.resource.data.uid == request.auth.uid && validAd(request.resource.data);
       allow update: if isAdmin() || (signed() && resource.data.uid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','age','reg','vil','about','ava','img','ints','pur','g','anon','profileDetails'])
         && (!('profileDetails' in request.resource.data) || (request.resource.data.profileDetails is map && request.resource.data.profileDetails.keys().hasOnly(['housing','living','work','car','education'])))
