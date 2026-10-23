@@ -103,6 +103,14 @@
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       call = { gid: ch.id, mode: "audio", channel, uid, client, audioTrack: null, videoTrack: null, muted: false, videoEnabled: false, leaving: false };
       GC = call;
+      const renewToken = async () => {
+        try {
+          const c = await FB.agoraToken(channel, uid);
+          await client.renewToken(c.token);
+        } catch (e) { console.warn("Agora token yangilanmadi:", e); }
+      };
+      client.on("token-privilege-will-expire", renewToken);
+      client.on("token-privilege-did-expire", renewToken);
       client.on("user-published", async (user, mediaType) => {
         if (GC !== call) return;
         await client.subscribe(user, mediaType);
