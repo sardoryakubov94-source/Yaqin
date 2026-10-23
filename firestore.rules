@@ -105,8 +105,12 @@ service cloud.firestore {
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
           && (request.resource.data.get('kind', '') != 'media'
             || (request.resource.data.mediaType in ['image','video']
-              && request.resource.data.mediaUrl is string
-              && request.resource.data.mediaUrl.matches('https://firebasestorage.googleapis.com/.*')
+              && ((request.resource.data.get('mediaProvider', '') == 'openinary'
+                  && request.resource.data.mediaPath is string
+                  && request.resource.data.mediaPath.size() <= 400
+                  && request.resource.data.mediaPath.matches('/?yaqin/groups/' + gid + '/.*'))
+                || (request.resource.data.get('mediaUrl', '') is string
+                  && request.resource.data.get('mediaUrl', '').matches('https://firebasestorage.googleapis.com/.*')))
               && (get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid
                 || get(/databases/$(db)/documents/groups/$(gid)).data.get('mediaUploadMode', 'owner') == 'members')))
           && ((!('visibleAt' in request.resource.data) && !('expiresAt' in request.resource.data))

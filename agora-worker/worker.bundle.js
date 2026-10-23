@@ -12,11 +12,7 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
 var __commonJS = (cb, mod) => function __require2() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e) {
-    throw mod = 0, e;
-  }
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -1723,11 +1719,20 @@ var ORIGINS = [
   "http://localhost:5000",
   "http://localhost:8080"
 ];
+function isAllowedOrigin(origin) {
+  if (ORIGINS.includes(origin)) return true;
+  try {
+    const u = new URL(origin);
+    return u.protocol === "https:" && u.origin === origin;
+  } catch {
+    return false;
+  }
+}
 var index_default = {
   async fetch(req, env) {
     const reqOrigin = req.headers.get("Origin") || "";
     const cors = {
-      "Access-Control-Allow-Origin": ORIGINS.includes(reqOrigin) ? reqOrigin : ORIGINS[0],
+      "Access-Control-Allow-Origin": isAllowedOrigin(reqOrigin) ? reqOrigin : ORIGINS[0],
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Vary": "Origin",
@@ -1736,6 +1741,82 @@ var index_default = {
     const out = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors });
     const fail = (error, status) => out({ error }, status);
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    if (new URL(req.url).pathname === "/api/openinary/sign") {
+      if (req.method !== "POST") return fail("Method not allowed", 405);
+      if (!isAllowedOrigin(reqOrigin)) return fail("Bu saytga ruxsat berilmagan.", 403);
+      if (!env.OPENINARY_API_KEY) return fail("OPENINARY_API_KEY Worker Secret sifatida sozlanmagan.", 500);
+      const idToken2 = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+      if (!idToken2) return fail("Avval Yaqin hisobingizga kiring.", 401);
+      let body2;
+      try {
+        body2 = await req.json();
+      } catch {
+        return fail("Noto\u02BBg\u02BBri so\u02BBrov.", 400);
+      }
+      if (!body2 || typeof body2 !== "object" || Array.isArray(body2)) return fail("Noto\u02BBg\u02BBri so\u02BBrov.", 400);
+      let uid2;
+      try {
+        uid2 = jwtUid(idToken2);
+      } catch {
+        return fail("Token noto\u02BBg\u02BBri.", 401);
+      }
+      if (!uid2 || typeof uid2 !== "string") return fail("Token noto\u02BBg\u02BBri.", 401);
+      const userCheck = await fetch(`${FS}/users/${encodeURIComponent(uid2)}`, {
+        headers: { Authorization: "Bearer " + idToken2, "User-Agent": "Yaqin-Openinary-Worker/1.0" }
+      });
+      if (userCheck.status === 401 || userCheck.status === 403) return fail("Sessiya yaroqsiz. Qayta kiring.", 401);
+      if (!userCheck.ok) return fail("Foydalanuvchi hisobini tekshirib bo\u02BBlmadi.", userCheck.status === 404 ? 403 : 502);
+      const scope = String(body2.scope || "");
+      let folder;
+      if (scope === "profile" || scope === "ads" || scope === "private") {
+        folder = `yaqin/users/${uid2}/${scope}`;
+      } else if (scope === "group") {
+        const gid2 = String(body2.groupId || "");
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(gid2)) return fail("Guruh ID noto\u02BBg\u02BBri.", 400);
+        const g2 = await fetch(`${FS}/groups/${encodeURIComponent(gid2)}`, {
+          headers: { Authorization: "Bearer " + idToken2, "User-Agent": "Yaqin-Openinary-Worker/1.0" }
+        });
+        if (g2.status === 401 || g2.status === 403) return fail("Guruhni tekshirish uchun ruxsat yo\u02BBq.", 403);
+        if (g2.status === 404) return fail("Guruh topilmadi.", 404);
+        if (!g2.ok) return fail("Guruhni tekshirib bo\u02BBlmadi.", 502);
+        const member = await fetch(`${FS}/groups/${encodeURIComponent(gid2)}/members/${encodeURIComponent(uid2)}`, {
+          headers: { Authorization: "Bearer " + idToken2, "User-Agent": "Yaqin-Openinary-Worker/1.0" }
+        });
+        if (member.status === 404 || member.status === 403) return fail("Faqat guruh a\u02BCzolari media yuklay oladi.", 403);
+        if (!member.ok) return fail("Guruh a\u02BCzoligini tekshirib bo\u02BBlmadi.", 502);
+        const group = (await g2.json()).fields || {};
+        const owner = group.owner?.stringValue || "";
+        const mediaMode = group.mediaUploadMode?.stringValue || "owner";
+        if (owner !== uid2 && mediaMode !== "members") return fail("Guruh egasi media yuklashga ruxsat bermagan.", 403);
+        folder = `yaqin/groups/${gid2}/${uid2}`;
+      } else {
+        return fail("Yuklash turi noto\u02BBg\u02BBri.", 400);
+      }
+      let signed;
+      try {
+        const sr = await fetch("https://cdn.openinary.dev/upload/sign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + env.OPENINARY_API_KEY,
+            "User-Agent": "Yaqin-Openinary-Worker/1.0"
+          },
+          body: JSON.stringify({ expiresIn: 300, folder })
+        });
+        let sd = {};
+        try {
+          sd = await sr.json();
+        } catch {
+        }
+        if (!sr.ok || !sd.success || !sd.signature || !sd.expires || !sd.folder) {
+          return fail(sd.error || "Openinary imzo bera olmadi.", sr.ok ? 502 : sr.status);
+        }
+        signed = { signature: sd.signature, expires: sd.expires, folder: sd.folder };
+      } catch {
+        return fail("Openinary xizmatiga ulanib bo\u02BBlmadi.", 502);
+      }
+      return out(signed);
+    }
     if (req.method !== "POST") return fail("Method not allowed", 405);
     if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);
     const idToken = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
