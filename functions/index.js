@@ -21,6 +21,11 @@ exports.agoraToken=onCall({secrets:[AGORA_APP_CERT]},async request=>{
   if(!/^yq_[A-Za-z0-9_-]{1,60}$/.test(channel)||!Number.isSafeInteger(uid)||uid<1||uid>4294967295){
     throw new HttpsError("invalid-argument","Kanal yoki foydalanuvchi ID notoʻgʻri.");
   }
+  // Bind Agora UID to the signed-in Firebase identity to prevent UID impersonation.
+  let expectedUid=2166136261;
+  for(const ch of request.auth.uid){expectedUid^=ch.charCodeAt(0);expectedUid=Math.imul(expectedUid,16777619)}
+  expectedUid=(expectedUid>>>0)||1;
+  if(uid!==expectedUid) throw new HttpsError("permission-denied","Foydalanuvchi ID mos kelmadi.");
   const gid=channel.slice(3);
   const [group,member]=await Promise.all([
     db.doc("groups/"+gid).get(),
