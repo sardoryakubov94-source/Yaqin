@@ -135,6 +135,51 @@ service cloud.firestore {
       }
     }
 
+
+    match /groupCalls/{gid} {
+      allow get: if signed() && member(gid);
+      allow list: if signed() && member(gid);
+      allow create: if signed() && member(gid)
+        && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
+        && request.resource.data.gid == gid && request.resource.data.owner == request.auth.uid
+        && request.resource.data.mode in ['audio','video'] && request.resource.data.active == true;
+      allow update: if signed() && member(gid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','endedAt'])
+        && request.resource.data.active == false;
+      allow delete: if signed() && member(gid) && request.auth.uid == resource.data.owner;
+      match /participants/{uid} {
+        allow read: if signed() && member(gid);
+        allow create, update: if signed() && request.auth.uid == uid && member(gid)
+          && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
+          && request.resource.data.uid == uid && request.resource.data.mode in ['audio','video'];
+        allow delete: if signed() && request.auth.uid == uid && member(gid);
+      }
+      match /signals/{sid} {
+        allow read: if signed() && member(gid);
+        allow create: if signed() && member(gid)
+          && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
+          && request.resource.data.caller == request.auth.uid
+          && request.resource.data.callee is string
+          && exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.resource.data.callee))
+          && request.resource.data.offer.sdp is string;
+        allow update: if signed() && member(gid)
+          && request.auth.uid == resource.data.callee
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer','answeredAt'])
+          && request.resource.data.answer.sdp is string;
+        allow delete: if signed() && member(gid)
+          && (request.auth.uid == resource.data.caller || request.auth.uid == resource.data.callee);
+        match /candidates/{cid} {
+          allow read: if signed() && member(gid);
+          allow create: if signed() && member(gid)
+            && request.resource.data.from == request.auth.uid
+            && (request.auth.uid == get(/databases/$(db)/documents/groupCalls/$(gid)/signals/$(sid)).data.caller
+              || request.auth.uid == get(/databases/$(db)/documents/groupCalls/$(gid)/signals/$(sid)).data.callee)
+            && request.resource.data.candidate is map;
+          allow update, delete: if false;
+        }
+      }
+    }
+
     match /notifs/{id} {
       allow read: if signed() && resource.data.to == request.auth.uid;
       allow create: if signed() && request.resource.data.to is string
