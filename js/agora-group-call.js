@@ -49,33 +49,7 @@
         updateButtons(call);
       } catch (e) { call.muted = !call.muted; uiAlert("Mikrofonni almashtirib boʻlmadi: " + (e?.message || e)); }
     };
-    if (cam) cam.onclick = async () => {
-      if (GC !== call) return;
-      try {
-        if (call.videoTrack) {
-          await call.client.unpublish(call.videoTrack);
-          call.videoTrack.stop();
-          call.videoTrack.close();
-          call.videoTrack = null;
-          document.getElementById("agora_local")?.querySelector(".agora-media")?.replaceChildren();
-          setStatus("🎙️ Ovozli chat yoniq · video oʻchirilgan");
-        } else {
-          call.videoTrack = await AgoraRTC.createCameraVideoTrack({ encoderConfig: "360p_7" });
-          await call.client.publish(call.videoTrack);
-          const el = node("local", "Siz");
-          if (el) call.videoTrack.play(el);
-          setStatus("🎙️ Ovozli chat yoniq · 📹 video ham yoqilgan");
-        }
-        call.videoEnabled = !!call.videoTrack;
-        updateButtons(call);
-      } catch (e) {
-        if (call.videoTrack && !call.videoEnabled) {
-          try { call.videoTrack.close(); } catch (_) {}
-          call.videoTrack = null;
-        }
-        uiAlert("Videoni yoqib/oʻchirib boʻlmadi: " + (e?.message || e) + ". Kamera ruxsatini tekshiring.");
-      }
-    };
+    if (cam) cam.onclick = () => toggleCamera(call);
     updateButtons(call);
   }
   async function startGroupCall(mode) {
@@ -116,7 +90,7 @@
         await client.subscribe(user, mediaType);
         if (mediaType === "audio" && user.audioTrack) user.audioTrack.play();
         if (mediaType === "video" && user.videoTrack) {
-          const el = node(user.uid, "Guruh aʼzosi " + String(user.uid).slice(-5));
+          const el = node(user.uid, (call.names && call.names[user.uid]) || ("Guruh aʼzosi " + String(user.uid).slice(-5)));
           if (el) user.videoTrack.play(el);
         }
       });
@@ -126,6 +100,15 @@
       call.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       await client.publish([call.audioTrack]);
       await FB.groupCallEnter(ch.id, "audio");
+      call.names = {};
+      call.unsubNames = FB.groupCallParticipants(ch.id, ps => {
+        for (const p of ps) {
+          const k = uidFor(p.uid);
+          call.names[k] = p.name || "Aʼzo";
+          const el = document.querySelector("#agora_" + k + " .agora-name");
+          if (el) el.textContent = call.names[k];
+        }
+      });
       draw();
       const panel = document.getElementById("groupCallPanel");
       if (panel) panel.style.display = "block";
@@ -174,6 +157,7 @@
     const call = GC;
     if (!call) return;
     GC = null;
+    try { call.unsubNames && call.unsubNames(); } catch (_) {}
     try { call.audioTrack?.stop(); call.audioTrack?.close(); } catch (_) {}
     try { call.videoTrack?.stop(); call.videoTrack?.close(); } catch (_) {}
     try { await call.client?.leave(); } catch (e) { console.warn("Agora leave:", e); }
@@ -181,6 +165,7 @@
     try { await FB.groupCallLeave(call.gid); } catch (e) { console.warn("Guruh qoʻngʻirogʻidan chiqish:", e); }
     if (!silent && st?.chat?.id === call.gid) draw();
   }
+  window.addEventListener("pagehide", () => { try { GC && GC.client && GC.client.leave(); } catch (_) {} });
   window.startGroupCall = startGroupCall;
   window.leaveGroupCall = leaveGroupCall;
 })();
