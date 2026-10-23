@@ -78,6 +78,18 @@ window.FB={
   try{await S.deleteObject(S.ref(sto,`avatars/${uid}.jpg`))}catch(e){}
   await A.deleteUser(u)},
  async photo(data){const url=await up(`avatars/${U().uid}.jpg`,data);await D.setDoc(uref(U().uid),{img:url},{merge:true});return url}
+
+ groupCallRoom:(gid,cb)=>D.onSnapshot(D.doc(db,"groupCalls",gid),s=>cb(s.exists()?{...s.data(),id:s.id}:null),e=>console.error("Guruh qoʻngʻirogʻi:",e)),
+ groupCallParticipants:(gid,cb)=>D.onSnapshot(D.collection(db,"groupCalls",gid,"participants"),s=>cb(s.docs.map(d=>({...d.data(),uid:d.id}))),e=>console.error("Qoʻngʻiroq aʼzolari:",e)),
+ async groupCallEnter(gid,mode){const u=U();if(!u)throw new Error("Avval tizimga kiring");const gr=await D.getDoc(D.doc(db,"groups",gid));if(!gr.exists())throw new Error("Guruh topilmadi");if(Number(gr.data().premiumUntil)<=Date.now())throw new Error("Ovozli suhbat va jonli video uchun faol Premium kerak");if(!(await D.getDoc(D.doc(db,"groups",gid,"members",u.uid))).exists())throw new Error("Faqat guruh aʼzolari qoʻngʻiroqqa kira oladi");const room=D.doc(db,"groupCalls",gid),rs=await D.getDoc(room);if(rs.exists()&&rs.data().active&&rs.data().mode!==mode)throw new Error("Guruhda boshqa turdagi qoʻngʻiroq ketmoqda");if(!rs.exists()||!rs.data().active)await D.setDoc(room,{gid,owner:u.uid,mode,active:true,startedAt:Date.now()});const us=await D.getDoc(uref(u.uid));await D.setDoc(D.doc(db,"groupCalls",gid,"participants",u.uid),{uid:u.uid,name:us.data()?.name||u.displayName||"Aʼzo",mode,joinedAt:Date.now()});return true},
+ groupCallLeave:async(gid)=>{const u=U();if(!u)return;await D.deleteDoc(D.doc(db,"groupCalls",gid,"participants",u.uid)).catch(()=>{});const ps=await D.getDocs(D.collection(db,"groupCalls",gid,"participants"));if(ps.empty)await D.setDoc(D.doc(db,"groupCalls",gid),{active:false,endedAt:Date.now()},{merge:true})},
+ groupCallSignals:(gid,field,uid,cb)=>D.onSnapshot(D.query(D.collection(db,"groupCalls",gid,"signals"),D.where(field,"==",uid)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error("Signal:",e)),
+ groupCallSignal:(gid,id,cb)=>D.onSnapshot(D.doc(db,"groupCalls",gid,"signals",id),s=>cb(s.exists()?{...s.data(),id:s.id}:null),e=>console.error("Signal:",e)),
+ groupCallCandidates:(gid,id,cb)=>D.onSnapshot(D.collection(db,"groupCalls",gid,"signals",id,"candidates"),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error("ICE:",e)),
+ groupCallOffer:(gid,caller,callee,offer)=>D.setDoc(D.doc(db,"groupCalls",gid,"signals",caller+"_"+callee),{caller,callee,offer:{type:offer.type,sdp:offer.sdp},answer:null,createdAt:Date.now()}),
+ groupCallAnswer:(gid,id,answer)=>D.updateDoc(D.doc(db,"groupCalls",gid,"signals",id),{answer:{type:answer.type,sdp:answer.sdp},answeredAt:Date.now()}),
+ groupCallAddCandidate:(gid,id,candidate,from)=>D.addDoc(D.collection(db,"groupCalls",gid,"signals",id,"candidates"),{from,candidate:candidate.toJSON?candidate.toJSON():candidate,t:Date.now()}),
+
 };
 dispatchEvent(new Event("fb-ready"));
 }catch(e){console.error("Firebase init xatosi:",e)}
