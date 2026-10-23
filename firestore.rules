@@ -143,9 +143,12 @@ service cloud.firestore {
         && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
         && request.resource.data.gid == gid && request.resource.data.owner == request.auth.uid
         && request.resource.data.mode in ['audio','video'] && request.resource.data.active == true;
-      allow update: if signed() && member(gid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','endedAt'])
-        && request.resource.data.active == false;
+      allow update: if signed() && member(gid) && (
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','endedAt']) && request.resource.data.active == false)
+        || (!resource.data.active && request.resource.data.active == true
+          && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
+          && request.resource.data.gid == gid && request.resource.data.owner == request.auth.uid
+          && request.resource.data.mode in ['audio','video'] && request.resource.data.startedAt is int));
       allow delete: if signed() && member(gid) && request.auth.uid == resource.data.owner;
       match /participants/{uid} {
         allow read: if signed() && member(gid);
