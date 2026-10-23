@@ -1,20 +1,20 @@
 const G="https://www.gstatic.com/firebasejs/10.14.1/";
-const {initializeApp}=await import(G+"firebase-app.js");
-const A=await import(G+"firebase-auth.js"),D=await import(G+"firebase-firestore.js"),S=await import(G+"firebase-storage.js");
+const [{initializeApp},A,D,S]=await Promise.all([import(G+"firebase-app.js"),import(G+"firebase-auth.js"),import(G+"firebase-firestore.js"),import(G+"firebase-storage.js")]);
 const cfg=(await import("./firebase-config.js")).default;
 try{
 const app=initializeApp(cfg),auth=A.getAuth(app),db=D.getFirestore(app),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
 const U=()=>auth.currentUser,uref=u=>D.doc(db,"users",u);
-async function profile(u){const s=await D.getDoc(uref(u.uid)),d=s.exists()?s.data():{};return{uid:u.uid,email:u.email,name:d.name||u.displayName||u.email.split("@")[0],phone:d.phone||"",img:d.img||u.photoURL||"",groups:d.groups||[],prefs:d.prefs||null,favs:d.favs||null,freeUsed:!!d.freeUsed}}
+async function profile(u){const s=await D.getDoc(uref(u.uid)),d=s.exists()?s.data():{};const p={uid:u.uid,email:u.email,name:d.name||u.displayName||u.email.split("@")[0],phone:d.phone||"",img:d.img||u.photoURL||"",groups:d.groups||[],prefs:d.prefs||null,favs:d.favs||null,freeUsed:!!d.freeUsed};try{localStorage.setItem("yqProfile:"+u.uid,JSON.stringify(p))}catch(e){}return p}
+function fastProfile(u){let cached={};try{cached=JSON.parse(localStorage.getItem("yqProfile:"+u.uid)||"{}")}catch(e){}return{...cached,uid:u.uid,email:u.email||cached.email||"",name:cached.name||u.displayName||(u.email||"").split("@")[0]||"Foydalanuvchi",phone:cached.phone||"",img:cached.img||u.photoURL||"",groups:cached.groups||[],prefs:cached.prefs||null,favs:cached.favs||null,freeUsed:!!cached.freeUsed,_profileLoading:true}}
 window.YQ_NO_STORAGE=true; // Firebase Storage (Blaze) ishlatilmaydi: rasmlar siqilgan holda Firestore hujjatida saqlanadi
 async function up(path,data){if(window.YQ_NO_STORAGE)return data;const r=S.ref(sto,path);await S.uploadString(r,data,"data_url");return S.getDownloadURL(r)}
 window.FB={
- onUser:cb=>A.onAuthStateChanged(auth,async u=>cb(u?await profile(u):null)),
+ onUser:cb=>A.onAuthStateChanged(auth,u=>{if(!u){cb(null);return}const fast=fastProfile(u);cb(fast);profile(u).then(cb).catch(e=>{console.error("Profilni yangilashda xato:",e);cb(fast)})}),
  async signUp(e,p,name,phone){const c=await A.createUserWithEmailAndPassword(auth,e,p);await A.updateProfile(c.user,{displayName:name});await D.setDoc(uref(c.user.uid),{name,phone,email:e,t:Date.now()});return profile(c.user)},
  async signIn(e,p){return profile((await A.signInWithEmailAndPassword(auth,e,p)).user)},
  async google(){const u=(await A.signInWithPopup(auth,new A.GoogleAuthProvider())).user;if(!(await D.getDoc(uref(u.uid))).exists())await D.setDoc(uref(u.uid),{name:u.displayName||"",phone:"",email:u.email,img:u.photoURL||"",t:Date.now()});return profile(u)},
  reset:e=>A.sendPasswordResetEmail(auth,e),out:()=>A.signOut(auth),
- ads:cb=>D.onSnapshot(D.query(D.collection(db,"ads"),D.limit(200)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(Number(b.t)||0)-(Number(a.t)||0))),e=>console.error("Eʼlonlarni yuklashda xato:",e)),
+ ads:cb=>D.onSnapshot(D.query(D.collection(db,"ads"),D.limit(60)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(Number(b.t)||0)-(Number(a.t)||0))),e=>console.error("Eʼlonlarni yuklashda xato:",e)),
  async addAd(d,free){const u=U(),{_priv,...ad}=d;let img=ad.img;if(img&&img.startsWith("data:"))img=await up(`ads/${u.uid}/${Date.now()}.jpg`,img);const r=D.doc(D.collection(db,"ads")),data={...ad,img:img||"",uid:u.uid,t:Date.now()};if(free){const b=D.writeBatch(db);b.set(r,data);b.set(uref(u.uid),{freeUsed:true},{merge:true});await b.commit()}else await D.setDoc(r,data);if(_priv)await D.setDoc(D.doc(db,"ads",r.id,"priv","info"),_priv);return r.id},
  upAd:(id,x)=>D.updateDoc(D.doc(db,"ads",id),x),async delAd(id){try{await D.deleteDoc(D.doc(db,"ads",id,"priv","info"))}catch(e){}await D.deleteDoc(D.doc(db,"ads",id))},
  saveUser:x=>D.setDoc(uref(U().uid),x,{merge:true}),
