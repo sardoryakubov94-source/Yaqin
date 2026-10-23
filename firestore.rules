@@ -51,6 +51,7 @@ service cloud.firestore {
       allow read: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
       allow update: if isAdmin();
     }
+    match /auditLogs/{id} { allow create: if isAdmin() && request.resource.data.by == request.auth.uid; allow read: if isAdmin(); }
     match /reports/{id} { allow create: if signed() && request.resource.data.by == request.auth.uid; allow read, delete: if isAdmin(); }
     match /priv/{uid} { allow read, write: if signed() && request.auth.uid == uid; }
     match /swipes/{id} {
@@ -99,7 +100,7 @@ service cloud.firestore {
           || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
       }
       match /msgs/{mid} {
-        allow read: if signed() && member(gid);
+        allow read: if signed() && (member(gid) || isAdmin());
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
           && (request.resource.data.get('kind', '') != 'media'
