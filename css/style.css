@@ -174,3 +174,19 @@ img,svg,video,canvas{max-width:100%}
 .avatar-option.upload-avatar{grid-column:1/-1;min-height:48px!important;height:48px;flex-direction:row;gap:10px;padding:0 14px;border-radius:14px}
 .avatar-option.upload-avatar svg{width:20px;height:20px;flex:none}
 .avatar-option.upload-avatar span{font-size:13px!important;line-height:1.2}
+
+/* Oʻz rasmim paneli (galereyadan yuklangan) */
+.mp-hint{grid-column:1/-1;font-size:12px;line-height:1.4;color:var(--m);margin:-2px 2px 2px;display:flex;gap:6px;align-items:flex-start}
+.mp-hint svg{flex:none;margin-top:1px;color:var(--a)}
+.my-photo{grid-column:1/-1;display:flex;gap:12px;align-items:center;padding:10px;border-radius:16px;background:var(--c2);border:1.5px solid #ffffff1a;min-width:0}
+.my-photo.pub{border-color:var(--g)}
+.my-photo.priv{border-color:var(--a);background:#2c2536}
+.my-photo>img{width:76px;height:76px;flex:none;border-radius:50%;object-fit:cover;border:2px solid var(--a)}
+.my-photo.pub>img{border-color:var(--g)}
+.mp-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.mp-t b{font-size:14px}
+.mp-t small{font-size:12px;line-height:1.35;color:var(--m);display:flex;gap:6px;align-items:flex-start}
+.mp-t small svg{flex:none;margin-top:1px;color:var(--a)}
+.mp-a{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+.mp-a button{padding:7px 12px;border-radius:10px;background:#ffffff14;font-size:12px;font-weight:700;color:var(--t)}
+.mp-a button.del{color:#ff7a70}
