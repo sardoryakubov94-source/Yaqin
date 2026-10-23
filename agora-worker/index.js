@@ -33,7 +33,7 @@ export default {
       if (!ORIGINS.includes(reqOrigin)) return fail("Bu saytga ruxsat berilmagan.", 403);
       if (!env.OPENINARY_API_KEY) return fail("OPENINARY_API_KEY Worker Secret sifatida sozlanmagan.", 500);
 
-      const idToken = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+      const idToken = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
       if (!idToken) return fail("Avval Yaqin hisobingizga kiring.", 401);
 
       let body;
