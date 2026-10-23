@@ -99,6 +99,24 @@ service cloud.firestore {
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
         allow delete: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
       }
+      match /joinRequests/{uid} {
+        allow get: if signed() && (request.auth.uid == uid
+          || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
+        allow list: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
+        allow create: if signed() && request.auth.uid == uid
+          && request.resource.data.uid == uid && request.resource.data.status == 'pending'
+          && exists(/databases/$(db)/documents/groups/$(gid));
+        allow update: if signed() && (
+          (get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid
+            && resource.data.status == 'pending'
+            && request.resource.data.status in ['approved','rejected']
+            && request.resource.data.uid == resource.data.uid)
+          || (request.auth.uid == uid && resource.data.status == 'rejected'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.uid == uid));
+        allow delete: if signed() && (request.auth.uid == uid
+          || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
+      }
     }
 
     match /notifs/{id} {
