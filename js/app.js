@@ -245,6 +245,9 @@ function initMap(){const el=$("map");if(!el)return;
   let prov=0,fails=0,layer;
   const addT=()=>{fails=0;layer=L.tileLayer(T[prov][0],{maxZoom:18,attribution:T[prov][1]});layer.on("tileerror",()=>{if(++fails>=4&&prov===0){prov=1;try{m.removeLayer(layer)}catch(e){}addT()}});layer.addTo(m)};
   addT();
+  const locate=L.control({position:"bottomright"});
+  locate.onAdd=()=>{const box=L.DomUtil.create("div","leaflet-bar yaqin-locate-control");box.innerHTML='<button type="button" aria-label="Mening joyim" title="Mening joyim">'+I("pin",19)+'</button>';L.DomEvent.disableClickPropagation(box);L.DomEvent.on(box.querySelector("button"),"click",e=>{L.DomEvent.stop(e);getMyLocation()});return box};
+  locate.addTo(m);
   drawMarkers();
   const P=st.dr.pts;if(P.length)DL=mkPoly(P).addTo(m);if(st.areaGeo){DL=L.geoJSON(st.areaGeo,{style:{color:"#43a5ff",weight:3,fillColor:"#43a5ff",fillOpacity:.10}}).addTo(m);m.fitBounds(DL.getBounds(),{padding:[20,20],maxZoom:st.areaDistrict?12:8});}
   m.on("click",e=>{if(!st.dr.on)return;st.dr.pts.push([e.latlng.lat,e.latlng.lng]);if(DL)m.removeLayer(DL);DL=mkPoly(st.dr.pts).addTo(m);polyRes()});
