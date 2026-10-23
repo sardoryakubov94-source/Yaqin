@@ -26,6 +26,80 @@ export default {
     const fail = (error, status) => out({ error }, status);
 
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+
+    // Openinary: short-lived upload signature. The API key never leaves this Worker.
+    if (new URL(req.url).pathname === "/api/openinary/sign") {
+      if (req.method !== "POST") return fail("Method not allowed", 405);
+      if (!ORIGINS.includes(reqOrigin)) return fail("Bu saytga ruxsat berilmagan.", 403);
+      if (!env.OPENINARY_API_KEY) return fail("OPENINARY_API_KEY Worker Secret sifatida sozlanmagan.", 500);
+
+      const idToken = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+      if (!idToken) return fail("Avval Yaqin hisobingizga kiring.", 401);
+
+      let body;
+      try { body = await req.json(); } catch { return fail("Notoʻgʻri soʻrov.", 400); }
+      if (!body || typeof body !== "object" || Array.isArray(body)) return fail("Notoʻgʻri soʻrov.", 400);
+      let uid;
+      try { uid = jwtUid(idToken); } catch { return fail("Token notoʻgʻri.", 401); }
+      if (!uid || typeof uid !== "string") return fail("Token notoʻgʻri.", 401);
+
+      // Firestore checks the Firebase ID token and the user's own-document rules.
+      const userCheck = await fetch(`${FS}/users/${encodeURIComponent(uid)}`, {
+        headers: { Authorization: "Bearer " + idToken, "User-Agent": "Yaqin-Openinary-Worker/1.0" },
+      });
+      if (userCheck.status === 401 || userCheck.status === 403) return fail("Sessiya yaroqsiz. Qayta kiring.", 401);
+      if (!userCheck.ok) return fail("Foydalanuvchi hisobini tekshirib boʻlmadi.", userCheck.status === 404 ? 403 : 502);
+
+      const scope = String(body.scope || "");
+      let folder;
+      if (scope === "profile" || scope === "ads" || scope === "private") {
+        folder = `yaqin/users/${uid}/${scope}`;
+      } else if (scope === "group") {
+        const gid = String(body.groupId || "");
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(gid)) return fail("Guruh ID notoʻgʻri.", 400);
+        const g = await fetch(`${FS}/groups/${encodeURIComponent(gid)}`, {
+          headers: { Authorization: "Bearer " + idToken, "User-Agent": "Yaqin-Openinary-Worker/1.0" },
+        });
+        if (g.status === 401 || g.status === 403) return fail("Guruhni tekshirish uchun ruxsat yoʻq.", 403);
+        if (g.status === 404) return fail("Guruh topilmadi.", 404);
+        if (!g.ok) return fail("Guruhni tekshirib boʻlmadi.", 502);
+        const member = await fetch(`${FS}/groups/${encodeURIComponent(gid)}/members/${encodeURIComponent(uid)}`, {
+          headers: { Authorization: "Bearer " + idToken, "User-Agent": "Yaqin-Openinary-Worker/1.0" },
+        });
+        if (member.status === 404 || member.status === 403) return fail("Faqat guruh aʼzolari media yuklay oladi.", 403);
+        if (!member.ok) return fail("Guruh aʼzoligini tekshirib boʻlmadi.", 502);
+        const group = (await g.json()).fields || {};
+        const owner = group.owner?.stringValue || "";
+        const mediaMode = group.mediaUploadMode?.stringValue || "owner";
+        if (owner !== uid && mediaMode !== "members") return fail("Guruh egasi media yuklashga ruxsat bermagan.", 403);
+        folder = `yaqin/groups/${gid}/${uid}`;
+      } else {
+        return fail("Yuklash turi notoʻgʻri.", 400);
+      }
+
+      let signed;
+      try {
+        const sr = await fetch("https://cdn.openinary.dev/upload/sign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + env.OPENINARY_API_KEY,
+            "User-Agent": "Yaqin-Openinary-Worker/1.0",
+          },
+          body: JSON.stringify({ expiresIn: 300, folder }),
+        });
+        let sd = {};
+        try { sd = await sr.json(); } catch {}
+        if (!sr.ok || !sd.success || !sd.signature || !sd.expires || !sd.folder) {
+          return fail(sd.error || "Openinary imzo bera olmadi.", sr.ok ? 502 : sr.status);
+        }
+        signed = { signature: sd.signature, expires: sd.expires, folder: sd.folder };
+      } catch {
+        return fail("Openinary xizmatiga ulanib boʻlmadi.", 502);
+      }
+      return out(signed);
+    }
+
     if (req.method !== "POST") return fail("Method not allowed", 405);
     if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);
 
