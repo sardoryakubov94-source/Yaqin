@@ -45,9 +45,11 @@ h3{margin:14px 0 8px}
 .hd button{background:none;font-size:22px;padding:4px 10px}
 .menu{position:absolute;right:10px;top:54px;background:var(--c2);border-radius:14px;padding:6px;z-index:3;box-shadow:0 8px 24px #0008}
 .menu button{display:flex;gap:10px;align-items:center;background:none;padding:10px 14px;text-align:left;white-space:nowrap;width:100%}
-.msgs{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
-.m{max-width:80%;padding:9px 12px;border-radius:16px;background:var(--c2)}
+.msgs{flex:1;min-height:0;overflow:auto;padding:8px 9px;display:flex;flex-direction:column;gap:5px}
+.m{max-width:84%;padding:6px 9px;border-radius:13px;background:var(--c2);font-size:14px;line-height:1.35;overflow-wrap:anywhere}
 .m.me{align-self:flex-end;background:#6b3a64}
+.m small{display:block;color:#ffffff80;font-size:10px;margin-top:1px;text-align:right;line-height:1.2}
+.m b{display:block;font-size:11px;color:var(--a);margin-bottom:1px}
 .cons{background:#2c2347;border:1px solid var(--a);margin:8px 12px 0;border-radius:16px;padding:12px;position:relative}
 .cons .x{position:absolute;right:8px;top:4px;background:none;font-size:20px;color:var(--m)}
 .send{display:flex;gap:8px;padding:10px;background:var(--c)}.send input{flex:1}
