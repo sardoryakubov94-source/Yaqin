@@ -1,5 +1,5 @@
 const G="https://www.gstatic.com/firebasejs/10.14.1/";
-const [{initializeApp},A,D,S]=await Promise.all([import(G+"firebase-app.js"),import(G+"firebase-auth.js"),import(G+"firebase-firestore.js"),import(G+"firebase-storage.js")]);
+const [{initializeApp},A,D,S,F]=await Promise.all([import(G+"firebase-app.js"),import(G+"firebase-auth.js"),import(G+"firebase-firestore.js"),import(G+"firebase-storage.js"),import(G+"firebase-functions.js")]);
 const cfg=(await import("./firebase-config.js")).default;
 try{
 const app=initializeApp(cfg),auth=A.getAuth(app),db=D.getFirestore(app),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
@@ -83,6 +83,7 @@ window.FB={
   try{await S.deleteObject(S.ref(sto,`avatars/${uid}.jpg`))}catch(e){}
   await A.deleteUser(u)},
  async photo(data){const url=await up(`avatars/${U().uid}.jpg`,data);await D.setDoc(uref(U().uid),{img:url},{merge:true});return url},
+ agoraToken:async(channel,uid)=>{const functions=F.getFunctions(app,"us-central1");const issue=F.httpsCallable(functions,"agoraToken");const result=await issue({channel,uid});return result.data},
  groupCallRoom:(gid,cb)=>D.onSnapshot(D.doc(db,"groupCalls",gid),s=>cb(s.exists()?{...s.data(),id:s.id}:null),e=>console.error("Guruh qoʻngʻirogʻi:",e)),
  groupCallParticipants:(gid,cb)=>D.onSnapshot(D.collection(db,"groupCalls",gid,"participants"),s=>cb(s.docs.map(d=>({...d.data(),uid:d.id}))),e=>console.error("Qoʻngʻiroq aʼzolari:",e)),
  async groupCallEnter(gid,mode){const u=U();if(!u)throw new Error("Avval tizimga kiring");const gr=await D.getDoc(D.doc(db,"groups",gid));if(!gr.exists())throw new Error("Guruh topilmadi");if(Number(gr.data().premiumUntil)<=Date.now())throw new Error("Ovozli suhbat va jonli video uchun faol Premium kerak");if(!(await D.getDoc(D.doc(db,"groups",gid,"members",u.uid))).exists())throw new Error("Faqat guruh aʼzolari qoʻngʻiroqqa kira oladi");const room=D.doc(db,"groupCalls",gid),rs=await D.getDoc(room);if(rs.exists()&&rs.data().active&&rs.data().mode!==mode)throw new Error("Guruhda boshqa turdagi qoʻngʻiroq ketmoqda");if(!rs.exists()||!rs.data().active)await D.setDoc(room,{gid,owner:u.uid,mode,active:true,startedAt:Date.now()});const us=await D.getDoc(uref(u.uid));await D.setDoc(D.doc(db,"groupCalls",gid,"participants",u.uid),{uid:u.uid,name:us.data()?.name||u.displayName||"Aʼzo",mode,joinedAt:Date.now()});return true},
