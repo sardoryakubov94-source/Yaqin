@@ -417,3 +417,29 @@ async function delAcc(){const f=fb();if(!f)return;if(!await uiConfirm("Hisobingi
 const oldProf3=prof;
 prof=function(){const h=oldProf3();if(!st.user)return h;return h+`<div style="text-align:center;margin:20px 0 6px;font-size:13px"><a href="privacy.html" target="_blank" style="color:var(--m)">Maxfiylik siyosati</a> · <a href="terms.html" target="_blank" style="color:var(--m)">Foydalanish shartlari</a></div><button class="ghost" style="width:100%;margin-top:8px;color:#e5554a;font-size:13px" onclick="delAcc()">Hisobni oʻchirish</button>`};
 draw();
+
+/* Android/brauzer ortga tugmasi: avval oynani yopish, soʻng bosh sahifaga qaytish, bosh sahifada esa ikki marta bosib chiqish. */
+let backPressedAt=0;
+function armYaqinBack(){try{history.pushState({yaqinBackTrap:true},"",location.href)}catch(e){}}
+addEventListener("popstate",()=>{
+ const now=Date.now();
+ if(st.form||st.chat||st.swProfile||st.sw){
+  if(st.chat)closeChat();
+  else{st.form=null;st.swProfile=false;st.sw=false;draw()}
+  armYaqinBack();return;
+ }
+ if(st.tab!=="home"){
+  st.tab="home";st.chat=null;st.form=null;st.sw=false;st.swProfile=false;draw();
+  backPressedAt=0;armYaqinBack();return;
+ }
+ if(now-backPressedAt<2000){
+  backPressedAt=0;
+  history.back();
+  return;
+ }
+ backPressedAt=now;
+ toast("Dasturdan chiqish uchun yana bir marta ortga bosing");
+ armYaqinBack();
+});
+armYaqinBack();
+
