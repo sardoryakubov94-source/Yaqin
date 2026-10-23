@@ -262,3 +262,8 @@ img,svg,video,canvas{max-width:100%}
 .rp b{font-size:17px}.rp small{color:var(--m);font-size:12px;line-height:1.4;margin-bottom:4px}
 .rp button{padding:13px 14px;border-radius:14px;background:#ffffff12;color:var(--t);font-size:14px;font-weight:600;text-align:left}
 .rp button.cn{background:transparent;text-align:center;color:var(--m)}
+
+/* Pastki menyu: yozuvlar bir qatorda, + tugmasi kattaroq */
+.nav button:not(.plus){white-space:nowrap;font-size:10px;padding:0;overflow:visible}
+.nav button:not(.plus) svg{flex:none}
+.nav .plus{width:66px;height:66px;margin-top:-28px;box-shadow:0 6px 18px #f0b34a55}
