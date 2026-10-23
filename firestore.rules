@@ -89,7 +89,9 @@ service cloud.firestore {
       allow delete: if signed() && (request.auth.uid == resource.data.owner || isAdmin());
       match /members/{uid} {
         allow read: if signed();
-        allow create: if signed() && request.auth.uid == uid;
+        allow create: if signed() && request.auth.uid == uid
+          && (get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid
+            || get(/databases/$(db)/documents/groups/$(gid)/joinRequests/$(uid)).data.status == 'approved');
         allow delete: if signed() && (request.auth.uid == uid
           || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
       }
