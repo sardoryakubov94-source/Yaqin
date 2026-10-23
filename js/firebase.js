@@ -5,12 +5,12 @@ try{
 const app=initializeApp(cfg),auth=A.getAuth(app),db=D.getFirestore(app),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
 const U=()=>auth.currentUser,uref=u=>D.doc(db,"users",u);
 const OPENINARY_BASE="https://cdn.openinary.dev",OPENINARY_BUCKET="76b38502-642f-4fad-8b1f-0cc4c7b351e8";
-const openinaryUrl=path=>OPENINARY_BASE+"/b/"+OPENINARY_BUCKET+"/t/"+String(path||"").replace(/^\\/+/, "");
+function openinaryUrl(path){let p=String(path||"");while(p.startsWith("/"))p=p.slice(1);return OPENINARY_BASE+"/b/"+OPENINARY_BUCKET+"/t/"+p}
 function openinaryPath(url){const prefix=OPENINARY_BASE+"/b/"+OPENINARY_BUCKET+"/t/";return typeof url==="string"&&url.startsWith(prefix)?url.slice(prefix.length):""}
-function resolveMediaRef(value){if(!value)return "";if(typeof value!=="string")return "";if(value.startsWith("data:")||/^https?:\\/\\//i.test(value))return openinaryPath(value)?openinaryUrl(openinaryPath(value)):value;return openinaryUrl(value)}
+function resolveMediaRef(value){if(!value||typeof value!=="string")return "";if(value.startsWith("data:")||value.startsWith("http://")||value.startsWith("https://"))return openinaryPath(value)?openinaryUrl(openinaryPath(value)):value;return openinaryUrl(value)}
 async function signOpeninary(scope,groupId){
  const u=U();if(!u)throw new Error("Avval Yaqin hisobingizga kiring.");
- const worker=String(window.CFG?.AGORA_TOKEN_URL||"").replace(/\\/+$/,"");
+ let worker=String(window.CFG?.AGORA_TOKEN_URL||"");while(worker.endsWith("/"))worker=worker.slice(0,-1);
  if(!worker||worker.includes("SIZNING-NOM"))throw new Error("Cloudflare Worker manzili js/config.js dagi AGORA_TOKEN_URL maydoniga yozilmagan.");
  const token=await u.getIdToken(),r=await fetch(worker+"/api/openinary/sign",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({scope,groupId})});
  let d={};try{d=await r.json()}catch(e){}
