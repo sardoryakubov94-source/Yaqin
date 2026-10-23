@@ -106,11 +106,11 @@ async function pub(cost){keep();const p=st.p;if(!p.name||!p.age||p.age<18){uiAle
 function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("mi")?$("mi").value:null;
  const v={home,fav:favs,circ:groupsV,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
- const ov=st.form?formV():st.chat?chatV():st.sw?swipeV():"";if(ov)$("app").insertAdjacentHTML("beforeend",ov);
+ const ov=st.form?formV():st.chat?chatV():st.swProfile?swipeProfileV():st.sw?swipeV():"";if(ov)$("app").insertAdjacentHTML("beforeend",ov);
  const N=[["home",I("home",24),"Bosh"],["msg",I("chat",24),"Xabarlar"],["fav",I("heart",24),"Sevimli"],["+","+",""],["map",I("map",24),"Xarita"],["circ",I("users",24),"Guruhlar"],["prof",I("user",24),"Profil"]];
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',38)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m)m.scrollTop=m.scrollHeight;if(a==="q"&&$("q")){$("q").focus()}
- if(st.sw&&!st.form&&!st.chat)renderDeck();if(mv!=null&&$("mi"))$("mi").value=mv;if(st.tab=="map")initMap()}
+ if(st.sw&&!st.form&&!st.chat&&!st.swProfile)renderDeck();if(mv!=null&&$("mi"))$("mi").value=mv;if(st.tab=="map")initMap()}
 function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.uid&&!a.isDemo}))}
 let UC,UG,UM,UP,GROOM,GPART,GC=null;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
@@ -247,12 +247,15 @@ function closeSw(){st.sw=false;draw()}
 function swipeV(){return `<div class="ov" style="background:radial-gradient(circle at 50% 0,#4a2250,var(--bg) 60%)"><div class="hd"><button onclick="closeSw()">${I("back",22)}</button><b>Juft topish</b><button onclick="st.sv=null;st.form='survey';draw()">${I("filter",20)}</button></div><div class="deck" id="deck"></div><div class="swb"><button class="swn" onclick="fly(0)">${I("x",30)}</button><button class="swl" onclick="fly(1)">${I("heart",30,1)}</button></div></div>`}
 function renderDeck(){const d=$("deck");if(!d)return;const a=st.deck[st.di],b=st.deck[st.di+1],pr=st.user.prefs;
  if(!a){d.innerHTML=`<div class="empty" style="margin:auto"><p style="font-size:18px;margin-bottom:14px">Hozircha mos nomzod tugadi</p><button class="go" onclick="svReset()">Yoqmaganlarni qayta koʻrish</button></div>`;return}
- const card=(x,id,cls)=>`<div class="sc ${cls}" ${id?'id="sc"':""}><div class="sp" style="background-image:url('${x.img}')"></div><span class="mt">${Math.min(99,Math.round(score(x,pr)))}% mos</span><div class="si"><b style="font-size:24px">${esc(x.name)}, ${x.age}</b><p>${I("pin",14)} ${esc(x.reg)}</p><div class="ints">${(x.ints||[]).slice(0,4).map(i=>`<span class="tag">${esc(i)}</span>`).join("")}</div><p style="margin-top:6px">${esc((x.about||"").slice(0,90))}</p></div><div class="stamp like">YOQDI</div><div class="stamp nope">KEYINGI</div></div>`;
+ const card=(x,id,cls)=>`<div class="sc ${cls}" ${id?'id="sc"':""}><div class="sp" role="button" aria-label="Nomzod profilini ochish" onclick="openSwipeProfile()" style="background-image:url('${x.img}');cursor:pointer"></div><span class="mt">${Math.min(99,Math.round(score(x,pr)))}% mos</span><div class="si"><b style="font-size:24px">${esc(x.name)}, ${x.age}</b><p>${I("pin",14)} ${esc(x.reg)}</p><div class="ints">${(x.ints||[]).slice(0,4).map(i=>`<span class="tag">${esc(i)}</span>`).join("")}</div><p style="margin-top:6px">${esc((x.about||"").slice(0,90))}</p></div><div class="stamp like">YOQDI</div><div class="stamp nope">KEYINGI</div></div>`;
  d.innerHTML=(b?card(b,0,"back"):"")+card(a,1,"");bindSwipe()}
+function openSwipeProfile(){if(ignoreSwipeClick)return;const a=st.deck&&st.deck[st.di];if(a){st.swProfile=a;draw()}}
+function swipeProfileV(){const a=st.swProfile;if(!a)return "";return '<div class="ov" style="z-index:120;background:#09070df2;overflow:auto"><div class="sheet" style="position:relative;max-width:520px;width:100%;margin:auto;padding:0 0 24px;overflow:hidden"><button class="ghost" style="position:absolute;z-index:2;right:12px;top:12px;width:42px;height:42px;border-radius:50%;background:#100d18d9" onclick="st.swProfile=null;draw()">'+I("x",22)+'</button><div style="height:min(62vh,520px);min-height:300px;background:#17121e;position:relative"><img src="'+esc(a.img||"")+'" alt="Nomzod rasmi" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;inset:auto 0 0;padding:46px 18px 18px;background:linear-gradient(transparent,#09070df2);color:white"><b style="font-size:26px">'+esc(a.name)+", "+a.age+'</b><p style="margin-top:7px">'+I("pin",15)+' '+esc(a.reg)+'</p></div></div><div style="padding:18px"><div class="ints">'+(a.ints||[]).map(i=>'<span class="tag">'+esc(i)+'</span>').join("")+'</div><h3 style="margin:16px 0 8px">Oʻzi haqida</h3><p style="color:var(--t);line-height:1.6;white-space:pre-wrap">'+esc(a.about||"Nomzod oʻzi haqida maʼlumot kiritmagan.")+'</p>'+detailsLine(a)+'<button class="go" style="width:100%;margin-top:20px;padding:14px" onclick="st.swProfile=null;openAd(\''+a.id+'\')">'+I("chat",18)+' Xabar yozish</button><button class="ghost" style="width:100%;margin-top:8px" onclick="st.swProfile=null;draw()">Orqaga qaytish</button></div></div></div>'}
 function stamp(el,dx){el.querySelector(".like").style.opacity=Math.max(0,Math.min(1,dx/100));el.querySelector(".nope").style.opacity=Math.max(0,Math.min(1,-dx/100))}
+let ignoreSwipeClick=false;
 function bindSwipe(){const el=$("sc");if(!el)return;let x0=0,dx=0,on=false;
  el.onpointerdown=e=>{on=true;x0=e.clientX;dx=0;el.setPointerCapture(e.pointerId);el.style.transition="none"};
- el.onpointermove=e=>{if(!on)return;dx=e.clientX-x0;el.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`;stamp(el,dx)};
+ el.onpointermove=e=>{if(!on)return;dx=e.clientX-x0;if(Math.abs(dx)>8){ignoreSwipeClick=true;setTimeout(()=>{ignoreSwipeClick=false},450)}el.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`;stamp(el,dx)};
  const end=()=>{if(!on)return;on=false;if(Math.abs(dx)>100)fly(dx>0?1:0);else{el.style.transition="transform .25s";el.style.transform="";stamp(el,0)}};
  el.onpointerup=end;el.onpointercancel=end}
 let flying=false;
