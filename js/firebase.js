@@ -86,7 +86,7 @@ window.FB={
  groupCallSignals:(gid,field,uid,cb)=>D.onSnapshot(D.query(D.collection(db,"groupCalls",gid,"signals"),D.where(field,"==",uid)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error("Signal:",e)),
  groupCallSignal:(gid,id,cb)=>D.onSnapshot(D.doc(db,"groupCalls",gid,"signals",id),s=>cb(s.exists()?{...s.data(),id:s.id}:null),e=>console.error("Signal:",e)),
  groupCallCandidates:(gid,id,cb)=>D.onSnapshot(D.collection(db,"groupCalls",gid,"signals",id,"candidates"),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error("ICE:",e)),
- groupCallOffer:(gid,caller,callee,offer)=>D.setDoc(D.doc(db,"groupCalls",gid,"signals",caller+"_"+callee),{caller,callee,offer:{type:offer.type,sdp:offer.sdp},answer:null,createdAt:Date.now()}),
+ groupCallOffer:(gid,caller,callee,offer,id)=>D.setDoc(D.doc(db,"groupCalls",gid,"signals",id||caller+"_"+callee),{caller,callee,offer:{type:offer.type,sdp:offer.sdp},answer:null,createdAt:Date.now()}),
  groupCallAnswer:(gid,id,answer)=>D.updateDoc(D.doc(db,"groupCalls",gid,"signals",id),{answer:{type:answer.type,sdp:answer.sdp},answeredAt:Date.now()}),
  groupCallAddCandidate:(gid,id,candidate,from)=>D.addDoc(D.collection(db,"groupCalls",gid,"signals",id,"candidates"),{from,candidate:candidate.toJSON?candidate.toJSON():candidate,t:Date.now()}),
 
