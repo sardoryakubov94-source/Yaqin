@@ -255,3 +255,10 @@ img,svg,video,canvas{max-width:100%}
     gap:7px;
   }
 }
+
+/* Shikoyat oynasi */
+.rp-bg{position:fixed;inset:0;background:#000a;z-index:80;display:flex;align-items:flex-end;justify-content:center}
+.rp{width:100%;max-width:560px;background:var(--c2);border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.rp b{font-size:17px}.rp small{color:var(--m);font-size:12px;line-height:1.4;margin-bottom:4px}
+.rp button{padding:13px 14px;border-radius:14px;background:#ffffff12;color:var(--t);font-size:14px;font-weight:600;text-align:left}
+.rp button.cn{background:transparent;text-align:center;color:var(--m)}
