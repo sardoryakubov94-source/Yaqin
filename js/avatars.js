@@ -76,6 +76,7 @@ if(has("earring"))o+=`<circle cx="58" cy="106" r="4" fill="#f4cf5a"/><circle cx=
 if(has("pearl"))o+=`<circle cx="58" cy="106" r="4" fill="#fff" stroke="#cfcfd8"/><circle cx="142" cy="106" r="4" fill="#fff" stroke="#cfcfd8"/>`;
 o+=`</g><circle cx="100" cy="100" r="96" fill="none" stroke="${sh(c.bg[0],30)}" stroke-width="5"/></svg>`;
 return o}
-window.yqAvatar=function(code){const m=/^yq:(kelin|kuyov):(\d+)$/.exec(String(code||""));if(!m)return code;return"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg(m[1],m[2]))};
+window.yqAvatar=function(code){const q=/^ph:(kelin|kuyov):([1-5])$/.exec(String(code||""));if(q)return"icons/avatars/"+q[1]+q[2]+".webp";const m=/^yq:(kelin|kuyov):(\d+)$/.exec(String(code||""));if(!m)return code;return"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg(m[1],m[2]))};
+window.yqPhNames={kelin:["Klassik","Samimiy","Turmak","Hijobli","Quyoshli"],kuyov:["Rasmiy","Hoodie","Quyoshli","Oq koʻylak","Kepkali"]};
 window.yqNames={kelin:["Kelin","Hijobli","Zarif","Turmak","Qora hijob","Quyoshli","Sporty","Gulli","Malika"],kuyov:["Kuyov","Smoking","Doppi","Sporty","Quyoshli","Kepkali","Soqolli","Blazer","Ziyoli"]};
 })();
