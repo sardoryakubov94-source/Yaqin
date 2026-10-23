@@ -20,7 +20,7 @@ const out=[],now=Date.now();
   const anon=i%7===3,reg=pick(REG),age=g==="kelin"?between(19,34):between(22,42),open=!anon;
   const details={};Object.keys(D).forEach(k=>{if(rnd()<.8)details[k]=pick(D[k])});
   if(g==="kelin")delete details.car;
-  const img=open&&i%2===0?"icons/avatars/"+g+PH[g][i/2%5|0]+".webp":"";
+  const img=open&&i%4!==1?"icons/avatars/"+g+PH[g][i%5]+".webp":"";
   const off=Math.floor((2+rnd()*470)*3600000);
   out.push({name:anon?"Anonim":nm,age,reg,vil:(pl(reg)||{}).vil||"",g,pur:PUR(),about:anon?"":pick(ABOUT[g]),ava:avs[i%avs.length],img,vip:false,status:"active",anon,ints:shuffle(INTS).slice(0,between(2,4)),profileDetails:anon?{}:details,isDemo:true,t:now-off});
  });
