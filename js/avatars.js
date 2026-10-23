@@ -78,5 +78,6 @@ o+=`</g><circle cx="100" cy="100" r="96" fill="none" stroke="${sh(c.bg[0],30)}" 
 return o}
 window.yqAvatar=function(code){const q=/^ph:(kelin|kuyov):([1-5])$/.exec(String(code||""));if(q)return"icons/avatars/"+q[1]+q[2]+".webp";const m=/^yq:(kelin|kuyov):(\d+)$/.exec(String(code||""));if(!m)return code;return"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg(m[1],m[2]))};
 window.yqPhNames={kelin:["Klassik","Samimiy","Turmak","Hijobli","Quyoshli"],kuyov:["Rasmiy","Hoodie","Quyoshli","Oq koʻylak","Kepkali"]};
+window.yqVis={kelin:[1,2,3,4,5,8,9],kuyov:[1,2,3,6,7,8,9]};
 window.yqNames={kelin:["Kelin","Hijobli","Zarif","Turmak","Qora hijob","Quyoshli","Sporty","Gulli","Malika"],kuyov:["Kuyov","Smoking","Doppi","Sporty","Quyoshli","Kepkali","Soqolli","Blazer","Ziyoli"]};
 })();

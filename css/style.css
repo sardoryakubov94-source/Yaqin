@@ -169,3 +169,8 @@ img,svg,video,canvas{max-width:100%}
 .nav{max-width:100vw}
 .nav button{min-width:0}
 .pur .l1,.pur .l2{white-space:normal}
+
+/* Galereyadan yuklash: kichik, uzun, alohida qator */
+.avatar-option.upload-avatar{grid-column:1/-1;min-height:48px!important;height:48px;flex-direction:row;gap:10px;padding:0 14px;border-radius:14px}
+.avatar-option.upload-avatar svg{width:20px;height:20px;flex:none}
+.avatar-option.upload-avatar span{font-size:13px!important;line-height:1.2}
