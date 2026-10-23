@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
-  const active = () => window.GC || null;
+  const active = () => GC || null;
   const channelFor = gid => ("yq_" + String(gid)).slice(0, 63);
   function uidFor(value) {
     let h = 2166136261;
@@ -37,7 +37,7 @@
     if (el) call.videoTrack.play(el);
   }
   async function startGroupCall(mode) {
-    const ch = window.st && st.chat;
+    const ch = st && st.chat;
     if (!ch || ch.t !== "g") return;
     const g = (st.groups || []).find(x => x.id === ch.id);
     if (!g || Number(g.premiumUntil) <= Date.now()) {
@@ -45,7 +45,7 @@
     }
     if (!window.AgoraRTC) { uiAlert("Agora Web SDK yuklanmadi. Internet aloqasini tekshiring."); return; }
     if (!navigator.mediaDevices?.getUserMedia) { uiAlert("Mikrofon/kamera uchun sayt HTTPS orqali ochilishi kerak."); return; }
-    if (window.GC) {
+    if (GC) {
       if (GC.gid === ch.id && GC.mode === mode) { uiAlert("Siz allaqachon qoʻngʻiroqdasiz."); return; }
       await leaveGroupCall(true);
     }
@@ -57,9 +57,9 @@
       if (!credentials || !credentials.token || !credentials.appId) throw new Error("Agora token xizmati sozlanmagan.");
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       call = { gid: ch.id, mode, channel, uid, client, audioTrack: null, videoTrack: null, muted: false, cameraOff: false, leaving: false };
-      window.GC = call;
+      GC = call;
       client.on("user-published", async (user, mediaType) => {
-        if (window.GC !== call) return;
+        if (GC !== call) return;
         await client.subscribe(user, mediaType);
         if (mediaType === "audio" && user.audioTrack) user.audioTrack.play();
         if (mediaType === "video" && user.videoTrack) {
@@ -93,13 +93,13 @@
           (mode === "video" ? '<button class="ghost" id="agoraCameraBtn" type="button">📷 Kamerani oʻchirish</button>' : "");
         controls.appendChild(tools);
         document.getElementById("agoraMuteBtn").onclick = async () => {
-          if (window.GC !== call) return;
+          if (GC !== call) return;
           call.muted = !call.muted; await call.audioTrack.setEnabled(!call.muted);
           document.getElementById("agoraMuteBtn").textContent = call.muted ? "🔇 Mikrofonni yoqish" : "🎙️ Mikrofonni oʻchirish";
         };
         const cam = document.getElementById("agoraCameraBtn");
         if (cam) cam.onclick = async () => {
-          if (window.GC !== call || !call.videoTrack) return;
+          if (GC !== call || !call.videoTrack) return;
           call.cameraOff = !call.cameraOff; await call.videoTrack.setEnabled(!call.cameraOff);
           cam.textContent = call.cameraOff ? "📷 Kamerani yoqish" : "📷 Kamerani oʻchirish";
         };
@@ -111,23 +111,23 @@
       console.error("Agora group call:", e);
       if (call) {
         try { call.audioTrack?.close(); call.videoTrack?.close(); await call.client?.leave(); } catch (_) {}
-        if (window.GC === call) window.GC = null;
+        if (GC === call) GC = null;
       }
       try { await FB.groupCallLeave(ch.id); } catch (_) {}
       uiAlert("Qoʻngʻiroq boshlanmadi: " + (e?.message || e) + ". Agora tokeni va mikrofon/kamera ruxsatini tekshirish kerak.");
     }
   }
   async function leaveGroupCall(silent = false) {
-    const call = window.GC;
+    const call = GC;
     if (!call) return;
-    window.GC = null;
+    GC = null;
     try { call.audioTrack?.stop(); call.audioTrack?.close(); } catch (_) {}
     try { call.videoTrack?.stop(); call.videoTrack?.close(); } catch (_) {}
     try { await call.client?.leave(); } catch (e) { console.warn("Agora leave:", e); }
     document.getElementById("callVideos")?.replaceChildren();
     document.getElementById("agoraCallTools")?.remove();
     try { await FB.groupCallLeave(call.gid); } catch (e) { console.warn("Guruh qoʻngʻirogʻidan chiqish:", e); }
-    if (!silent && window.st?.chat?.id === call.gid) draw();
+    if (!silent && st?.chat?.id === call.gid) draw();
   }
   // Override the previous WebRTC group-call implementation with Agora RTC.
   window.startGroupCall = startGroupCall;
