@@ -11,5 +11,17 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid && request.resource.size < 1024 * 1024 && request.resource.contentType.matches('image/.*');
     }
+    match /group-media/{gid}/{uid}/{file} {
+      function groupDoc() { return firestore.get(/databases/(default)/documents/groups/$(gid)).data; }
+      function isMember() { return request.auth != null && firestore.exists(/databases/(default)/documents/groups/$(gid)/members/$(request.auth.uid)); }
+      allow read: if isMember();
+      allow delete: if request.auth != null && request.auth.uid == uid && isMember();
+      allow write: if isMember()
+        && request.auth.uid == uid
+        && ((groupDoc().owner == request.auth.uid) || groupDoc().get('mediaUploadMode', 'owner') == 'members')
+        && request.resource.size < 20 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') && request.resource.size < 5 * 1024 * 1024
+          || request.resource.contentType.matches('video/(mp4|webm|quicktime)'));
+    }
   }
 }
