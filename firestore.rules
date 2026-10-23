@@ -165,10 +165,13 @@ service cloud.firestore {
           && request.resource.data.callee is string
           && exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.resource.data.callee))
           && request.resource.data.offer.sdp is string;
-        allow update: if signed() && member(gid)
-          && request.auth.uid == resource.data.callee
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer','answeredAt'])
-          && request.resource.data.answer.sdp is string;
+        allow update: if signed() && member(gid) && (
+          (request.auth.uid == resource.data.caller
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ready'])
+            && request.resource.data.ready == true)
+          || (request.auth.uid == resource.data.callee
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer','answeredAt'])
+            && request.resource.data.answer.sdp is string));
         allow delete: if signed() && member(gid)
           && (request.auth.uid == resource.data.caller || request.auth.uid == resource.data.callee);
         match /candidates/{cid} {
