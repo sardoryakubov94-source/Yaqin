@@ -19,9 +19,14 @@ service firebase.storage {
       allow write: if isMember()
         && request.auth.uid == uid
         && ((groupDoc().owner == request.auth.uid) || groupDoc().get('mediaUploadMode', 'owner') == 'members')
-        && request.resource.size < 20 * 1024 * 1024
-        && (request.resource.contentType.matches('image/.*') && request.resource.size < 5 * 1024 * 1024
-          || request.resource.contentType.matches('video/(mp4|webm|quicktime)'));
+        && ((groupDoc().get('premiumUntil', 0) > request.time.toMillis()
+          && request.resource.size < 100 * 1024 * 1024
+          && ((request.resource.contentType.matches('image/.*') && request.resource.size < 25 * 1024 * 1024)
+            || request.resource.contentType.matches('video/(mp4|webm|quicktime)')))
+          || (groupDoc().get('premiumUntil', 0) <= request.time.toMillis()
+            && request.resource.size < 20 * 1024 * 1024
+            && ((request.resource.contentType.matches('image/.*') && request.resource.size < 5 * 1024 * 1024)
+              || request.resource.contentType.matches('video/(mp4|webm|quicktime)'))));
     }
   }
 }
