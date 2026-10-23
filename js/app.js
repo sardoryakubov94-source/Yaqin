@@ -155,7 +155,7 @@ function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.ui
 let UC,UG,UM,UP,GROOM,GPART,GC=null;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
 addEventListener("fb-ready",()=>{FB.onUser(u=>{const was=st.user&&st.user.uid;st.user=u;if(!u&&st.form=="logout")st.form=null;if(u&&st.form=="auth")st.form=null;syncAds();
- if(!u){stopAll();st.chat=null}else if(was!=u.uid){stopAll();UC=FB.chats(u.uid,l=>{st.chats=l.sort((a,b)=>b.lastT-a.lastT);syncShared();if(st.chat&&st.chat.t=="c")draw();else if(st.tab=="msg"&&!st.form)draw()});UG=FB.groups(l=>{st.groups=l;if(st.tab=="circ"&&!st.form&&!st.chat)draw()});FB.mySwipes().then(m=>{st.swiped=m}).catch(()=>{});if(!u.prefs&&!st.skipSv){st.skipSv=1;st.sv=null;st.form="survey"}FB.priv().then(x=>{st.priv=x;if(st.tab=="prof"&&!st.form)draw()}).catch(()=>{})}
+ if(!u){stopAll();st.chat=null}else if(was!=u.uid){stopAll();UC=FB.chats(u.uid,l=>{st.chats=l.sort((a,b)=>b.lastT-a.lastT);syncShared();if(st.chat&&st.chat.t=="c")draw();else if(st.tab=="msg"&&!st.form)draw()});UG=FB.groups(l=>{st.groups=l;if(st.tab=="circ"&&!st.form&&!st.chat)draw()});FB.mySwipes().then(m=>{st.swiped=m}).catch(()=>{});if(!u.prefs&&!u._profileLoading&&!st.skipSv){st.skipSv=1;st.sv=null;st.form="survey"}FB.priv().then(x=>{st.priv=x;if(st.tab=="prof"&&!st.form)draw()}).catch(()=>{})}
  draw()});FB.ads(l=>{st.raw=l;syncAds();if(st.tab=="map"&&MAP&&!st.form&&!st.chat)drawMarkers();else if(!st.form&&!st.chat)draw()})});
 
 st.dr={on:false,pts:[]};let MAP,DL,MYL,MYC;
