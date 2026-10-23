@@ -1,1 +1,1 @@
-window.CFG={TEST_MODE:false,CHAT_LIVE:true,VAPID:"",AGORA_TOKEN_URL:"https://yaqin-agora.SIZNING-NOM.workers.dev"}; // VAPID: Firebase Console → Project settings → Cloud Messaging → Web Push certificates → Key pair
+window.CFG={TEST_MODE:false,CHAT_LIVE:true,VAPID:"",AGORA_TOKEN_URL:"https://yaqin-agora.sardoryakubov94.workers.dev"}; // VAPID: Firebase Console → Project settings → Cloud Messaging → Web Push certificates → Key pair
