@@ -38,6 +38,7 @@ export default {
 
       let body;
       try { body = await req.json(); } catch { return fail("Notoʻgʻri soʻrov.", 400); }
+      if (!body || typeof body !== "object" || Array.isArray(body)) return fail("Notoʻgʻri soʻrov.", 400);
       let uid;
       try { uid = jwtUid(idToken); } catch { return fail("Token notoʻgʻri.", 401); }
       if (!uid || typeof uid !== "string") return fail("Token notoʻgʻri.", 401);
