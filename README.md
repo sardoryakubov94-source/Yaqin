@@ -35,3 +35,10 @@ Foydalanuvchi bildirishnomalar oynasida "Yoqish" ni bosgach, qurilma tokeni `fcm
 
 ## Bloklash
 Chat menyusidan "Bloklash": bloklangan foydalanuvchi yoza olmaydi (Rules darajasida), eʼlonlari ham ko'rinmaydi. Profilda "Bloklanganlar" bo'limidan blokdan chiqariladi.
+
+## Openinary media uploads
+- Profile images, ad images, private photos, and group-chat media are uploaded to Openinary Cloud; Firestore stores the returned file path rather than a delivery URL.
+- In Cloudflare Dashboard → Workers & Pages → `yaqin-agora` → Settings → Variables and Secrets, add `OPENINARY_API_KEY` as a **Secret** (not a plain Variable). Never commit the key or put it in browser code.
+- Replace the placeholder in `js/config.js` (`AGORA_TOKEN_URL`) with the actual deployed `yaqin-agora` Worker URL, for example `https://yaqin-agora.<your-subdomain>.workers.dev`. The same Worker URL is used for Agora token requests and `/api/openinary/sign`.
+- Deploy the Worker from `agora-worker/` with `npm install` then `npm run deploy`; make sure the Cloudflare secret is set for the Production environment.
+- Openinary Cloud upload signatures expire after 5 minutes. The browser uploads directly to `https://cdn.openinary.dev/upload`; the API key remains on the Worker.
