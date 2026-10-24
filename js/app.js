@@ -511,18 +511,14 @@ armYaqinBack();
   bg.addEventListener("click",e=>{if(e.target===bg)bg.remove()});bg.querySelector("header button").onclick=()=>bg.remove();
   document.body.appendChild(bg);const chosen=list.querySelector(".selected");if(chosen)chosen.scrollIntoView({block:"nearest"});
  }
- let start=null;
- document.addEventListener("pointerdown",e=>{
-  const sel=e.target.closest&&e.target.closest("select.in");if(!sel)return;
-  start={sel,x:e.clientX,y:e.clientY,id:e.pointerId};e.preventDefault();e.stopPropagation();
+ // Open the branded picker only on a completed tap/click.
+ // Do not cancel pointer events: Android must be able to complete taps normally.
+ document.addEventListener("click",e=>{
+  const sel=e.target.closest&&e.target.closest("select.in");
+  if(!sel)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  openPicker(sel);
  },true);
- document.addEventListener("pointerup",e=>{
-  if(!start)return;const p=start;start=null;
-  if(p.id!==e.pointerId)return;
-  const moved=Math.hypot(e.clientX-p.x,e.clientY-p.y);
-  const under=document.elementFromPoint(e.clientX,e.clientY);
-  if(moved<10&&under&&(under===p.sel||p.sel.contains(under))){e.preventDefault();e.stopPropagation();openPicker(p.sel)}
- },true);
- document.addEventListener("pointercancel",()=>{start=null},true);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){const p=document.querySelector(".yq-picker-bg");if(p)p.remove()}},true);
 })();
