@@ -409,3 +409,6 @@ img,svg,video,canvas{max-width:100%}
 .yq-picker-option i{font-style:normal;color:#f0b34a;font-size:18px;flex:none}
 .yq-picker-group{padding:12px 12px 5px;color:#aaa0c7;font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
 @keyframes yqFade{from{opacity:0}to{opacity:1}}
+
+/* Standart tanlash oynasi ochilmasligi uchun: teginishni Yaqin tanlagichi qabul qiladi */
+select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}

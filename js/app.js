@@ -511,13 +511,23 @@ armYaqinBack();
   bg.addEventListener("click",e=>{if(e.target===bg)bg.remove()});bg.querySelector("header button").onclick=()=>bg.remove();
   document.body.appendChild(bg);const chosen=list.querySelector(".selected");if(chosen)chosen.scrollIntoView({block:"nearest"});
  }
- // Open the branded picker only on a completed tap/click.
- // Do not cancel pointer events: Android must be able to complete taps normally.
+ // Standart (Android) tanlash oynasi tegilgan zahoti ochiladi va bekor qilib boʻlmaydi,
+ // shuning uchun select.in CSS bilan teginishni qabul qilmaydi (pointer-events:none),
+ // teginish esa ustidagi elementga tushadi va bu yerda koordinata boʻyicha select topiladi.
  document.addEventListener("click",e=>{
-  const sel=e.target.closest&&e.target.closest("select.in");
+  const t=e.target;
+  if(!t||!t.closest||t.closest(".yq-picker-bg")||document.querySelector(".yq-picker-bg"))return;
+  let sel=t.closest("select.in");
+  if(!sel){
+   const x=e.clientX,y=e.clientY;if(!x&&!y)return;
+   sel=[...document.querySelectorAll("select.in")].find(s=>{
+    if(s.disabled||!s.offsetParent)return false;
+    const r=s.getBoundingClientRect(),p=s.parentElement;
+    return r.width>0&&r.height>0&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom&&p&&(p===t||p.contains(t)||t.contains(s));
+   });
+  }
   if(!sel)return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
+  e.preventDefault();e.stopImmediatePropagation();
   openPicker(sel);
  },true);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){const p=document.querySelector(".yq-picker-bg");if(p)p.remove()}},true);
