@@ -59,7 +59,16 @@
     if (!g || Number(g.premiumUntil) <= Date.now()) {
       uiAlert("Ovozli chat va jonli video uchun faol Premium guruh kerak."); return;
     }
-    if (!window.AgoraRTC) { uiAlert("Agora Web SDK yuklanmadi. Internet aloqasini tekshiring."); return; }
+    if (!window.AgoraRTC) {
+      try {
+        await new Promise((res, rej) => {
+          const sc = document.createElement("script");
+          sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js";
+          sc.onload = res; sc.onerror = () => rej(new Error("x"));
+          document.head.appendChild(sc);
+        });
+      } catch (_) { uiAlert("Agora Web SDK yuklanmadi. Internet aloqasini tekshiring."); return; }
+    }
     if (!navigator.mediaDevices?.getUserMedia) { uiAlert("Mikrofon/kamera uchun sayt HTTPS orqali ochilishi kerak."); return; }
     if (GC) {
       if (GC.gid === ch.id) {
