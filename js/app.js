@@ -5,7 +5,7 @@ const pl=n=>PLACES[n]||PLACES[n+" tumani"]||PLACES[n+" shahri"]||PLACES[String(n
 const nz=s=>String(s||"").toLowerCase().replace(/[ʻʼ'’`‘]/g,"");
 const vilOf=a=>a.vil||(pl(a.reg)||{}).vil||"";
 const hit=a=>{const q=nz(st.q).trim();return nz(a.reg).includes(q)||nz(vilOf(a)).includes(q)};
-const PUR={oila:["Oila qurish uchun","Jiddiy niyat bilan, nikoh maqsadida","<b class=\"l1\">1 Roʻzgʻorga</b><small class=\"l2\">(Jiddiy oila qurish)</small>"],nikoh:["Nikoh uchun (maxfiy)","Shaxsiy hayot hurmat qilinadi, maxfiy tarzda","<b class=\"l1\">2 Roʻzgʻorga</b><small class=\"l2\">(Yashirin nikoh)</small>"],tanish:["Tanishuv uchun","Oʻzingizga mos juftni erkin izlash","<b class=\"l1\">Oddiy munosabat</b><small class=\"l2\">(Mos juft izlash)</small>"]};
+const PUR={oila:["Oila qurish uchun","Jiddiy niyat bilan, nikoh maqsadida","<b class=\"l1\">1-Roʻzgʻorga</b><small class=\"l2\">(Jiddiy oila qurish)</small>"],nikoh:["Nikoh uchun (maxfiy)","Shaxsiy hayot hurmat qilinadi, maxfiy tarzda","<b class=\"l1\">2-Roʻzgʻorga</b><small class=\"l2\">(Yashirin nikoh)</small>"],tanish:["Tanishuv uchun","Oʻzingizga mos juftni erkin izlash","<b class=\"l1\">Oddiy munosabat</b><small class=\"l2\">(Mos juft izlash)</small>"]};
 const TPL={kelin:["👰","🧕","🌹","💐","🌸","🦋"],kuyov:["🤵","🧔","🦁","🦅","⚜️","🌙"]};
 const S=(k,d)=>{try{return JSON.parse(localStorage[k])}catch(e){return d}};
 const save=()=>{try{localStorage.yq=JSON.stringify({fav:st.fav,seen:st.seen})}catch(e){}};
