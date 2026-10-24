@@ -305,6 +305,14 @@
     if (h.indexOf(k) < 0) return h;
     return h.replace(k, `<button class="hd-call" type="button" aria-label="Ovozli qoʻngʻiroq" onclick="callStart('audio')">${I_PHONE}</button><button class="hd-call" type="button" aria-label="Video qoʻngʻiroq" onclick="callStart('video')">${I_CAM}</button>` + k);
   };
+  // bildirishnomani bosganda tegishli chatni ochish
+  function openWhenReady(id, n) {
+    n = n || 0;
+    if (typeof openC === "function" && st.user && (st.chats || []).some(c => c.id === id)) { openC(id); return; }
+    if (n < 40) setTimeout(() => openWhenReady(id, n + 1), 500);
+  }
+  if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", e => { const id = e.data && e.data.openChat; if (id) openWhenReady(id); });
+  try { const qid = new URLSearchParams(location.search).get("chat"); if (qid) { history.replaceState(null, "", location.pathname); openWhenReady(qid); } } catch (_) {}
   setInterval(watchIncoming, 2000);
   window.addEventListener("pagehide", () => { if (C && C.id && (C.joined || C.role === "caller")) { try { FB.callSet(C.id, "ended"); } catch (_) {} } });
   window.__yqCall = { get C() { return C; }, FILTERS, watchIncoming };

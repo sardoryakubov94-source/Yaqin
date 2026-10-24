@@ -1,8 +1,10 @@
 # Yaqin Worker (bepul, kutubxonasiz, ~130 qator)
 
-Ikkita ish qiladi:
+Uchta ish qiladi:
 - `POST /` — guruh ovozli chat / video translatsiya uchun Agora token (1 soatlik)
 - `POST /api/openinary/sign` — guruhga rasm/video yuklash uchun imzo
+- `POST /api/call/token` — shaxsiy qoʻngʻiroq tokeni
+- `POST /api/push` — push bildirishnoma (FCM): yangi xabar va kiruvchi qoʻngʻiroq
 
 ## Telefondan / brauzerdan deploy (buyruqsiz)
 1. Cloudflare → Workers & Pages → `yaqin-agora` → Edit code.
@@ -10,6 +12,7 @@ Ikkita ish qiladi:
 3. Settings → Variables and Secrets (Type: Secret):
    - `AGORA_APP_CERT` = Agora Primary Certificate
    - `OPENINARY_API_KEY` = Openinary API kaliti
+   - `FIREBASE_SA` = Firebase service account JSON (Project settings → Service accounts → Generate new private key; fayl mazmunini toʻliq joylang)
 4. Kutubxona ham, `nodejs_compat` ham kerak emas.
 
 ## Buyruq bilan

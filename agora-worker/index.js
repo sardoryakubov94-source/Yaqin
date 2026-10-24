@@ -1,5 +1,5 @@
 // Yaqin Worker (Cloudflare, bepul, kutubxonasiz): Agora token (guruh + 1:1 qoʻngʻiroq) + Openinary yuklash imzosi.
-// Secretlar: AGORA_APP_CERT, OPENINARY_API_KEY (kodga yozilmaydi).
+// Secretlar: AGORA_APP_CERT, OPENINARY_API_KEY, FIREBASE_SA (kodga yozilmaydi).
 const PROJECT = "yaqin-3f9f9";
 const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
 const FS = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
@@ -44,6 +44,26 @@ function hashUid(v) {
   return (h >>> 0) || 1;
 }
 
+// <push> FCM HTTP v1: service account bilan OAuth tokeni (kutubxonasiz)
+const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+let saTok = { v: "", exp: 0 };
+async function saToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (saTok.v && saTok.exp - 60 > now) return saTok.v;
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const der = Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "")), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const head = b64u(te.encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const claim = b64u(te.encode(JSON.stringify({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/datastore", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 })));
+  const sig = b64u(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, te.encode(head + "." + claim)));
+  const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "grant_type=" + encodeURIComponent("urn:ietf:params:oauth:grant-type:jwt-bearer") + "&assertion=" + head + "." + claim + "." + sig });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.access_token) throw new Error("Service account tokeni olinmadi: " + (d.error_description || d.error || r.status));
+  saTok = { v: d.access_token, exp: now + (d.expires_in || 3600) };
+  return saTok.v;
+}
+// </push>
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
@@ -82,6 +102,65 @@ export default {
     }
 
     const path = new URL(req.url).pathname;
+
+    // ---- Push bildirishnoma (FCM) ----
+    if (path === "/api/push") {
+      if (!env.FIREBASE_SA) return fail("FIREBASE_SA Worker siri sozlanmagan.", 500);
+      const type = String(body.type || "");
+      let peer, title, text, kind = "", tag, dedupe, chatId = "";
+      if (type === "chat") {
+        const cid = String(body.chatId || ""), mid = String(body.msgId || "");
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(cid) || !/^[A-Za-z0-9]{10,40}$/.test(mid)) return fail("Soʻrov notoʻgʻri.", 400);
+        const [c, m] = await Promise.all([fs(`/chats/${enc(cid)}`), fs(`/chats/${enc(cid)}/msgs/${enc(mid)}`)]);
+        if ([c.status, m.status].some(x => x === 401 || x === 403)) return fail("Ruxsat yoʻq.", 403);
+        if (!c.ok || !m.ok) return fail("Xabar topilmadi.", 404);
+        const cf = (await c.json()).fields || {}, mf = (await m.json()).fields || {};
+        const members = (cf.members?.arrayValue?.values || []).map(v => v.stringValue);
+        if (!members.includes(uid) || mf.from?.stringValue !== uid) return fail("Ruxsat yoʻq.", 403);
+        if (Math.abs(Date.now() - Number(mf.t?.integerValue || 0)) > 120000) return fail("Xabar eski.", 409);
+        kind = mf.kind?.stringValue || "";
+        if (kind === "call") return out({ sent: 0, skipped: "call-log" });
+        peer = members.find(x => x !== uid); chatId = cid; tag = "chat-" + cid; dedupe = "m_" + mid;
+        title = mf.name?.stringValue || "Yaqin";
+        const t = mf.text?.stringValue || "";
+        text = kind === "media" ? "📷 Rasm" : kind === "voice" ? "🎤 Ovozli xabar" : kind === "sticker" ? "Stiker " + t : t;
+      } else if (type === "call") {
+        const id = String(body.callId || "");
+        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return fail("Soʻrov notoʻgʻri.", 400);
+        const c = await fs(`/calls/${enc(id)}`);
+        if (c.status === 401 || c.status === 403) return fail("Ruxsat yoʻq.", 403);
+        if (!c.ok) return fail("Qoʻngʻiroq topilmadi.", 404);
+        const f = (await c.json()).fields || {};
+        if (f.from?.stringValue !== uid || f.status?.stringValue !== "ringing") return fail("Ruxsat yoʻq.", 403);
+        if (Math.abs(Date.now() - Number(f.t?.integerValue || 0)) > 90000) return fail("Qoʻngʻiroq eski.", 409);
+        peer = f.to?.stringValue; kind = "call"; chatId = f.chatId?.stringValue || ""; tag = "call"; dedupe = "c_" + id;
+        title = f.fromName?.stringValue || "Yaqin";
+        text = f.mode?.stringValue === "video" ? "📹 Video qoʻngʻiroq qilmoqda…" : "📞 Qoʻngʻiroq qilmoqda…";
+      } else return fail("Push turi notoʻgʻri.", 400);
+      if (!peer) return fail("Qabul qiluvchi topilmadi.", 404);
+
+      try {
+        const sa = await saToken(env), H = { Authorization: "Bearer " + sa, "Content-Type": "application/json" };
+        // bir xabarga bitta push (takror soʻrovlardan himoya)
+        const dd = await fetch(`${FS}/pushLog?documentId=${enc(dedupe)}`, { method: "POST", headers: H, body: JSON.stringify({ fields: { t: { integerValue: String(Date.now()) }, from: { stringValue: uid } } }) });
+        if (dd.status === 409) return out({ sent: 0, skipped: "duplicate" });
+        if (!dd.ok) return fail("Push navbatga qoʻyilmadi.", 502);
+        const fr = await fetch(`${FS}/fcm/${enc(peer)}`, { headers: H });
+        if (fr.status === 404) return out({ sent: 0, skipped: "no-token" });
+        if (!fr.ok) return fail("Qabul qiluvchi tokenlari oʻqilmadi.", 502);
+        const tokens = ((await fr.json()).fields?.tokens?.arrayValue?.values || []).map(v => v.stringValue).filter(Boolean).slice(0, 5);
+        const sa0 = JSON.parse(env.FIREBASE_SA); let sent = 0; const dead = [];
+        await Promise.all(tokens.map(async tk => {
+          const r = await fetch(`https://fcm.googleapis.com/v1/projects/${sa0.project_id || PROJECT}/messages:send`, {
+            method: "POST", headers: H,
+            body: JSON.stringify({ message: { token: tk, notification: { title, body: String(text).slice(0, 120) }, data: { kind, chatId, tag }, webpush: { headers: { Urgency: "high", TTL: kind === "call" ? "45" : "86400" } } } }),
+          });
+          if (r.ok) sent++; else if (r.status === 404 || /UNREGISTERED/.test(await r.text().catch(() => ""))) dead.push(tk);
+        }));
+        if (dead.length) await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents:commit`, { method: "POST", headers: H, body: JSON.stringify({ writes: [{ transform: { document: `projects/${PROJECT}/databases/(default)/documents/fcm/${peer}`, fieldTransforms: [{ fieldPath: "tokens", removeAllFromArray: { values: dead.map(x => ({ stringValue: x })) } }] } }] }) }).catch(() => {});
+        return out({ sent, removed: dead.length });
+      } catch (e) { return fail("Push yuborilmadi: " + (e && e.message ? e.message : e), 502); }
+    }
 
     // ---- Openinary: qisqa muddatli yuklash imzosi ----
     if (path === "/api/openinary/sign") {
