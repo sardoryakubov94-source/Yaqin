@@ -24,9 +24,66 @@
     { id: "film", name: "Kino", css: "contrast(1.2) saturate(.9)", vignette: 1, cf: 1 },
     { id: "hearts", name: "💖", css: "saturate(1.15) brightness(1.04)", fx: "💖", dir: -1 },
     { id: "stars", name: "✨", css: "contrast(1.05)", fx: "✨", dir: -1 },
-    { id: "snow", name: "❄️", css: "brightness(1.05) saturate(.95)", fx: "❄️", dir: 1 }
+    { id: "snow", name: "❄️", css: "brightness(1.05) saturate(.95)", fx: "❄️", dir: 1 },
+    { id: "m_glasses", name: "🕶️", css: "", mask: "glasses" },
+    { id: "m_crown", name: "👑", css: "", mask: "crown" },
+    { id: "m_dog", name: "🐶", css: "", mask: "dog" },
+    { id: "m_cat", name: "🐱", css: "", mask: "cat" },
+    { id: "m_clown", name: "🤡", css: "", mask: "clown" },
+    { id: "m_love", name: "😍", css: "", mask: "love" }
   ];
-  const usable = () => FILTERS.filter(f => SUP_FILTER || !f.cf && f.id !== "none" || f.id === "none");
+  const usable = () => FILTERS.filter(f => SUP_FILTER || !f.cf);
+
+  // ---------- yuz niqoblari (MediaPipe Face Landmarker, faqat tanlanganda yuklanadi) ----------
+  let faceP = null;
+  function loadFace() {
+    if (window.YQ_FACE_LOADER) return window.YQ_FACE_LOADER();
+    if (faceP) return faceP;
+    faceP = (async () => {
+      const V = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+      const mod = await import(V + "/vision_bundle.mjs");
+      const files = await mod.FilesetResolver.forVisionTasks(V + "/wasm");
+      const make = d => mod.FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: d }, runningMode: "VIDEO", numFaces: 1 });
+      try { return await make("GPU"); } catch (_) { return await make("CPU"); }
+    })().catch(e => { faceP = null; throw e; });
+    return faceP;
+  }
+  const mid = (p, q) => ({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
+  function anchors(cam, lm) {
+    const P = i => ({ x: lm[i].x * cam.w, y: lm[i].y * cam.h });
+    const cur = { a: P(234), b: P(454), top: P(10), chin: P(152), nose: P(1), eL: mid(P(33), P(133)), eR: mid(P(263), P(362)) };
+    const pv = cam.pv;
+    if (pv) for (const k in cur) { cur[k] = { x: pv[k].x + (cur[k].x - pv[k].x) * .55, y: pv[k].y + (cur[k].y - pv[k].y) * .55 }; }
+    cam.pv = cur;
+    return cur;
+  }
+  function emoji(ctx, ch, x, y, size, rot) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.font = size + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(ch, 0, 0); ctx.restore(); }
+  function ear(ctx, x, y, fw, rot, tri, c1, c2) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    if (tri) { ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(-fw * .13, 0); ctx.lineTo(0, -fw * .3); ctx.lineTo(fw * .13, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(-fw * .07, 0); ctx.lineTo(0, -fw * .19); ctx.lineTo(fw * .07, 0); ctx.closePath(); ctx.fill(); }
+    else { ctx.fillStyle = c1; ctx.beginPath(); ctx.ellipse(0, -fw * .1, fw * .1, fw * .19, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.ellipse(0, -fw * .09, fw * .055, fw * .12, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  function drawMask(cam, kind, lm) {
+    const ctx = cam.ctx, A = anchors(cam, lm);
+    const fw = Math.hypot(A.b.x - A.a.x, A.b.y - A.a.y), ang = Math.atan2(A.b.y - A.a.y, A.b.x - A.a.x);
+    ctx.save(); ctx.filter = "none";
+    if (kind === "glasses") { const c = mid(A.eL, A.eR); emoji(ctx, "🕶️", c.x, c.y, fw * 1.05, ang); }
+    else if (kind === "crown") emoji(ctx, "👑", A.top.x, A.top.y - fw * .2, fw * .8, ang);
+    else if (kind === "love") { const k = 1 + .09 * Math.sin(Date.now() / 120); emoji(ctx, "❤️", A.eL.x, A.eL.y, fw * .3 * k, ang); emoji(ctx, "❤️", A.eR.x, A.eR.y, fw * .3 * k, ang); }
+    else if (kind === "dog" || kind === "cat") {
+      const dog = kind === "dog", c1 = dog ? "#8a5a2b" : "#3b3b46", c2 = dog ? "#e9a1a8" : "#f2a6b8";
+      ear(ctx, A.top.x - fw * .34 * Math.cos(ang), A.top.y - fw * .34 * Math.sin(ang), fw, ang - (dog ? .35 : .15), !dog, c1, c2);
+      ear(ctx, A.top.x + fw * .34 * Math.cos(ang), A.top.y + fw * .34 * Math.sin(ang), fw, ang + (dog ? .35 : .15), !dog, c1, c2);
+      ctx.fillStyle = dog ? "#1d1d22" : "#f2a6b8"; ctx.beginPath(); ctx.ellipse(A.nose.x, A.nose.y, fw * .065, fw * .045, ang, 0, Math.PI * 2); ctx.fill();
+      if (!dog) { ctx.strokeStyle = "#ffffffcc"; ctx.lineWidth = Math.max(2, fw * .01); ctx.beginPath(); for (const sd of [-1, 1]) for (const dy of [-.03, .02, .07]) { ctx.moveTo(A.nose.x + sd * fw * .1, A.nose.y + fw * dy); ctx.lineTo(A.nose.x + sd * fw * .5, A.nose.y + fw * (dy * 1.8 - .01)); } ctx.stroke(); }
+    } else if (kind === "clown") {
+      ctx.fillStyle = "#e5232d"; ctx.beginPath(); ctx.arc(A.nose.x, A.nose.y, fw * .1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff66"; ctx.beginPath(); ctx.arc(A.nose.x - fw * .03, A.nose.y - fw * .035, fw * .025, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ff5a8a55"; for (const e of [A.eL, A.eR]) { ctx.beginPath(); ctx.arc(e.x, e.y + fw * .2, fw * .09, 0, Math.PI * 2); ctx.fill(); }
+    }
+    ctx.restore();
+  }
 
   async function startCam(facing) {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing || "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }, audio: false });
@@ -60,6 +117,11 @@
       if (cam.parts.length < 16 && Math.random() < .35) { const s = 16 + Math.random() * 22; cam.parts.push({ x: Math.random() * w, y: f.dir < 0 ? h + s : -s, s, v: (1.2 + Math.random() * 2.2) * f.dir, d: (Math.random() - .5) * .8 }); }
       ctx.textBaseline = "middle"; ctx.textAlign = "center";
       cam.parts = cam.parts.filter(p => { p.y += p.v; p.x += p.d; ctx.font = p.s + "px serif"; ctx.fillText(f.fx, p.x, p.y); return p.y > -50 && p.y < h + 50; });
+    }
+    if (f.mask && cam.fl) {
+      cam.n = (cam.n || 0) + 1;
+      if (cam.n % 2 === 0 || !cam.lm) { try { const r = cam.fl.detectForVideo(v, performance.now()); cam.lm = r && r.faceLandmarks && r.faceLandmarks[0] || null; if (!cam.lm) cam.pv = null; } catch (_) {} }
+      if (cam.lm) drawMask(cam, f.mask, cam.lm);
     }
     ctx.restore();
   }
@@ -267,7 +329,16 @@
     } catch (_) { uiAlert("Kamerani almashtirib boʻlmadi."); }
   };
   window.callFilters = function () { const my = C; if (!my || !my.cam) return; my.filterOpen = !my.filterOpen; renderFilters(); renderCtl(); };
-  window.callSetFilter = function (id) { const my = C; if (!my || !my.cam) return; my.cam.filter = FILTERS.find(f => f.id === id) || FILTERS[0]; my.cam.parts = []; renderFilters(); };
+  window.callSetFilter = function (id) {
+    const my = C; if (!my || !my.cam) return;
+    const cam = my.cam, f = FILTERS.find(x => x.id === id) || FILTERS[0];
+    cam.filter = f; cam.parts = []; cam.lm = null; cam.pv = null; renderFilters();
+    if (f.mask && !cam.fl) {
+      toast("Niqob yuklanmoqda…");
+      loadFace().then(fl => { cam.fl = fl; if (cam.filter === f && !cam.dead) toast("Niqob tayyor. Yuzingizni kameraga qarating"); })
+        .catch(() => { if (!cam.dead) { cam.filter = FILTERS[0]; renderFilters(); } uiAlert("Niqobni yuklab boʻlmadi. Internet aloqasini tekshiring."); });
+    }
+  };
   window.callEnd = function () {
     const my = C; if (!my) return;
     if (my.role === "caller" && !my.joined) { FB.callSet(my.id, "ended").catch(() => {}); finish("Bekor qilindi", "ended"); }
