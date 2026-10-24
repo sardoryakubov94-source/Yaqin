@@ -46,7 +46,7 @@
   };
   window.voiceBubble = function (x, g) {
     const me = x.from == st.user.uid, d = Math.max(1, Math.round(x.dur || 1));
-    return `<div class="m vm-msg ${me ? "me" : ""}" data-vid="${x.id}">${g && !me ? `<b>${esc(x.name || "")}</b>` : ""}<div class="vm-row"><button type="button" class="vm-play" aria-label="Ijro" onclick="voicePlay('${x.id}')">▶</button><div class="vm-wave">${bars(x.id)}</div><span class="vm-t">${fmt(d)}</span></div><small>${tm(x.t)}</small></div>`;
+    return `<div class="m vm-msg ${me ? "me" : ""}" data-vid="${x.id}" data-mid="${x.id}">${g && !me ? `<b>${esc(x.name || "")}</b>` : ""}${typeof replyQuote === "function" ? replyQuote(x) : ""}<div class="vm-row"><button type="button" class="vm-play" aria-label="Ijro" onclick="voicePlay('${x.id}')">▶</button><div class="vm-wave">${bars(x.id)}</div><span class="vm-t">${fmt(d)}</span></div><small>${tm(x.t)}${typeof msgTick === "function" ? msgTick(x) : ""}</small></div>`;
   };
 
   // ---------- yozish ----------

@@ -82,7 +82,23 @@ service cloud.firestore {
               && request.resource.data.mediaPath.matches('/?yaqin/users/' + request.auth.uid + '/private/.*')))
           && (request.resource.data.get('kind', '') != 'voice'
             || (request.resource.data.voiceId is string && request.resource.data.voiceId.size() <= 40
-              && request.resource.data.dur is number && request.resource.data.dur <= 125));
+              && request.resource.data.dur is number && request.resource.data.dur <= 125))
+          && (request.resource.data.get('reply', null) == null
+            || (request.resource.data.reply is map && request.resource.data.reply.keys().hasOnly(['id', 'name', 'text', 'kind'])
+              && request.resource.data.reply.id is string && request.resource.data.reply.text is string && request.resource.data.reply.text.size() <= 120));
+        allow update: if signed() && request.auth.uid in chatOf(cid).members && resource.data.from == request.auth.uid
+          && resource.data.get('deleted', false) == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt', 'deleted'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && (request.resource.data.get('deleted', false) == true || resource.data.get('kind', '') == '');
+      }
+      match /state/{uid} {
+        allow read: if signed() && request.auth.uid in chatOf(cid).members;
+        allow write: if signed() && request.auth.uid == uid && request.auth.uid in chatOf(cid).members
+          && request.resource.data.keys().hasOnly(['readMsg', 'readT', 'typing'])
+          && (!('readMsg' in request.resource.data) || (request.resource.data.readMsg is string && request.resource.data.readMsg.size() <= 40))
+          && (!('readT' in request.resource.data) || request.resource.data.readT is int)
+          && (!('typing' in request.resource.data) || request.resource.data.typing is int);
       }
       match /voice/{vid} {
         allow read: if signed() && request.auth.uid in chatOf(cid).members;
@@ -134,6 +150,9 @@ service cloud.firestore {
         allow read: if signed() && (member(gid) || isAdmin());
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && (request.resource.data.get('reply', null) == null
+            || (request.resource.data.reply is map && request.resource.data.reply.keys().hasOnly(['id', 'name', 'text', 'kind'])
+              && request.resource.data.reply.id is string && request.resource.data.reply.text is string && request.resource.data.reply.text.size() <= 120))
           && (request.resource.data.get('kind', '') != 'media'
             || (request.resource.data.mediaType in ['image','video']
               && ((request.resource.data.get('mediaProvider', '') == 'openinary'
@@ -149,6 +168,11 @@ service cloud.firestore {
               && (!('visibleAt' in request.resource.data) || request.resource.data.visibleAt is int)
               && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt is int)
               && (!('visibleAt' in request.resource.data && 'expiresAt' in request.resource.data) || request.resource.data.expiresAt > request.resource.data.visibleAt)));
+        allow update: if signed() && member(gid) && resource.data.from == request.auth.uid
+          && resource.data.get('deleted', false) == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt', 'deleted'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && (request.resource.data.get('deleted', false) == true || resource.data.get('kind', '') == '');
         allow delete: if signed() && get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid;
       }
       match /joinRequests/{uid} {
