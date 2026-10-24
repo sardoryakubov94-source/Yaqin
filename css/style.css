@@ -310,3 +310,18 @@ img,svg,video,canvas{max-width:100%}
 /* Klaviatura ochilganda chat yozish qatori yashirinib qolmasligi uchun */
 .ov{top:var(--vvt,0px);bottom:auto;height:var(--vvh,100dvh)}
 .ov .send{flex:none;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+
+/* Stiker va rasm yuborish */
+.send .stk-btn{font-size:21px;line-height:1;padding:6px 8px}
+.m.stk{background:none;padding:2px 4px}.m.stk.me{background:none}
+.m.stk .stk-e{display:block;font-size:64px;line-height:1.1;animation:stkpop .28s ease-out}
+.m.stk small{margin-top:0}
+@keyframes stkpop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.stk-panel{flex:none;background:var(--c);border-top:1px solid #ffffff12;max-height:38%;display:flex;flex-direction:column}
+.stk-tabs{display:flex;gap:2px;padding:4px 6px;overflow-x:auto;border-bottom:1px solid #ffffff10;flex:none}
+.stk-tabs button{background:none;border:0;font-size:20px;padding:5px 10px;border-radius:10px;opacity:.65;flex:none}
+.stk-tabs button.on{background:#ffffff14;opacity:1}
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:2px;padding:6px;overflow-y:auto}
+.stk-grid button{background:none;border:0;font-size:32px;line-height:1.2;padding:4px;border-radius:10px}
+.stk-grid button:active{background:#ffffff18;transform:scale(.92)}
+.stk-empty{grid-column:1/-1;color:var(--m);text-align:center;padding:14px 0}

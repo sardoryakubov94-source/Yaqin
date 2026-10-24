@@ -73,7 +73,13 @@ service cloud.firestore {
         allow read: if signed() && request.auth.uid in chatOf(cid).members;
         allow create: if signed() && request.auth.uid in chatOf(cid).members && request.resource.data.from == request.auth.uid
           && !exists(/databases/$(db)/documents/blocks/$(otherOf(cid) + '_' + request.auth.uid))
-          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && (request.resource.data.get('kind', '') != 'media'
+            || (request.resource.data.mediaType == 'image'
+              && request.resource.data.get('mediaProvider', '') == 'openinary'
+              && request.resource.data.mediaPath is string
+              && request.resource.data.mediaPath.size() <= 400
+              && request.resource.data.mediaPath.matches('/?yaqin/users/' + request.auth.uid + '/private/.*')));
       }
       match /shared/{d} {
         allow read: if signed() && request.auth.uid in chatOf(cid).members;
