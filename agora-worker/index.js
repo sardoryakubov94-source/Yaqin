@@ -107,6 +107,78 @@ export default {
     if (path === "/api/push") {
       if (!env.FIREBASE_SA) return fail("FIREBASE_SA Worker siri sozlanmagan.", 500);
       const type = String(body.type || "");
+      // ---- "Sizga eng mos inson yangi eʼlon joyladi" (ilovadagi score() formulasi bilan bir xil) ----
+      if (type === "match") {
+        const id = String(body.adId || "");
+        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return fail("Soʻrov notoʻgʻri.", 400);
+        const chk = await fs(`/users/${enc(uid)}`);                 // ID tokenni Firestore tekshiradi
+        if (chk.status === 401 || chk.status === 403) return fail("Sessiya yaroqsiz.", 401);
+        const str = v => v?.stringValue || "", num = v => Number(v?.integerValue ?? v?.doubleValue ?? 0);
+        try {
+          const sa = await saToken(env), H = { Authorization: "Bearer " + sa, "Content-Type": "application/json" };
+          const DOCS = `projects/${PROJECT}/databases/(default)/documents`;
+          const ar = await fetch(`${FS}/ads/${enc(id)}`, { headers: H });
+          if (ar.status === 404) return fail("Eʼlon topilmadi.", 404);
+          if (!ar.ok) return fail("Eʼlonni oʻqib boʻlmadi.", 502);
+          const f = (await ar.json()).fields || {};
+          const ad = { g: str(f.g), age: num(f.age), reg: str(f.reg), vil: str(f.vil), pur: str(f.pur), name: str(f.name), uid: str(f.uid), anon: !!f.anon?.booleanValue, ints: (f.ints?.arrayValue?.values || []).map(str) };
+          if (str(f.status) !== "active" || f.isDemo?.booleanValue) return out({ sent: 0, skipped: "not-active" });
+          if (Date.now() - num(f.t) > 6 * 3600 * 1000) return out({ sent: 0, skipped: "old" });
+          if (ad.g !== "kelin" && ad.g !== "kuyov") return out({ sent: 0, skipped: "no-gender" });
+          const dd = await fetch(`${FS}/pushLog?documentId=${enc("ad_" + id)}`, { method: "POST", headers: H, body: JSON.stringify({ fields: { t: { integerValue: String(Date.now()) }, from: { stringValue: uid } } }) });
+          if (dd.status === 409) return out({ sent: 0, skipped: "duplicate" });
+          if (!dd.ok) return fail("Navbatga qoʻyilmadi.", 502);
+
+          // anketasi shu jinsni izlaydigan foydalanuvchilar
+          const qr = await fetch(`${FS}:runQuery`, { method: "POST", headers: H, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "prefs.g" }, op: "EQUAL", value: { stringValue: ad.g === "kelin" ? "erkak" : "ayol" } } }, select: { fields: [{ fieldPath: "prefs" }] }, limit: 500 } }) });
+          if (!qr.ok) return fail("Nomzodlarni qidirib boʻlmadi.", 502);
+          const cand = [];
+          for (const row of await qr.json()) {
+            if (!row.document) continue;
+            const cu = row.document.name.split("/").pop(); if (cu === ad.uid) continue;
+            const pr = row.document.fields?.prefs?.mapValue?.fields || {};
+            const p = { reg: str(pr.reg), vil: str(pr.vil), pur: str(pr.pur), age: num(pr.age), ints: (pr.ints?.arrayValue?.values || []).map(str) };
+            let sc = 0;
+            if (ad.reg && ad.reg === p.reg) sc += 45; else if (ad.vil && ad.vil === p.vil) sc += 25;
+            sc += ad.ints.filter(x => p.ints.includes(x)).length * 12;
+            if (p.pur && ad.pur === p.pur) sc += 15;
+            const dA = Math.abs((ad.age || 0) - (p.age || ad.age || 0)); sc += dA <= 3 ? 10 : dA <= 7 ? 5 : 0;
+            if (sc >= 50) cand.push({ uid: cu, sc });
+          }
+          cand.sort((a, b) => b.sc - a.sc);
+          const top = cand.slice(0, 60);
+          if (!top.length) return out({ sent: 0, matched: 0 });
+
+          const br = await fetch(`${FS}:batchGet`, { method: "POST", headers: H, body: JSON.stringify({ documents: top.map(c => `${DOCS}/fcm/${c.uid}`), mask: { fieldPaths: ["tokens", "noMatch", "mDay", "mCnt"] } }) });
+          const info = {};
+          if (br.ok) for (const r of await br.json()) if (r.found) info[r.found.name.split("/").pop()] = r.found.fields || {};
+          const day = new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);   // Oʻzbekiston kuni
+          const pick = [];
+          for (const c of top) {
+            const fi = info[c.uid] || {};
+            if (fi.noMatch?.booleanValue) continue;
+            const cnt = str(fi.mDay) === day ? num(fi.mCnt) : 0;
+            if (cnt >= 2) continue;                                   // kuniga koʻpi bilan 2 ta
+            pick.push({ uid: c.uid, cnt, tokens: (fi.tokens?.arrayValue?.values || []).map(str).filter(Boolean).slice(-2) });
+            if (pick.length >= 25) break;
+          }
+          const title = "Sizga eng mos inson yangi eʼlon joyladi", text = `${ad.anon ? "Anonim nomzod" : ad.name}, ${ad.age} yosh${ad.reg ? " · " + ad.reg : ""}`;
+          let sent = 0; const dead = {}; let budget = 38;
+          await Promise.all(pick.flatMap(u => u.tokens.map(tk => ({ u, tk }))).slice(0, budget).map(async ({ u, tk }) => {
+            const r = await fetch(`https://fcm.googleapis.com/v1/projects/${PROJECT}/messages:send`, { method: "POST", headers: H, body: JSON.stringify({ message: { token: tk, notification: { title, body: text }, data: { kind: "match", chatId: "", tag: "match", adId: id }, webpush: { headers: { Urgency: "normal", TTL: "86400" } } } }) });
+            if (r.ok) sent++; else if (r.status === 404 || /UNREGISTERED/.test(await r.text().catch(() => ""))) (dead[u.uid] = dead[u.uid] || []).push(tk);
+          }));
+          const now = Date.now(), writes = [];
+          for (const u of pick) {
+            const nid = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+            writes.push({ update: { name: `${DOCS}/notifs/${nid}`, fields: { to: { stringValue: u.uid }, type: { stringValue: "match" }, title: { stringValue: title }, text: { stringValue: text }, adId: { stringValue: id }, t: { integerValue: String(now) }, read: { booleanValue: false } } }, currentDocument: { exists: false } });
+            writes.push({ update: { name: `${DOCS}/fcm/${u.uid}`, fields: { mDay: { stringValue: day }, mCnt: { integerValue: String(u.cnt + 1) } } }, updateMask: { fieldPaths: ["mDay", "mCnt"] } });
+            if (dead[u.uid]) writes.push({ transform: { document: `${DOCS}/fcm/${u.uid}`, fieldTransforms: [{ fieldPath: "tokens", removeAllFromArray: { values: dead[u.uid].map(x => ({ stringValue: x })) } }] } });
+          }
+          if (writes.length) await fetch(`${FS}:commit`, { method: "POST", headers: H, body: JSON.stringify({ writes }) }).catch(() => {});
+          return out({ matched: cand.length, notified: pick.length, sent });
+        } catch (e) { return fail("Moslik xabari yuborilmadi: " + (e && e.message ? e.message : e), 502); }
+      }
       let peer, title, text, kind = "", tag, dedupe, chatId = "";
       if (type === "chat") {
         const cid = String(body.chatId || ""), mid = String(body.msgId || "");

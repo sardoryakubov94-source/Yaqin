@@ -4,7 +4,7 @@ Uchta ish qiladi:
 - `POST /` — guruh ovozli chat / video translatsiya uchun Agora token (1 soatlik)
 - `POST /api/openinary/sign` — guruhga rasm/video yuklash uchun imzo
 - `POST /api/call/token` — shaxsiy qoʻngʻiroq tokeni
-- `POST /api/push` — push bildirishnoma (FCM): yangi xabar va kiruvchi qoʻngʻiroq
+- `POST /api/push` — push bildirishnoma (FCM): yangi xabar, kiruvchi qoʻngʻiroq va "Sizga eng mos inson yangi eʼlon joyladi" (anketa asosida, kuniga 2 tagacha)
 
 ## Telefondan / brauzerdan deploy (buyruqsiz)
 1. Cloudflare → Workers & Pages → `yaqin-agora` → Edit code.

@@ -411,7 +411,7 @@ var US_;
 function openNotif(){if(!need())return;st.nnew={};const ids=st.notifs.filter(n=>!n.read).map(n=>n.id);ids.forEach(i=>st.nnew[i]=1);if(ids.length)FB.markRead(ids).catch(()=>{});st.form="notif";draw()}
 function closeNotif(){st.form=null;st.nnew={};draw()}
 function readAll(){const ids=st.notifs.filter(n=>!n.read).map(n=>n.id);if(ids.length)FB.markRead(ids).catch(()=>{});st.nnew={};draw()}
-function ntGo(t){st.form=null;st.nnew={};if(t=="support"){openSup(st.user.uid);return}st.tab=t=="like"?"msg":"prof";draw()}
+function ntGo(t){st.form=null;st.nnew={};if(t=="support"){openSup(st.user.uid);return}st.tab=t=="like"?"msg":t=="match"?"home":"prof";draw()}
 function notifV(){const L=[...st.notifs].sort((a,b)=>b.t-a.t).slice(0,60),isN=n=>st.nnew[n.id]||!n.read,nw=L.filter(isN),old=L.filter(n=>!isN(n));
  const row=(n,y)=>`<div class="nt ${y?"new":""}" onclick="ntGo('${n.type}')">${y?'<span class="dot"></span>':'<span style="width:10px;flex:none"></span>'}<div><b>${esc(n.title)}</b><p>${esc(n.text||"")}</p><small>${ago(n.t)}</small></div></div>`;
  const perm="Notification" in window&&Notification.permission!="granted"?`<div class="cons" style="margin:0 0 12px"><b>Telefon bildirishnomalarini yoqing</b><p style="color:var(--m);margin:4px 0 8px;font-size:13px">Ilova ochiq yoki orqa fonda turganda yangi xabar haqida bildirishnoma keladi.</p><button class="go" onclick="enablePush()">Yoqish</button></div>`:"";
