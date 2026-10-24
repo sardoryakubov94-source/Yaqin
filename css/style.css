@@ -397,3 +397,15 @@ img,svg,video,canvas{max-width:100%}
 .yc-b.red span{background:#e5483d}
 .yc-b.green span{background:#22b35a}
 .yc-b:active span{transform:scale(.94)}
+
+/* Branded select menu instead of Android's oversized native picker */
+.yq-picker-bg{position:fixed;inset:0;z-index:10000;background:#080610b8;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px;animation:yqFade .16s ease}
+.yq-picker{width:min(100%,440px);max-height:min(76vh,620px);display:flex;flex-direction:column;background:linear-gradient(160deg,#282039,#191525 72%);border:1px solid #a99aff66;border-radius:22px;overflow:hidden;box-shadow:0 22px 70px #000b;color:var(--t,#f7f3ff)}
+.yq-picker header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;border-bottom:1px solid #ffffff18;font-size:17px;font-weight:800;color:#f7f3ff}
+.yq-picker header button{width:34px;height:34px;border-radius:11px;background:#ffffff0c;color:#d8d0ef;font-size:18px;flex:none}
+.yq-picker-options{overflow:auto;padding:7px 10px 12px;overscroll-behavior:contain}
+.yq-picker-option{width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:11px 13px;margin:3px 0;border:1px solid transparent;border-radius:12px;background:transparent;color:#e9e3f7;font-size:15px;line-height:1.35}
+.yq-picker-option.selected{background:linear-gradient(100deg,#f0b34a24,#a99aff20);border-color:#f0b34a99;color:#ffd17a;font-weight:750}
+.yq-picker-option i{font-style:normal;color:#f0b34a;font-size:18px;flex:none}
+.yq-picker-group{padding:12px 12px 5px;color:#aaa0c7;font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
+@keyframes yqFade{from{opacity:0}to{opacity:1}}
