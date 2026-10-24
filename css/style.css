@@ -358,3 +358,11 @@ img,svg,video,canvas{max-width:100%}
 .pur-home .l1{font-weight:750}
 .pur-home .l2{color:inherit;opacity:.76}
 @media(prefers-reduced-motion:reduce){.pur-home button,.pur-home button::after{transition:none!important}.pur-home button:active{transform:none}}
+
+
+/* Equal-width relationship filters with a little more room, safely inside the screen */
+.pur-home{width:calc(100% + 8px);margin-left:-4px;margin-right:-4px;gap:4px;padding:4px}
+.pur-home button{flex:1 1 0;min-width:0;padding:7px 1px}
+.pur-home .l1{font-size:clamp(10px,3.1vw,13px);letter-spacing:-.35px;max-width:100%}
+.pur-home .l2{font-size:clamp(8px,2.45vw,10px);white-space:normal;text-align:center;max-width:100%;overflow-wrap:normal;line-height:1.2}
+@media(max-width:340px){.pur-home{gap:3px;padding:3px}.pur-home .l1{font-size:10px}.pur-home .l2{font-size:8px}}
