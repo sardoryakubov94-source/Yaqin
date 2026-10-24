@@ -79,7 +79,18 @@ service cloud.firestore {
               && request.resource.data.get('mediaProvider', '') == 'openinary'
               && request.resource.data.mediaPath is string
               && request.resource.data.mediaPath.size() <= 400
-              && request.resource.data.mediaPath.matches('/?yaqin/users/' + request.auth.uid + '/private/.*')));
+              && request.resource.data.mediaPath.matches('/?yaqin/users/' + request.auth.uid + '/private/.*')))
+          && (request.resource.data.get('kind', '') != 'voice'
+            || (request.resource.data.voiceId is string && request.resource.data.voiceId.size() <= 40
+              && request.resource.data.dur is number && request.resource.data.dur <= 125));
+      }
+      match /voice/{vid} {
+        allow read: if signed() && request.auth.uid in chatOf(cid).members;
+        allow create: if signed() && request.auth.uid in chatOf(cid).members && request.resource.data.from == request.auth.uid
+          && !exists(/databases/$(db)/documents/blocks/$(otherOf(cid) + '_' + request.auth.uid))
+          && request.resource.data.data is string && request.resource.data.data.size() <= 800000
+          && request.resource.data.data[0:11] == 'data:audio/'
+          && request.resource.data.dur is number && request.resource.data.dur > 0 && request.resource.data.dur <= 125;
       }
       match /shared/{d} {
         allow read: if signed() && request.auth.uid in chatOf(cid).members;

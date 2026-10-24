@@ -325,3 +325,23 @@ img,svg,video,canvas{max-width:100%}
 .stk-grid button{background:none;border:0;font-size:32px;line-height:1.2;padding:4px;border-radius:10px}
 .stk-grid button:active{background:#ffffff18;transform:scale(.92)}
 .stk-empty{grid-column:1/-1;color:var(--m);text-align:center;padding:14px 0}
+
+/* Ovozli xabarlar */
+.send.vm.hastext .vm-btn{display:none}
+.send.vm:not(.hastext) .go{display:none}
+.send .vm-btn{padding:9px 11px;color:var(--t)}
+.send.recording>*:not(.vrec){display:none!important}
+.vrec{display:flex;flex:1 1 100%;align-items:center;gap:10px;min-width:0}
+.vrec b{font-variant-numeric:tabular-nums;min-width:38px}
+.vrec .vhint{flex:1;color:var(--m);font-size:12px}
+.vrec .vcancel{padding:9px 11px}
+.vdot{width:10px;height:10px;border-radius:50%;background:#ef4444;animation:vdot 1s infinite}
+@keyframes vdot{50%{opacity:.25}}
+.m.vm-msg{min-width:190px}
+.vm-row{display:flex;align-items:center;gap:9px}
+.vm-play{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:#ffffff22;color:var(--t);font-size:15px;line-height:1}
+.m.me .vm-play{background:#ffffff30}
+.vm-wave{flex:1;display:flex;align-items:center;gap:2px;height:26px;min-width:0}
+.vm-wave i{flex:1;max-width:4px;border-radius:2px;background:#ffffff55;transition:background .15s}
+.vm-wave i.on{background:#fff}
+.vm-t{flex:none;font-size:11px;color:var(--m);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
