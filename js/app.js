@@ -488,3 +488,29 @@ addEventListener("popstate",()=>{
 });
 armYaqinBack();
 
+
+;
+// Yaqin-styled select picker: use app-themed options instead of Android's native sheet.
+(function(){
+ if(window.__yaqinSelectPicker)return;window.__yaqinSelectPicker=true;
+ function openPicker(sel){
+  if(!sel||sel.disabled||sel.dataset.nativePicker==="1")return;
+  const options=[...sel.options].filter(o=>!o.disabled).map(o=>({value:o.value,label:o.textContent.trim(),selected:o.value===sel.value,group:o.parentElement&&o.parentElement.tagName==="OPTGROUP"?o.parentElement.label:""}));
+  if(!options.length)return;
+  const bg=document.createElement("div");bg.className="yq-picker-bg";
+  const title=(sel.labels&&sel.labels[0]&&sel.labels[0].textContent.trim())||"Tanlang";
+  bg.innerHTML='<section class="yq-picker" role="dialog" aria-modal="true"><header><span></span><button type="button" aria-label="Yopish">✕</button></header><div class="yq-picker-options"></div></section>';
+  bg.querySelector("header span").textContent=title;
+  const list=bg.querySelector(".yq-picker-options");let lastGroup="";
+  options.forEach(o=>{
+   if(o.group&&o.group!==lastGroup){const g=document.createElement("div");g.className="yq-picker-group";g.textContent=o.group;list.appendChild(g);lastGroup=o.group}
+   const b=document.createElement("button");b.type="button";b.className="yq-picker-option"+(o.selected?" selected":"");
+   const label=document.createElement("span");label.textContent=o.label;const tick=document.createElement("i");tick.textContent=o.selected?"✓":"";b.append(label,tick);
+   b.onclick=()=>{sel.value=o.value;sel.dispatchEvent(new Event("change",{bubbles:true}));bg.remove()};list.appendChild(b)
+  });
+  bg.addEventListener("click",e=>{if(e.target===bg)bg.remove()});bg.querySelector("header button").onclick=()=>bg.remove();
+  document.body.appendChild(bg);const chosen=list.querySelector(".selected");if(chosen)chosen.scrollIntoView({block:"nearest"});
+ }
+ document.addEventListener("pointerdown",e=>{const sel=e.target.closest&&e.target.closest("select.in");if(!sel)return;e.preventDefault();e.stopPropagation();openPicker(sel)},true);
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const p=document.querySelector(".yq-picker-bg");if(p)p.remove()}},true);
+})();
