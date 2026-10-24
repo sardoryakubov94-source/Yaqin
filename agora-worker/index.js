@@ -1,4 +1,4 @@
-// Yaqin Worker (Cloudflare, bepul, kutubxonasiz): Agora token + Openinary yuklash imzosi.
+// Yaqin Worker (Cloudflare, bepul, kutubxonasiz): Agora token (guruh + 1:1 qoʻngʻiroq) + Openinary yuklash imzosi.
 // Secretlar: AGORA_APP_CERT, OPENINARY_API_KEY (kodga yozilmaydi).
 const PROJECT = "yaqin-3f9f9";
 const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
@@ -113,6 +113,23 @@ export default {
         if (!sr.ok || !sd.success || !sd.signature || !sd.expires || !sd.folder) return fail(sd.error || "Openinary imzo bera olmadi.", sr.ok ? 502 : sr.status);
         return out({ signature: sd.signature, expires: sd.expires, folder: sd.folder });
       } catch { return fail("Openinary xizmatiga ulanib boʻlmadi.", 502); }
+    }
+
+    // ---- Agora: shaxsiy (1:1) qoʻngʻiroq tokeni ----
+    if (path === "/api/call/token") {
+      if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);
+      const callId = String(body.callId || "");
+      if (!/^[A-Za-z0-9]{10,40}$/.test(callId)) return fail("Qoʻngʻiroq ID notoʻgʻri.", 400);
+      const c = await fs(`/calls/${enc(callId)}`);
+      if (c.status === 401 || c.status === 403) return fail("Sessiya yaroqsiz yoki bu qoʻngʻiroqqa ruxsat yoʻq.", 401);
+      if (c.status === 404) return fail("Qoʻngʻiroq topilmadi.", 404);
+      if (!c.ok) return fail("Qoʻngʻiroqni tekshirib boʻlmadi.", 502);
+      const f = (await c.json()).fields || {}, st = f.status?.stringValue || "";
+      if (uid !== f.from?.stringValue && uid !== f.to?.stringValue) return fail("Bu qoʻngʻiroqqa ruxsat yoʻq.", 403);
+      if (st !== "ringing" && st !== "accepted") return fail("Qoʻngʻiroq tugagan.", 403);
+      const channel = "yc_" + callId, auid = hashUid(uid);
+      const token = await rtcToken(APP_ID, env.AGORA_APP_CERT, channel, auid, TOKEN_TTL);
+      return out({ appId: APP_ID, channel, uid: auid, token, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
     }
 
     // ---- Agora: guruh ovozli chat / video translatsiya tokeni ----

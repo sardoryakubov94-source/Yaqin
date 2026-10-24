@@ -1,0 +1,311 @@
+/* Yaqin: shaxsiy (1:1) ovozli va video qoʻngʻiroq + video filtrlar. Agora RTC + Firestore signal. voice-msg.js dan keyin yuklanadi. */
+(function () {
+  "use strict";
+  const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
+  const SDK = "https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js";
+  const RING_MS = () => Number(window.YQ_CALL_TIMEOUT) || 45000;
+  const q = id => document.getElementById(id);
+  const fmt = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s % 60).padStart(2, "0"); };
+  function uidFor(v) { let h = 2166136261; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; }
+  const SUP_FILTER = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
+
+  const I_PHONE = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+  const I_CAM = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4zM2 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" transform="translate(1 0)"/></svg>';
+
+  // ---------- video filtrlar (canvas) ----------
+  const FILTERS = [
+    { id: "none", name: "Oddiy", css: "" },
+    { id: "warm", name: "Iliq", css: "sepia(.3) saturate(1.35) contrast(1.05) brightness(1.04)", cf: 1 },
+    { id: "cool", name: "Sovuq", css: "saturate(1.1) hue-rotate(14deg) brightness(1.04)", cf: 1 },
+    { id: "bw", name: "Qora-oq", css: "grayscale(1) contrast(1.1)", cf: 1 },
+    { id: "retro", name: "Retro", css: "sepia(.65) contrast(1.15) saturate(.9)", cf: 1 },
+    { id: "pink", name: "Pushti", css: "saturate(1.5) hue-rotate(-25deg) brightness(1.05)", cf: 1 },
+    { id: "soft", name: "Silliq", css: "brightness(1.08) saturate(1.1)", soft: 1, cf: 1 },
+    { id: "film", name: "Kino", css: "contrast(1.2) saturate(.9)", vignette: 1, cf: 1 },
+    { id: "hearts", name: "💖", css: "saturate(1.15) brightness(1.04)", fx: "💖", dir: -1 },
+    { id: "stars", name: "✨", css: "contrast(1.05)", fx: "✨", dir: -1 },
+    { id: "snow", name: "❄️", css: "brightness(1.05) saturate(.95)", fx: "❄️", dir: 1 }
+  ];
+  const usable = () => FILTERS.filter(f => SUP_FILTER || !f.cf && f.id !== "none" || f.id === "none");
+
+  async function startCam(facing) {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing || "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }, audio: false });
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.setAttribute("playsinline", ""); v.srcObject = stream;
+    try { await v.play(); } catch (_) {}
+    const w = v.videoWidth || 640, h = v.videoHeight || 480;
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const ctx = cv.getContext("2d");
+    const out = cv.captureStream(24).getVideoTracks()[0];
+    const cam = { stream, v, cv, ctx, out, w, h, facing: facing || "user", filter: FILTERS[0], parts: [], dead: false };
+    cam.timer = setInterval(() => draw(cam), 1000 / 24);
+    draw(cam);
+    return cam;
+  }
+  function draw(cam) {
+    if (cam.dead || !cam.ctx) return;
+    const { ctx, v, w, h } = cam, f = cam.filter;
+    if (v.readyState !== undefined && v.readyState < 2 && !window.YQ_TEST) return;
+    ctx.save();
+    ctx.filter = SUP_FILTER && f.css ? f.css : "none";
+    ctx.drawImage(v, 0, 0, w, h);
+    if (f.soft && SUP_FILTER) { ctx.globalAlpha = .5; ctx.filter = "blur(2.2px) " + f.css; ctx.drawImage(v, 0, 0, w, h); ctx.globalAlpha = 1; }
+    ctx.filter = "none";
+    if (f.vignette) {
+      const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .78);
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.55)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    }
+    if (f.fx) {
+      if (cam.parts.length < 16 && Math.random() < .35) { const s = 16 + Math.random() * 22; cam.parts.push({ x: Math.random() * w, y: f.dir < 0 ? h + s : -s, s, v: (1.2 + Math.random() * 2.2) * f.dir, d: (Math.random() - .5) * .8 }); }
+      ctx.textBaseline = "middle"; ctx.textAlign = "center";
+      cam.parts = cam.parts.filter(p => { p.y += p.v; p.x += p.d; ctx.font = p.s + "px serif"; ctx.fillText(f.fx, p.x, p.y); return p.y > -50 && p.y < h + 50; });
+    }
+    ctx.restore();
+  }
+  function stopCam(cam) {
+    if (!cam) return; cam.dead = true; clearInterval(cam.timer);
+    try { cam.stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+    try { cam.out.stop(); } catch (_) {}
+  }
+
+  // ---------- qoʻngʻiroq tovushi ----------
+  const RG = { t: null, v: null, ac: null };
+  function ring(kind) {
+    stopRing();
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; const ac = RG.ac = new AC();
+      const beep = () => { const o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.value = kind === "in" ? 880 : 425; g.gain.value = .08; o.connect(g); g.connect(ac.destination); o.start(); setTimeout(() => { try { o.stop(); } catch (_) {} }, kind === "in" ? 350 : 900); };
+      beep(); RG.t = setInterval(beep, kind === "in" ? 1500 : 3200);
+    } catch (_) {}
+    if (kind === "in" && navigator.vibrate) { const vb = () => { try { navigator.vibrate([400, 200, 400]); } catch (_) {} }; vb(); RG.v = setInterval(vb, 2200); }
+  }
+  function stopRing() { clearInterval(RG.t); clearInterval(RG.v); RG.t = RG.v = null; try { RG.ac && RG.ac.close(); } catch (_) {} RG.ac = null; try { navigator.vibrate && navigator.vibrate(0); } catch (_) {} }
+
+  // ---------- holat va oyna ----------
+  let C = null, sdkP = null, incUnsub = null, incUid = null;
+  const handled = new Set();
+  function loadSdk() {
+    if (window.AgoraRTC) return Promise.resolve();
+    if (!sdkP) sdkP = new Promise((res, rej) => { const s = document.createElement("script"); s.src = SDK; s.onload = res; s.onerror = () => { sdkP = null; rej(new Error("Agora SDK yuklanmadi. Internetni tekshiring.")); }; document.head.appendChild(s); });
+    return sdkP;
+  }
+  const e2 = s => esc(String(s == null ? "" : s));
+  function ui(state) {
+    let el = q("yc");
+    if (!el) {
+      document.body.insertAdjacentHTML("beforeend", `<div class="yc" id="yc"><div class="yc-remote" id="ycRemote"></div><div class="yc-peer" id="ycPeer"><div class="yc-ava" id="ycAva"></div><div class="yc-name" id="ycName"></div><div class="yc-st" id="ycSt"></div></div><div class="yc-pip" id="ycPip" hidden></div><div class="yc-filters" id="ycFil" hidden></div><div class="yc-ctl" id="ycCtl"></div></div>`);
+      el = q("yc");
+    }
+    q("ycName").textContent = C.peerName || "Suhbatdosh";
+    q("ycAva").innerHTML = C.peerAva || "👤";
+    el.dataset.state = state;
+    renderCtl();
+  }
+  const btn = (cls, on, ico, lab) => `<button type="button" class="yc-b ${cls}" onclick="${on}"><span>${ico}</span><small>${lab}</small></button>`;
+  function renderCtl() {
+    const ctl = q("ycCtl"); if (!ctl || !C) return;
+    const s = q("yc").dataset.state;
+    if (s === "incoming") ctl.innerHTML = btn("red", "callDecline()", "✖", "Rad etish") + btn("green", "callAccept()", C.mode === "video" ? "📹" : "📞", "Javob berish");
+    else if (s === "calling") ctl.innerHTML = btn("red", "callEnd()", "✖", "Bekor qilish");
+    else {
+      const video = !!C.cam;
+      ctl.innerHTML = btn(C.muted ? "off" : "", "callMute()", C.muted ? "🔇" : "🎙️", "Mikrofon") +
+        btn(video ? "" : "off", "callCamera()", video ? "📹" : "📷", video ? "Kamera" : "Kamerani yoq") +
+        (video ? btn("", "callFlip()", "🔄", "Almashtirish") + btn(C.filterOpen ? "on" : "", "callFilters()", "✨", "Filtr") : "") +
+        btn("red", "callEnd()", "✖", "Tugatish");
+    }
+  }
+  function status(t) { const e = q("ycSt"); if (e) e.textContent = t; }
+  function renderPip() {
+    const p = q("ycPip"); if (!p) return;
+    p.innerHTML = "";
+    if (C && C.cam) { C.cam.cv.className = C.cam.facing === "user" ? "mir" : ""; p.appendChild(C.cam.cv); p.hidden = false; } else p.hidden = true;
+  }
+  function renderFilters() {
+    const f = q("ycFil"); if (!f) return;
+    f.hidden = !(C && C.cam && C.filterOpen);
+    f.innerHTML = usable().map(x => `<button type="button" class="${C.cam && C.cam.filter.id === x.id ? "on" : ""}" onclick="callSetFilter('${x.id}')">${x.name}</button>`).join("");
+  }
+
+  // ---------- chiquvchi ----------
+  async function preflight(mode) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Qoʻngʻiroq uchun sayt HTTPS orqali ochilishi va brauzer mikrofonni qoʻllashi kerak.");
+    try { const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: mode === "video" }); s.getTracks().forEach(t => t.stop()); }
+    catch (_) { throw new Error(mode === "video" ? "Kamera va mikrofondan foydalanishga ruxsat bering." : "Mikrofondan foydalanishga ruxsat bering."); }
+  }
+  window.callStart = async function (mode) {
+    const ch = st.chat;
+    if (C && !C.ended) { uiAlert("Siz allaqachon qoʻngʻiroqdasiz."); return; }
+    if (C) closeUi(C);
+    if (!ch || ch.t !== "c" || !st.user) return;
+    const chat = (st.chats || []).find(x => x.id === ch.id); if (!chat) return;
+    if (st.vrec) { uiAlert("Avval ovoz yozishni tugating."); return; }
+    const me = st.user.uid, peer = (chat.members || []).find(x => x !== me);
+    if (!peer) return;
+    const own = chat.owner === me;
+    const name = own ? chat.askerName : ((st.csh && st.csh.name) || chat.ownerName);
+    const ava = own ? ava2(chat.askerImg) : ava2(chat.ownerImg, chat.ownerAva);
+    try { await preflight(mode); } catch (e) { uiAlert(e.message); return; }
+    if (C && !C.ended) return;
+    if (C) closeUi(C);
+    C = { role: "caller", mode, chatId: ch.id, peer, peerName: name, peerAva: ava, ended: false };
+    ui("calling"); status("Qoʻngʻiroq qilinmoqda…"); ring("out");
+    try { C.id = await FB.callCreate(ch.id, peer, mode, st.user.name); }
+    catch (e) { const m = e && e.message ? e.message : e; closeUi(C); uiAlert("Qoʻngʻiroq boshlanmadi: " + m); return; }
+    const my = C;
+    my.unsub = FB.callWatch(my.id, d => {
+      if (!d || C !== my || my.ended) return;
+      my.status = d.status;
+      if (d.status === "accepted" && !my.joined) { my.joined = true; stopRing(); clearTimeout(my.tm); connect(); }
+      else if (d.status === "declined") finish("Qoʻngʻiroq rad etildi", "declined");
+      else if (d.status === "ended" || d.status === "missed") finish("Qoʻngʻiroq tugadi", d.status);
+    });
+    my.tm = setTimeout(() => { if (C === my && !my.joined) { FB.callSet(my.id, "missed").catch(() => {}); finish("Javob bermadi", "missed"); } }, RING_MS());
+  };
+  function ava2(img, emoji) { return img ? `<img alt="" src="${e2(img)}">` : e2(emoji || "👤"); }
+
+  // ---------- kiruvchi ----------
+  function showIncoming(d) {
+    if (C && !C.ended) { FB.callSet(d.id, "declined").catch(() => {}); return; }
+    if (C) closeUi(C);
+    const chat = (st.chats || []).find(x => x.id === d.chatId);
+    const me = st.user && st.user.uid, own = chat && chat.owner === me;
+    C = { role: "callee", id: d.id, mode: d.mode === "video" ? "video" : "audio", chatId: d.chatId, peer: d.from, peerName: d.fromName || (chat ? (own ? chat.askerName : chat.ownerName) : "Suhbatdosh"), peerAva: chat ? (own ? ava2(chat.askerImg) : ava2(chat.ownerImg, chat.ownerAva)) : "👤", ended: false };
+    ui("incoming"); status(C.mode === "video" ? "Video qoʻngʻiroq…" : "Ovozli qoʻngʻiroq…"); ring("in");
+    const my = C;
+    my.unsub = FB.callWatch(my.id, x => { if (C !== my || my.ended) return; if (!x || (x.status !== "ringing" && x.status !== "accepted")) finish("Qoʻngʻiroq bekor qilindi", "ended", true); });
+    my.tm = setTimeout(() => { if (C === my && !my.joined) finish("Javob berilmadi", "missed", true); }, RING_MS() + 5000);
+  }
+  window.callAccept = async function () {
+    const my = C; if (!my || my.role !== "callee" || my.joined) return;
+    try { await preflight(my.mode); } catch (e) { uiAlert(e.message); return; }
+    if (C !== my) return;
+    my.joined = true; stopRing(); clearTimeout(my.tm);
+    try { await FB.callSet(my.id, "accepted"); } catch (e) { finish("Qoʻngʻiroqqa ulanib boʻlmadi", "ended", true); return; }
+    connect();
+  };
+  window.callDecline = function () { const my = C; if (!my || my.role !== "callee") return; FB.callSet(my.id, "declined").catch(() => {}); finish("Rad etildi", "declined", true); };
+
+  function watchIncoming() {
+    const uid = st && st.user && st.user.uid;
+    if (uid === incUid) return;
+    if (incUnsub) { try { incUnsub(); } catch (_) {} incUnsub = null; }
+    incUid = uid || null;
+    if (!uid) return;
+    incUnsub = FB.callIncoming(uid, list => {
+      list.forEach(d => {
+        if (handled.has(d.id) || Math.abs(Date.now() - (d.t || 0)) > 75000) return;
+        handled.add(d.id); showIncoming(d);
+      });
+    });
+  }
+
+  // ---------- ulanish ----------
+  async function connect() {
+    const my = C; if (!my) return;
+    ui("live"); status("Ulanmoqda…");
+    try {
+      await loadSdk();
+      const myUid = uidFor(st.user.uid);
+      const d = await FB.callToken(my.id, myUid);
+      if (C !== my) return;
+      const client = my.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      client.on("user-joined", () => { if (!my.t0) { my.t0 = Date.now(); my.clock = setInterval(() => status(fmt((Date.now() - my.t0) / 1000)), 500); status("0:00"); } });
+      client.on("user-published", async (u, type) => {
+        try { await client.subscribe(u, type); } catch (_) { return; }
+        if (type === "video") { const r = q("ycRemote"); if (r) { u.videoTrack.play(r); r.classList.add("on"); } q("yc").classList.add("hasv"); }
+        if (type === "audio") u.audioTrack.play();
+      });
+      client.on("user-unpublished", (u, type) => { if (type === "video") { const r = q("ycRemote"); if (r) r.classList.remove("on"); q("yc") && q("yc").classList.remove("hasv"); } });
+      client.on("user-left", () => { if (C === my) { status("Suhbatdosh uzildi"); setTimeout(() => { if (C === my) endLocal(true); }, 1200); } });
+      client.on("token-privilege-will-expire", async () => { try { const n = await FB.callToken(my.id, myUid); await client.renewToken(n.token); } catch (_) {} });
+      await client.join(d.appId || APP_ID, d.channel, d.token, d.uid);
+      if (C !== my) { try { await client.leave(); } catch (_) {} return; }
+      my.mic = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
+      await client.publish([my.mic]);
+      if (my.mode === "video") await startVideo();
+      status(my.t0 ? fmt((Date.now() - my.t0) / 1000) : (my.role === "caller" ? "Suhbatdosh ulanmoqda…" : "Ulanmoqda…"));
+      try { if (navigator.wakeLock) my.wl = await navigator.wakeLock.request("screen"); } catch (_) {}
+    } catch (e) {
+      if (C === my) { const m = e && e.message ? e.message : e; finish("Ulanib boʻlmadi", "ended"); uiAlert("Qoʻngʻiroqqa ulanib boʻlmadi: " + m); }
+    }
+  }
+  async function startVideo() {
+    const my = C; if (!my || my.cam) return;
+    const cam = await startCam("user");
+    if (C !== my) { stopCam(cam); return; }
+    my.cam = cam;
+    my.vtrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: cam.out, width: cam.w, height: cam.h, frameRate: 24, bitrateMin: 200, bitrateMax: 900, optimizationMode: "motion" });
+    await my.client.publish([my.vtrack]);
+    renderPip(); renderFilters(); renderCtl();
+  }
+  async function stopVideo() {
+    const my = C; if (!my || !my.cam) return;
+    try { await my.client.unpublish([my.vtrack]); } catch (_) {}
+    try { my.vtrack.close(); } catch (_) {}
+    stopCam(my.cam); my.cam = null; my.vtrack = null; my.filterOpen = false;
+    renderPip(); renderFilters(); renderCtl();
+  }
+
+  // ---------- boshqaruv ----------
+  window.callMute = function () { const my = C; if (!my || !my.mic) return; my.muted = !my.muted; try { my.mic.setEnabled(!my.muted); } catch (_) {} renderCtl(); };
+  window.callCamera = async function () {
+    const my = C; if (!my || !my.client) return;
+    try { if (my.cam) await stopVideo(); else { await preflight("video"); await startVideo(); } }
+    catch (e) { uiAlert("Kamerani yoqib boʻlmadi: " + (e.message || e)); }
+  };
+  window.callFlip = async function () {
+    const my = C; if (!my || !my.cam) return;
+    const next = my.cam.facing === "user" ? "environment" : "user";
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: next, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      const old = my.cam.stream; my.cam.stream = s; my.cam.v.srcObject = s; my.cam.facing = next;
+      try { old.getTracks().forEach(t => t.stop()); } catch (_) {}
+      try { await my.cam.v.play(); } catch (_) {}
+      renderPip();
+    } catch (_) { uiAlert("Kamerani almashtirib boʻlmadi."); }
+  };
+  window.callFilters = function () { const my = C; if (!my || !my.cam) return; my.filterOpen = !my.filterOpen; renderFilters(); renderCtl(); };
+  window.callSetFilter = function (id) { const my = C; if (!my || !my.cam) return; my.cam.filter = FILTERS.find(f => f.id === id) || FILTERS[0]; my.cam.parts = []; renderFilters(); };
+  window.callEnd = function () {
+    const my = C; if (!my) return;
+    if (my.role === "caller" && !my.joined) { FB.callSet(my.id, "ended").catch(() => {}); finish("Bekor qilindi", "ended"); }
+    else endLocal(false);
+  };
+  function endLocal(remote) { const my = C; if (!my) return; if (!remote && my.id && my.status !== "ended") FB.callSet(my.id, "ended").catch(() => {}); finish("Qoʻngʻiroq tugadi", "ended", remote); }
+
+  function closeUi(my) { if (my && C !== my) return; const el = q("yc"); if (el) el.remove(); C = null; stopRing(); }
+  function finish(msg, final, quiet) {
+    const my = C; if (!my || my.ended) return;
+    my.ended = true; stopRing(); clearTimeout(my.tm); clearInterval(my.clock);
+    try { my.unsub && my.unsub(); } catch (_) {}
+    const secs = my.t0 ? (Date.now() - my.t0) / 1000 : 0;
+    try { my.client && my.client.leave(); } catch (_) {}
+    try { if (my.mic) { my.mic.stop(); my.mic.close(); } } catch (_) {}
+    try { my.vtrack && my.vtrack.close(); } catch (_) {}
+    stopCam(my.cam); my.cam = null;
+    try { my.wl && my.wl.release(); } catch (_) {}
+    if (my.role === "caller" && my.chatId) {
+      const kind = my.mode === "video" ? "📹 Video qoʻngʻiroq" : "📞 Ovozli qoʻngʻiroq";
+      const text = secs >= 1 ? kind + " · " + fmt(secs) : (final === "declined" ? "📞 Qoʻngʻiroq rad etildi" : "📞 Javobsiz qoʻngʻiroq");
+      FB.send("chats", my.chatId, text, st.user ? st.user.name : "", "call", {}).catch(() => {});
+    }
+    if (quiet) { closeUi(my); return; }
+    status(msg); const f = q("ycFil"); if (f) f.hidden = true; const c = q("ycCtl"); if (c) c.innerHTML = "";
+    setTimeout(() => closeUi(my), 900);
+  }
+
+  // ---------- chat sarlavhasiga tugmalar ----------
+  const base = window.chatV;
+  window.chatV = function () {
+    let h = base();
+    if (!st.chat || st.chat.t === "g" || !st.user) return h;
+    const k = '<button onclick="st.menu=!st.menu;draw()">';
+    if (h.indexOf(k) < 0) return h;
+    return h.replace(k, `<button class="hd-call" type="button" aria-label="Ovozli qoʻngʻiroq" onclick="callStart('audio')">${I_PHONE}</button><button class="hd-call" type="button" aria-label="Video qoʻngʻiroq" onclick="callStart('video')">${I_CAM}</button>` + k);
+  };
+  setInterval(watchIncoming, 2000);
+  window.addEventListener("pagehide", () => { if (C && C.id && (C.joined || C.role === "caller")) { try { FB.callSet(C.id, "ended"); } catch (_) {} } });
+  window.__yqCall = { get C() { return C; }, FILTERS, watchIncoming };
+})();
