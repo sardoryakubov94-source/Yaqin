@@ -363,9 +363,9 @@ img,svg,video,canvas{max-width:100%}
 /* Uchala munosabat filtri teng kenglikda, telefon ekranidan chiqmaydi */
 .pur-home{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100% + 24px);max-width:calc(100vw - 12px);margin-left:-12px;margin-right:-12px;gap:4px;padding:3px;box-sizing:border-box}
 .pur-home button{width:100%;min-width:0;max-width:100%;flex:none;padding:4px 2px;min-height:0;box-sizing:border-box}
-.pur-home .l1{font-size:clamp(9px,3.1vw,13px);letter-spacing:-.35px;max-width:100%;white-space:normal;text-align:center;overflow-wrap:anywhere}
-.pur-home .l2{font-size:clamp(8px,2.45vw,10px);white-space:normal;text-align:center;max-width:100%;overflow-wrap:anywhere;line-height:1.15}
-@media(max-width:340px){.pur-home{width:calc(100% + 20px);max-width:calc(100vw - 12px);margin-left:-10px;margin-right:-10px;gap:3px;padding:3px}.pur-home button{padding:4px 1px}.pur-home .l1{font-size:9px}.pur-home .l2{font-size:8px}}
+.pur-home .l1{font-size:clamp(10.5px,3.45vw,14px);letter-spacing:-.25px;max-width:100%;white-space:normal;text-align:center;overflow-wrap:anywhere;line-height:1.12}
+.pur-home .l2{font-size:clamp(9px,2.8vw,11px);white-space:normal;text-align:center;max-width:100%;overflow-wrap:anywhere;line-height:1.12}
+@media(max-width:340px){.pur-home{width:calc(100% + 20px);max-width:calc(100vw - 12px);margin-left:-10px;margin-right:-10px;gap:3px;padding:3px}.pur-home button{padding:4px 1px}.pur-home .l1{font-size:10px}.pur-home .l2{font-size:8.8px}}
 /* Shaxsiy qoʻngʻiroq */
 .hd .hd-call{display:flex;align-items:center;justify-content:center;color:var(--t);padding:6px 9px}
 .yc{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 18%,#3a1f3d,#0d0b17 70%);color:#fff;display:flex;flex-direction:column;height:100dvh}
