@@ -129,8 +129,25 @@
     const r = e.target.closest && e.target.closest("#ms .rq[data-rid]"); if (r) { e.preventDefault(); window.replyJump(r.dataset.rid); }
   });
 
+  // ---------- oldingi xabarlarni yuklash va yuklash xatosini koʻrsatish ----------
+  window.olderBtn = () => st.chat && st.cm && st.cm.length >= (st.msgLimit || 120) ? '<button type="button" class="older" onclick="loadOlder()">⬆ Oldingi xabarlar</button>' : "";
+  window.loadOlder = function () {
+    const ch = st.chat; if (!ch) return;
+    const m = q("ms"); if (m) st.keepScroll = { h: m.scrollHeight, t: m.scrollTop };
+    st.msgLimit = (st.msgLimit || 120) + 120;
+    try { if (typeof UM === "function") UM(); } catch (_) {}
+    const colName = ch.t === "g" ? "groups" : "chats";
+    UM = FB.msgs(colName, ch.id, list => { st.cm = list; chatMsgs(); if (ch.t === "c" && typeof seen === "function") seen(ch.id); });
+  };
+  let lastErr = "";
+  window.msgsError = function (e) {
+    const key = (st.chat ? st.chat.id : "") + ":" + (e && e.code);
+    if (key === lastErr) return; lastErr = key;
+    uiAlert("Xabarlarni yuklab boʻlmadi (" + ((e && e.code) || "xato") + "). " + (e && e.code === "permission-denied" ? "Firestore qoidalari yangilanmagan boʻlishi mumkin." : "Internetni tekshirib, sahifani yangilang."));
+  };
+
   // ---------- oʻqildi va yozmoqda (1:1) ----------
-  let sub = { id: null, unsub: null }, curChat = null, lastReadId = null, typingOn = false, lastTypingSent = 0, prevTyping = 0, typingUntil = 0, typingTimer = null;
+  let sub = { id: null, unsub: null }, retryAt = 0, curChat = null, lastReadId = null, typingOn = false, lastTypingSent = 0, prevTyping = 0, typingUntil = 0, typingTimer = null;
   window.liveRender = function () {
     const m = q("ms"); if (!m) return;
     const old = q("typing"); if (old) old.remove();
@@ -157,7 +174,7 @@
   function loop() {
     if (!st || !st.user) return;
     const ch = st.chat, cid = ch ? ch.id : null;
-    if (cid !== curChat) { curChat = cid; if (st.replyTo && st.replyCid !== cid) { st.replyTo = null; } }
+    if (cid !== curChat) { curChat = cid; st.msgLimit = 120; if (st.replyTo && st.replyCid !== cid) { st.replyTo = null; } }
     const want = ch && ch.t === "c" ? ch.id : null;
     if (want !== sub.id) {
       if (sub.unsub) { try { sub.unsub(); } catch (_) {} }
@@ -166,8 +183,8 @@
     }
     if (!want) return;
     const list = st.cm || [], last = list[list.length - 1], mi = q("mi");
-    if (last && last.from !== st.user.uid && last.id !== lastReadId && document.visibilityState === "visible") {
-      lastReadId = last.id; FB.markRead(want, last.id).catch(() => { lastReadId = null; });
+    if (last && last.from !== st.user.uid && last.id !== lastReadId && Date.now() >= retryAt && document.visibilityState === "visible") {
+      lastReadId = last.id; FB.markRead(want, last.id).catch(() => { lastReadId = null; retryAt = Date.now() + 30000; });
     }
     if (typingOn && (!mi || !mi.value.trim())) { typingOn = false; FB.setTyping(want, 0).catch(() => {}); }
   }

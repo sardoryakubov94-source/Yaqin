@@ -2,7 +2,7 @@ const G="https://www.gstatic.com/firebasejs/10.14.1/";
 const [{initializeApp},A,D,S]=await Promise.all([import(G+"firebase-app.js"),import(G+"firebase-auth.js"),import(G+"firebase-firestore.js"),import(G+"firebase-storage.js")]);
 const cfg=(await import("./firebase-config.js")).default;
 try{
-const app=initializeApp(cfg),auth=A.getAuth(app),db=(()=>{try{return D.initializeFirestore(app,{localCache:D.persistentLocalCache({tabManager:D.persistentMultipleTabManager()}),experimentalAutoDetectLongPolling:true})}catch(e){console.warn("Firestore kesh yoqilmadi:",e);return D.getFirestore(app)}})(),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
+const app=initializeApp(cfg),auth=A.getAuth(app),db=(()=>{try{return D.initializeFirestore(app,{localCache:D.memoryLocalCache(),experimentalAutoDetectLongPolling:true})}catch(e){console.warn("Firestore kesh yoqilmadi:",e);return D.getFirestore(app)}})(),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
 const U=()=>auth.currentUser,uref=u=>D.doc(db,"users",u);
 const OPENINARY_BASE="https://cdn.openinary.dev",OPENINARY_BUCKET="76b38502-642f-4fad-8b1f-0cc4c7b351e8";
 function openinaryUrl(path){let p=String(path||"");while(p.startsWith("/"))p=p.slice(1);return OPENINARY_BASE+"/b/"+OPENINARY_BUCKET+"/t/"+p}
@@ -48,7 +48,7 @@ window.FB={
  saveUser:x=>D.setDoc(uref(U().uid),x,{merge:true}),
  chats:(uid,cb)=>D.onSnapshot(D.query(D.collection(db,"chats"),D.where("members","array-contains",uid)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
  async openChat(ad,me){const id=`${ad.id}_${me.uid}`,r=D.doc(db,"chats",id);if(!(await D.getDoc(r)).exists())await D.setDoc(r,{adId:ad.id,owner:ad.uid,asker:me.uid,members:[ad.uid,me.uid],ownerName:ad.name,ownerAva:ad.ava||"",ownerImg:ad.img||"",askerName:me.name,askerImg:me.img||"",photoOk:false,last:"",lastT:Date.now(),lastBy:"",t:Date.now()});return id},
- msgs:(col,id,cb)=>D.onSnapshot(D.query(D.collection(db,col,id,"msgs"),D.orderBy("t","asc"),D.limitToLast(120)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>console.error(e)),
+ msgs:(col,id,cb,limit)=>D.onSnapshot(D.query(D.collection(db,col,id,"msgs"),D.orderBy("t","asc"),D.limitToLast(limit||(window.st&&window.st.msgLimit)||120)),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>{console.error("msgs:",e.code,e.message);if(window.msgsError)window.msgsError(e)}),
  send(col,id,text,name,kind,meta={}){const u=U(),t=Date.now(),rp=window.st&&window.st.replyTo&&window.st.chat&&window.st.chat.id===id&&kind!="call"&&kind!="like"?window.st.replyTo:null;if(rp){meta={...(meta||{}),reply:rp};window.st.replyTo=null;if(window.replyBarSync)window.replyBarSync()}const mref=D.doc(D.collection(db,col,id,"msgs"));const w=[D.setDoc(mref,{from:u.uid,name:name||"",text,t,...(kind?{kind}:{}),...(meta||{})})];if(col=="chats")w.push(D.updateDoc(D.doc(db,"chats",id),{last:text.slice(0,80),lastT:t,lastBy:u.uid}));return Promise.all(w).then(()=>{if(col=="chats"&&kind!="call")window.FB.pushNotify({type:"chat",chatId:id,msgId:mref.id})})},
  async getMatchPush(){const s=await D.getDoc(D.doc(db,"fcm",U().uid));return !(s.exists()&&s.data().noMatch)},
  setMatchPush:on=>D.setDoc(D.doc(db,"fcm",U().uid),{noMatch:!on},{merge:true}),
