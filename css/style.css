@@ -440,3 +440,13 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .mm-i:active{background:#ffffff10}.mm-i.danger{color:#ff6b6b}.mm-i.cancel{justify-content:center;color:var(--m)}
 .mm-i.ok{justify-content:center;background:#f0b34a;color:#1b1224;font-weight:700}.mm-i.ok.danger{background:#e5483d;color:#fff}
 .mm-row{display:flex;gap:8px;padding:4px}.mm-row .mm-i{flex:1;justify-content:center}
+
+/* Tiniq yuz paneli */
+.yc-filters{display:block;overflow:visible;padding:10px 12px 6px}
+.yc-beauty{display:flex;align-items:center;gap:10px;color:#fff;font-size:14px;padding:2px 2px 8px}
+.yc-beauty span{flex:none;font-weight:700}
+.yc-beauty input[type=range]{flex:1;min-width:0;accent-color:#f0b34a;height:28px}
+.yc-beauty b{flex:none;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.yc-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px}
+.yc-chips button{flex:none;border:1px solid #ffffff40;background:#00000066;color:#fff;border-radius:999px;padding:8px 14px;font-size:14px}
+.yc-chips button.on{background:#fff;color:#111;border-color:#fff}

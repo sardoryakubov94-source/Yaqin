@@ -20,7 +20,6 @@
     { id: "bw", name: "Qora-oq", css: "grayscale(1) contrast(1.1)", cf: 1 },
     { id: "retro", name: "Retro", css: "sepia(.65) contrast(1.15) saturate(.9)", cf: 1 },
     { id: "pink", name: "Pushti", css: "saturate(1.5) hue-rotate(-25deg) brightness(1.05)", cf: 1 },
-    { id: "soft", name: "Silliq", css: "brightness(1.08) saturate(1.1)", soft: 1, cf: 1 },
     { id: "film", name: "Kino", css: "contrast(1.2) saturate(.9)", vignette: 1, cf: 1 },
     { id: "hearts", name: "💖", css: "saturate(1.15) brightness(1.04)", fx: "💖", dir: -1 },
     { id: "stars", name: "✨", css: "contrast(1.05)", fx: "✨", dir: -1 },
@@ -85,6 +84,69 @@
     ctx.restore();
   }
 
+  // ---------- yuzni tiniqlashtirish (Snapchat uslubidagi "go'zallik" qatlami) ----------
+  // Teri faqat yuz konturi ichida yumshatiladi; koʻz, qosh va lablar aniq qoladi. Yuz topilmasa yengil umumiy yumshatish.
+  const OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+  const EYE_L = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466];
+  const EYE_R = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+  const LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+  const BROW_L = [276, 283, 282, 295, 285, 300, 293, 334, 296, 336];
+  const BROW_R = [46, 53, 52, 65, 55, 70, 63, 105, 66, 107];
+  const BEAUTY_IDX = [...new Set([...OVAL, ...EYE_L, ...EYE_R, ...LIPS, ...BROW_L, ...BROW_R])];
+  function ensureFace(cam, failMsg, onFail) {
+    if (cam.fl || cam.flBusy) return;
+    cam.flBusy = true; toast("Yuz filtri yuklanmoqda…");
+    loadFace().then(fl => { cam.fl = fl; cam.flBusy = false; if (!cam.dead) toast("Yuz filtri tayyor. Yuzingizni kameraga qarating"); })
+      .catch(() => { cam.flBusy = false; if (!cam.dead) { if (onFail) onFail(); uiAlert(failMsg); } });
+  }
+  function smoothLm(cam) {
+    const lm = cam.lm;
+    if (!lm) { cam.sm = null; return; }
+    if (!cam.sm) cam.sm = new Array(lm.length);
+    for (const i of BEAUTY_IDX) { const p = cam.sm[i], n = lm[i]; cam.sm[i] = p ? { x: p.x + (n.x - p.x) * .6, y: p.y + (n.y - p.y) * .6 } : { x: n.x, y: n.y }; }
+    cam.maskDirty = true;
+  }
+  function ensureBeauty(cam) {
+    if (cam.sc) return;
+    const mk = (cw, ch) => { const c = document.createElement("canvas"); c.width = Math.max(2, Math.round(cw)); c.height = Math.max(2, Math.round(ch)); return c; };
+    cam.sc = mk(cam.w / 3, cam.h / 3); cam.scx = cam.sc.getContext("2d");   // yumshatilgan nusxa (kichraytirib-kattalashtirish = tabiiy xiralik)
+    cam.tm = mk(cam.w, cam.h); cam.tmx = cam.tm.getContext("2d");           // yuz ichidagi qism
+    cam.mk = mk(cam.w / 4, cam.h / 4); cam.mkx = cam.mk.getContext("2d");   // yuz niqobi (past oʻlchamda, qirralari silliq)
+  }
+  function poly(c, idx, sm, cw, ch, grow) {
+    let cx = 0, cy = 0; for (const i of idx) { cx += sm[i].x; cy += sm[i].y; } cx /= idx.length; cy /= idx.length;
+    c.beginPath();
+    idx.forEach((i, k) => { const x = (cx + (sm[i].x - cx) * grow) * cw, y = (cy + (sm[i].y - cy) * grow) * ch; if (k) c.lineTo(x, y); else c.moveTo(x, y); });
+    c.closePath();
+  }
+  function buildMask(cam) {
+    const m = cam.mkx, cw = cam.mk.width, ch = cam.mk.height, sm = cam.sm;
+    m.globalCompositeOperation = "source-over"; m.clearRect(0, 0, cw, ch); m.fillStyle = "#fff";
+    poly(m, OVAL, sm, cw, ch, 1); m.fill();
+    m.globalCompositeOperation = "destination-out";
+    for (const g of [EYE_L, EYE_R]) { poly(m, g, sm, cw, ch, 1.4); m.fill(); }
+    for (const g of [BROW_L, BROW_R]) { poly(m, g, sm, cw, ch, 1.15); m.fill(); }
+    poly(m, LIPS, sm, cw, ch, 1.12); m.fill();
+    m.globalCompositeOperation = "source-over";
+  }
+  function beautify(cam) {
+    const L = cam.beauty; if (!L) return;
+    ensureBeauty(cam);
+    const { ctx, w, h } = cam, f = cam.filter, face = !!cam.sm;
+    cam.scx.imageSmoothingQuality = "high";
+    cam.scx.filter = SUP_FILTER ? (f.css ? f.css + " " : "") + "brightness(" + (1 + .12 * L) + ") contrast(" + (1 - .05 * L) + ") saturate(" + (1 + .06 * L) + ")" : "none";
+    cam.scx.drawImage(cam.v, 0, 0, cam.sc.width, cam.sc.height); cam.scx.filter = "none";
+    const t = cam.tmx; t.globalCompositeOperation = "source-over"; t.clearRect(0, 0, w, h); t.imageSmoothingQuality = "high";
+    t.drawImage(cam.sc, 0, 0, w, h);
+    if (face) {
+      if (cam.maskDirty) { buildMask(cam); cam.maskDirty = false; }
+      t.globalCompositeOperation = "destination-in"; t.drawImage(cam.mk, 0, 0, w, h); t.globalCompositeOperation = "source-over";
+    }
+    ctx.save(); ctx.filter = "none";
+    ctx.globalAlpha = face ? .35 + .55 * L : .18 + .22 * L; ctx.drawImage(cam.tm, 0, 0, w, h);   // teri silliqlanadi
+    if (face) { ctx.globalCompositeOperation = "soft-light"; ctx.globalAlpha = .35 * L; ctx.drawImage(cam.tm, 0, 0, w, h); }   // yuz yorishadi
+    ctx.restore();
+  }
   async function startCam(facing) {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing || "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }, audio: false });
     const v = document.createElement("video");
@@ -94,7 +156,7 @@
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
     const ctx = cv.getContext("2d");
     const out = cv.captureStream(24).getVideoTracks()[0];
-    const cam = { stream, v, cv, ctx, out, w, h, facing: facing || "user", filter: FILTERS[0], parts: [], dead: false };
+    const cam = { stream, v, cv, ctx, out, w, h, facing: facing || "user", filter: FILTERS[0], parts: [], dead: false, beauty: 0 };
     cam.timer = setInterval(() => draw(cam), 1000 / 24);
     draw(cam);
     return cam;
@@ -106,8 +168,12 @@
     ctx.save();
     ctx.filter = SUP_FILTER && f.css ? f.css : "none";
     ctx.drawImage(v, 0, 0, w, h);
-    if (f.soft && SUP_FILTER) { ctx.globalAlpha = .5; ctx.filter = "blur(2.2px) " + f.css; ctx.drawImage(v, 0, 0, w, h); ctx.globalAlpha = 1; }
     ctx.filter = "none";
+    if ((f.mask || cam.beauty > 0) && cam.fl) {
+      cam.n = (cam.n || 0) + 1;
+      if (cam.n % 2 === 0 || !cam.lm) { try { const r = cam.fl.detectForVideo(v, performance.now()); cam.lm = r && r.faceLandmarks && r.faceLandmarks[0] || null; if (!cam.lm) cam.pv = null; smoothLm(cam); } catch (_) {} }
+    }
+    if (cam.beauty > 0) beautify(cam);
     if (f.vignette) {
       const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .78);
       g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.55)");
@@ -118,11 +184,7 @@
       ctx.textBaseline = "middle"; ctx.textAlign = "center";
       cam.parts = cam.parts.filter(p => { p.y += p.v; p.x += p.d; ctx.font = p.s + "px serif"; ctx.fillText(f.fx, p.x, p.y); return p.y > -50 && p.y < h + 50; });
     }
-    if (f.mask && cam.fl) {
-      cam.n = (cam.n || 0) + 1;
-      if (cam.n % 2 === 0 || !cam.lm) { try { const r = cam.fl.detectForVideo(v, performance.now()); cam.lm = r && r.faceLandmarks && r.faceLandmarks[0] || null; if (!cam.lm) cam.pv = null; } catch (_) {} }
-      if (cam.lm) drawMask(cam, f.mask, cam.lm);
-    }
+    if (f.mask && cam.fl && cam.lm) drawMask(cam, f.mask, cam.lm);
     ctx.restore();
   }
   function stopCam(cam) {
@@ -174,7 +236,7 @@
       const video = !!C.cam;
       ctl.innerHTML = btn(C.muted ? "off" : "", "callMute()", C.muted ? "🔇" : "🎙️", "Mikrofon") +
         btn(video ? "" : "off", "callCamera()", video ? "📹" : "📷", video ? "Kamera" : "Kamerani yoq") +
-        (video ? btn("", "callFlip()", "🔄", "Almashtirish") + btn(C.filterOpen ? "on" : "", "callFilters()", "✨", "Filtr") : "") +
+        (video ? btn("", "callFlip()", "🔄", "Almashtirish") + btn(C.cam.beauty > 0 ? "on" : "", "callBeauty()", "✨", "Tiniq") + btn(C.filterOpen ? "on" : "", "callFilters()", "🎨", "Filtr") : "") +
         btn("red", "callEnd()", "✖", "Tugatish");
     }
   }
@@ -187,7 +249,10 @@
   function renderFilters() {
     const f = q("ycFil"); if (!f) return;
     f.hidden = !(C && C.cam && C.filterOpen);
-    f.innerHTML = usable().map(x => `<button type="button" class="${C.cam && C.cam.filter.id === x.id ? "on" : ""}" onclick="callSetFilter('${x.id}')">${x.name}</button>`).join("");
+    if (f.hidden) return;
+    const cam = C.cam, val = Math.round((cam.beauty || cam.bLast || .7) * 100);
+    f.innerHTML = `<div class="yc-beauty"><span>✨ Tiniq yuz</span><input type="range" id="ycInt" min="0" max="100" value="${val}" oninput="callBeautyLevel(this.value)" aria-label="Tiniqlik darajasi"><b id="ycIntV">${cam.beauty > 0 ? Math.round(cam.beauty * 100) + "%" : "Oʻchiq"}</b></div><div class="yc-chips">` +
+      usable().map(x => `<button type="button" class="${cam.filter.id === x.id ? "on" : ""}" onclick="callSetFilter('${x.id}')">${x.name}</button>`).join("") + "</div>";
   }
 
   // ---------- chiquvchi ----------
@@ -332,12 +397,21 @@
   window.callSetFilter = function (id) {
     const my = C; if (!my || !my.cam) return;
     const cam = my.cam, f = FILTERS.find(x => x.id === id) || FILTERS[0];
-    cam.filter = f; cam.parts = []; cam.lm = null; cam.pv = null; renderFilters();
-    if (f.mask && !cam.fl) {
-      toast("Niqob yuklanmoqda…");
-      loadFace().then(fl => { cam.fl = fl; if (cam.filter === f && !cam.dead) toast("Niqob tayyor. Yuzingizni kameraga qarating"); })
-        .catch(() => { if (!cam.dead) { cam.filter = FILTERS[0]; renderFilters(); } uiAlert("Niqobni yuklab boʻlmadi. Internet aloqasini tekshiring."); });
-    }
+    cam.filter = f; cam.parts = []; cam.pv = null; if (f.mask) cam.lm = null; renderFilters();
+    if (f.mask) ensureFace(cam, "Niqobni yuklab boʻlmadi. Internet aloqasini tekshiring.", () => { cam.filter = FILTERS[0]; renderFilters(); });
+  };
+  window.callBeauty = function () {
+    const my = C; if (!my || !my.cam) return; const cam = my.cam;
+    if (cam.beauty > 0) { cam.bLast = cam.beauty; cam.beauty = 0; }
+    else { cam.beauty = cam.bLast || .7; ensureFace(cam, "Aniq yuz filtri yuklanmadi, oddiy yumshatish ishlayapti."); }
+    renderCtl(); renderFilters();
+  };
+  window.callBeautyLevel = function (v) {
+    const my = C; if (!my || !my.cam) return; const cam = my.cam;
+    cam.beauty = Math.max(0, Math.min(1, Number(v) / 100));
+    if (cam.beauty > 0) { cam.bLast = cam.beauty; ensureFace(cam, "Aniq yuz filtri yuklanmadi, oddiy yumshatish ishlayapti."); }
+    const t = q("ycIntV"); if (t) t.textContent = cam.beauty > 0 ? Math.round(cam.beauty * 100) + "%" : "Oʻchiq";
+    renderCtl();
   };
   window.callEnd = function () {
     const my = C; if (!my) return;
