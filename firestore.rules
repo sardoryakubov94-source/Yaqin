@@ -146,6 +146,13 @@ service cloud.firestore {
         allow delete: if signed() && (request.auth.uid == uid
           || get(/databases/$(db)/documents/groups/$(gid)).data.owner == request.auth.uid);
       }
+      match /voice/{vid} {
+        allow read: if signed() && member(gid);
+        allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
+          && request.resource.data.data is string && request.resource.data.data.size() <= 800000
+          && request.resource.data.data[0:11] == 'data:audio/'
+          && request.resource.data.dur is number && request.resource.data.dur > 0 && request.resource.data.dur <= 125;
+      }
       match /msgs/{mid} {
         allow read: if signed() && (member(gid) || isAdmin());
         allow create: if signed() && member(gid) && request.resource.data.from == request.auth.uid
@@ -153,6 +160,9 @@ service cloud.firestore {
           && (request.resource.data.get('reply', null) == null
             || (request.resource.data.reply is map && request.resource.data.reply.keys().hasOnly(['id', 'name', 'text', 'kind'])
               && request.resource.data.reply.id is string && request.resource.data.reply.text is string && request.resource.data.reply.text.size() <= 120))
+          && (request.resource.data.get('kind', '') != 'voice'
+            || (request.resource.data.voiceId is string && request.resource.data.voiceId.size() <= 40
+              && request.resource.data.dur is number && request.resource.data.dur <= 125))
           && (request.resource.data.get('kind', '') != 'media'
             || (request.resource.data.mediaType in ['image','video']
               && ((request.resource.data.get('mediaProvider', '') == 'openinary'

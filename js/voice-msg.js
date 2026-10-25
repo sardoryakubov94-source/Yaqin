@@ -31,7 +31,7 @@
     const b = document.querySelector('[data-vid="' + id + '"] .vm-play'); if (b) b.textContent = "…";
     try {
       const key = ch.id + "/" + m.voiceId;
-      if (!cache[key]) cache[key] = await FB.voiceGet(ch.id, m.voiceId);
+      if (!cache[key]) cache[key] = await FB.voiceGet(ch.id, m.voiceId, ch.t === "g" ? "groups" : "chats");
       const a = new Audio(cache[key]);
       VP.id = id; VP.audio = a; VP.chat = ch.id;
       a.ontimeupdate = () => { if (VP.audio === a) ui(id); };
@@ -50,21 +50,23 @@
   };
 
   // ---------- yozish ----------
-  function bar() { return `<div class="vrec" id="vrec"><button type="button" class="ghost vcancel" aria-label="Bekor qilish" onclick="voiceStop(false)">🗑</button><span class="vdot"></span><b id="vrecT">0:00</b><span class="vhint">Yozilmoqda…</span><button type="button" class="go" aria-label="Yuborish" onclick="voiceStop(true)">${SEND}</button></div>`; }
+  function bar() { return `<div class="vrec" id="vrec"><button type="button" class="ghost vcancel" aria-label="Bekor qilish" onclick="voiceStop(false)">🗑</button><span class="vdot"></span><b id="vrecT">0:00</b><span class="vhint">‹ Bekor qilish uchun chapga suring</span><button type="button" class="go vsend" aria-label="Yuborish" onclick="voiceStop(true)">${SEND}</button></div><div class="vlockhint" id="vlockHint">🔒<i>↑</i></div>`; }
+  window.voiceBarHtml = bar;
   function showBar() {
     const s = document.querySelector(".ov .send");
     if (!s || document.getElementById("vrec")) return;
     s.classList.add("recording"); s.insertAdjacentHTML("afterbegin", bar());
   }
   function hideBar() {
-    const s = document.querySelector(".ov .send"); if (s) s.classList.remove("recording");
+    const s = document.querySelector(".ov .send"); if (s) s.classList.remove("recording", "locked");
     const v = document.getElementById("vrec"); if (v) v.remove();
+    const lh = document.getElementById("vlockHint"); if (lh) lh.remove();
   }
   function cleanup(R) { clearInterval(R.timer); try { R.stream.getTracks().forEach(t => t.stop()); } catch (_) {} if (st.vrec === R) st.vrec = null; hideBar(); }
 
   window.voiceStart = async function () {
     const ch = st.chat;
-    if (st.vrec || !ch || ch.t === "g" || ch.obs) return;
+    if (st.vrec || !ch || ch.obs) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { uiAlert("Bu brauzerda ovoz yozish qoʻllab-quvvatlanmaydi. Chrome yoki Safari yangi versiyasidan foydalaning."); return; }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
@@ -84,7 +86,7 @@
         const blob = new Blob(R.chunks, { type: R.mime });
         const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error("read")); fr.readAsDataURL(blob); });
         if (data.length > MAX_CHARS) { uiAlert("Ovozli xabar juda katta. Qisqaroq yozing."); return; }
-        FB.sendVoice(R.ch.id, data, Math.min(dur, MAX_SEC + 1), st.user.name).catch(x => uiAlert("Ovozli xabar yuborilmadi: " + (x.message || x)));
+        FB.sendVoice(R.ch.id, data, Math.min(dur, MAX_SEC + 1), st.user.name, R.ch.t === "g" ? "groups" : "chats").catch(x => uiAlert("Ovozli xabar yuborilmadi: " + (x.message || x)));
       } catch (x) { uiAlert("Ovozli xabar tayyorlanmadi: " + (x.message || x)); }
     };
     st.vrec = R; stopPlay();
@@ -108,14 +110,5 @@
   document.addEventListener("input", e => {
     if (e.target && e.target.id === "mi") { const s = e.target.closest(".send"); if (s) s.classList.toggle("hastext", !!e.target.value.trim()); }
   });
-  const base = window.chatV;
-  window.chatV = function () {
-    let h = base();
-    if (!st.chat || !st.user || st.chat.t === "g" || h.indexOf('class="go" onclick="send()"') < 0) return h;
-    h = h.replace('<div class="send', '<div class="send vm' + (st.vrec ? " recording" : ""));
-    h = h.replace('<button class="go" onclick="send()">', `<button class="ghost vm-btn" type="button" title="Ovozli xabar" aria-label="Ovozli xabar" onclick="voiceStart()">${MIC}</button><button class="go" onclick="send()">`);
-    if (st.vrec) h = h.replace(/(<div class="send[^>]*>)/, "$1" + bar());
-    return h;
-  };
   window.addEventListener("pagehide", () => { if (st.vrec) window.voiceStop(false); });
 })();
