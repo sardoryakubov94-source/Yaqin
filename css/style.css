@@ -63,7 +63,7 @@ label{display:block;color:var(--m);margin:12px 0 6px;font-size:13px}
 .empty{text-align:center;color:var(--m);padding:30px}
 #map{height:50vh;border-radius:20px;margin:10px 0 6px;overflow:hidden;position:relative;z-index:0;border:1px solid #ffffff18}
 .leaflet-container{background:#14111f;font:inherit}
-.mk{width:36px;height:36px;border-radius:50%;background:var(--a);color:#222;font-weight:800;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 2px 8px #0008}
+.mk{width:36px;height:36px;border-radius:50%;background:var(--a);color:#222;font-weight:800;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 2px 8px #0008}.mk.mk-age{width:auto;min-width:54px;height:34px;padding:0 9px;border-radius:18px;font-size:12px;white-space:nowrap;letter-spacing:-.2px;border-width:2px;background:#f0b34a;color:#21182a;box-shadow:0 3px 10px #0009}.mk-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;overflow:visible}
 .nav button{font-size:10px}
 .md{position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:20px}
 .mb{background:var(--c);border:1px solid #ffffff1c;border-radius:24px;padding:22px;width:100%;max-width:360px;box-shadow:0 20px 60px #000a;animation:pop .16s ease-out}
