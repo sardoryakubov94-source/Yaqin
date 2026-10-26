@@ -555,3 +555,5 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .group-msg-avatar{width:24px;height:24px;flex:0 0 24px;border-radius:50%;object-fit:cover;display:block;background:var(--s,#eee);border:1px solid var(--b,rgba(128,128,128,.22))}
 .group-msg-avatar-fallback{width:24px;height:24px;flex:0 0 24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--s,#e8e8e8);color:var(--t,#555);font-size:11px;font-weight:700}
 .group-msg-author .group-member-name{margin:0}
+
+.group-msg-avatar-fallback{background:#e8e8e8;color:#555}
