@@ -532,3 +532,15 @@ armYaqinBack();
  },true);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){const p=document.querySelector(".yq-picker-bg");if(p)p.remove()}},true);
 })();
+/* Close small popup menus when the user taps anywhere outside them. */
+(function(){
+ if(window.__yqOutsideMenuClose)return;window.__yqOutsideMenuClose=true;
+ document.addEventListener("pointerdown",function(e){
+  const menu=document.querySelector(".menu");if(!menu)return;
+  if(menu.contains(e.target))return;
+  st.menu=false;menu.remove();
+ },true);
+ document.addEventListener("keydown",function(e){
+  if(e.key!=="Escape")return;const menu=document.querySelector(".menu");if(menu){st.menu=false;menu.remove()}
+ },true);
+})();
