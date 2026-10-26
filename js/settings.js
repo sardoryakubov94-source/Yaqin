@@ -63,6 +63,26 @@
   const sw = on => `<span class="ps-sw${on ? " on" : ""}"><i></i></span>`;
   const det = (n, c, title, count, body) => `<details class="ps-det"><summary>${ico(n, c)}<div class="ps-tx"><b>${title}</b>${count !== "" ? `<small>${count}</small>` : ""}</div>${YI("chevron", 18, "ps-ch")}</summary><div class="ps-body">${body}</div></details>`;
 
+  // ---------- profilni kim koʻrdi / sevimlilarga qoʻshdi ----------
+  const EVT = { profile_view: ["Profilni koʻrganlar", "Profilingizni koʻrishdi", /\s*profilingizni koʻrdi\.?$/], favorite: ["Sevimlilarga qoʻshganlar", "sevimlilarga qoʻshishdi", /\s*eʼloningizni sevimlilarga qoʻshdi\.?$/] };
+  function who(kind) {
+    const E = EVT[kind], seen = {}, out = [];
+    (st.notifs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0)).forEach(n => {
+      if (n.type !== "like" || !n.from) return;
+      const hit = n.kind ? n.kind === kind : String(n.title || "").includes(E[1]);
+      if (!hit || seen[n.from]) return;
+      seen[n.from] = 1;
+      out.push({ name: n.name || String(n.text || "").replace(E[2], "") || "Foydalanuvchi", t: n.t || 0 });
+    });
+    return out;
+  }
+  window.psWho = function (kind) {
+    const l = who(kind), E = EVT[kind];
+    ysModal("<h4>" + E[0] + "</h4>" + (l.length ? l.map(x => `<div class="ps-blk"><span class="ps-ic c1">${YI("user", 16)}</span><b>${esc(x.name)}</b><small style="color:var(--m)">${x.t ? new Date(x.t).toLocaleDateString("uz") : ""}</small></div>`).join("") : '<p class="mm-p">Hozircha hech kim yoʻq.</p>') + '<button type="button" class="mm-i cancel">Yopish</button>', bg => {
+      bg.querySelector(".cancel").addEventListener("click", () => ysCloseModal());
+    });
+  };
+
   window.prof = function () {
     const u = st.user;
     if (!u) return `<h3>Profil</h3><div class="box" style="text-align:center"><p class="sub">Eʼlon berish va suhbatlashish uchun kiring yoki roʻyxatdan oʻting</p><button class="go" style="width:100%" onclick="st.am='in';st.form='auth';draw()">Kirish / Roʻyxatdan oʻtish</button></div>` + price();
@@ -74,8 +94,9 @@
     const pays = (st.mypays || []).slice(0, 8).map(x => `<div class="card" style="align-items:center"><div class="inf"><b>${KIND[x.kind] || x.kind} · ${fmt(x.amount)} soʻm</b><p>Kod ${esc(x.id.slice(-6).toUpperCase())} · ${new Date(x.t).toLocaleDateString("uz")}</p></div><span class="tag">${PSTAT[x.status] || x.status}</span>${x.status === "pending" ? `<button class="ghost" onclick="paySheet(${x.amount},'${x.id}','admin tekshiradi')">Rekvizit</button>` : ""}</div>`).join("") || '<div class="empty">Toʻlovlar yoʻq</div>';
     return `<div class="ps">
 <div class="ps-hero"><div class="ps-ava"><div class="av big">${u.img ? `<img src="${u.img}">` : YI("user", 44)}</div><button type="button" class="ps-cam" aria-label="Rasmni oʻzgartirish" onclick="$('pf').click()">${YI("camera", 16)}</button></div>
-<b class="ps-name">${esc(u.name)}</b><p class="ps-sub">${esc(u.phone || u.email || "")}</p>
+<div class="ps-nm"><b class="ps-name">${esc(u.name)}</b><button type="button" class="ps-edit" aria-label="Ismni oʻzgartirish" onclick="editMyName()">${YI("edit", 15)} Ismni oʻzgartirish</button></div><p class="ps-sub">${esc(u.phone || u.email || "")}</p>
 <div class="ps-stats"><div><b>${act}</b><small>Faol eʼlon</small></div><div><b>${m.length}</b><small>Jami eʼlon</small></div><div><b>${(st.fav || []).length}</b><small>Sevimli</small></div></div>
+<div class="ps-stats ps-stats2"><div role="button" onclick="psWho('profile_view')"><b>${who("profile_view").length}</b><small>Profilimni koʻrganlar</small></div><div role="button" onclick="psWho('favorite')"><b>${who("favorite").length}</b><small>Sevimlilarga qoʻshganlar</small></div></div>
 <input type="file" id="pf" accept="image/*" hidden onchange="pfPhoto(this)"></div>
 ${u.freeUsed ? "" : `<div class="ps-promo">${YI("gift", 22)}<div><b>Birinchi eʼlon BEPUL</b><small>Hoziroq eʼlon joylashtiring</small></div></div>`}
 <div class="ps-sec">Hisob</div><div class="ps-list">
