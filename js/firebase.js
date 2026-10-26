@@ -18,6 +18,18 @@ async function signOpeninary(scope,groupId){
  return d;
 }
 async function uploadOpeninary(input,scope,groupId,onProgress){
+ try{return await uploadOpeninaryOnce(input,scope,groupId,onProgress)}
+ catch(e){
+  if(!e||!e.netFail)throw e;
+  console.warn("Openinary yuklash xatosi, qayta urinilmoqda:",e);
+  await new Promise(r=>setTimeout(r,1500));
+  try{return await uploadOpeninaryOnce(input,scope,groupId,onProgress)}
+  catch(e2){
+   if(e2&&e2.netFail)e2.message=(navigator.onLine===false?"Internet yoʻq. Ulanishni tekshiring.":"Rasm serveriga (cdn.openinary.dev) ulanib boʻlmadi. Wi-Fi yoki mobil internetni almashtirib, VPN yoqilgan boʻlsa oʻchirib qayta urinib koʻring.");
+   throw e2}
+ }
+}
+async function uploadOpeninaryOnce(input,scope,groupId,onProgress){
  let file=input;
  if(typeof input==="string"&&input.startsWith("data:")){const blob=await (await fetch(input)).blob();const ext=(blob.type.split("/")[1]||"jpg").replace(/[^a-z0-9]/gi,"");file=new File([blob],"image."+ext,{type:blob.type||"image/jpeg"})}
  if(!(file instanceof File))throw new Error("Yuklash uchun fayl topilmadi.");
@@ -26,7 +38,7 @@ async function uploadOpeninary(input,scope,groupId,onProgress){
   const form=new FormData();form.append("files",file,file.name);form.append("folder",signed.folder);form.append("signature",signed.signature);form.append("expires",String(signed.expires));
   const xhr=new XMLHttpRequest();xhr.open("POST",OPENINARY_BASE+"/upload");if(onProgress&&xhr.upload)xhr.upload.onprogress=e=>{if(e.lengthComputable)try{onProgress(e.loaded/e.total)}catch(_){}};
   xhr.onload=()=>{let d={};try{d=JSON.parse(xhr.responseText)}catch(e){};const uploaded=d.files&&d.files[0];if(xhr.status>=200&&xhr.status<300&&d.success&&uploaded&&uploaded.path){resolve({path:uploaded.path,url:openinaryUrl(uploaded.path),deliveryUrl:(typeof uploaded.url=="string"&&uploaded.url.startsWith("/")?OPENINARY_BASE+uploaded.url:openinaryUrl(uploaded.path)),filename:uploaded.filename||file.name,size:uploaded.size||file.size});return}reject(new Error(d.errors?.[0]?.error||d.error||("Openinary yuklashi bajarilmadi ("+xhr.status+")")))};
-  xhr.onerror=()=>reject(new Error("Openinary bilan aloqa uzildi. Internetni tekshiring."));
+  xhr.timeout=90000;xhr.ontimeout=()=>{const e=new Error("Yuklash juda uzoq davom etdi.");e.netFail=1;reject(e)};xhr.onerror=()=>{const e=new Error("Openinary bilan aloqa uzildi. Internetni tekshiring.");e.netFail=1;reject(e)};
   xhr.onabort=()=>reject(new Error("Yuklash bekor qilindi."));
   xhr.send(form);
  });
