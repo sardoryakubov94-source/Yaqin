@@ -47,6 +47,7 @@ function price(){return `<div class="price"><b>Narxlar</b><p style="color:var(--
 function need(){if(st.user)return true;st.am="in";st.form="auth";draw();return false}
 function postBtn(){if(need()){st.form="post";draw()}}
 
+async function editMyName(){const v=await uiPrompt("Profilingizdagi ism","Ismingizni kiriting",st.user.name||"");if(v===null)return;const name=v.trim();if(!name){uiAlert("Ism boʻsh boʻlmasin.");return}if(name.length>40){uiAlert("Ism 40 belgidan oshmasin.");return}const f=fb();if(!f)return;try{await f.saveUser({name});st.user.name=name;draw();toast("Ism yangilandi")}catch(e){uiAlert("Ism oʻzgartirilmadi: "+(e.message||e))}}
 async function editPh(){const v=await uiPrompt("Telefon raqami","+998 90 123 45 67",st.user.phone||"");if(v===null)return;const f=fb();if(!f)return;try{await f.saveUser({phone:v.trim()});st.user.phone=v.trim();draw()}catch(x){uiAlert(x.message)}}
 function pfPhoto(i){const f=i.files[0];if(!f||!fb())return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=async()=>{const c=document.createElement("canvas");c.width=c.height=256;c.getContext("2d").drawImage(im,0,0,256,256);try{st.user.img=await FB.photo(c.toDataURL("image/jpeg",.8));draw()}catch(x){uiAlert("Rasm yuklanmadi: "+x.message)}};im.src=r.result};r.readAsDataURL(f)}
 const fb=()=>window.FB||(uiAlert("Firebase sozlanmagan: js/firebase-config.js faylini toʻldiring"),null);
