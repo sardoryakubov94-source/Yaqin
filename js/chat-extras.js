@@ -58,7 +58,7 @@
       file = await GM_COMPRESS(file);
       if (file.size > 8 * 1024 * 1024) throw new Error("Rasm 8 MB dan kichik boʻlishi kerak");
       upStatus("Rasm yuklanmoqda… 0%");
-      await FB.uploadChatMedia(ch.id, file, p => upStatus("Rasm yuklanmoqda… " + Math.round(p * 100) + "%"));
+      const secs=Number(document.getElementById("disappearAfter")?.value||0);const meta=secs>0?{expiresAt:Date.now()+secs*1000}:{};await FB.uploadChatMedia(ch.id, file, meta, p => upStatus("Rasm yuklanmoqda… " + Math.round(p * 100) + "%"));
     } catch (e) {
       uiAlert("Rasm yuborilmadi: " + (e.message || e));
     } finally {
@@ -73,7 +73,7 @@
     if (!st.chat || !st.user || h.indexOf('class="go" onclick="send()"') < 0) return h;
     if (st.stkChat !== st.chat.id) { st.stkChat = st.chat.id; st.stk = false; }
     const isG = st.chat.t === "g";
-    const btns = `<button class="ghost stk-btn" type="button" title="Stiker" aria-label="Stiker" onclick="toggleStk()">😊</button>` +
+    const expiry = `<select class="in disappear-select" id="disappearAfter" aria-label="Rasm qancha vaqtda yoʻqolsin" title="Yoʻqoladigan rasm muddati"><option value="0">Oddiy rasm</option><option value="10">10 soniya</option><option value="60">1 daqiqa</option><option value="3600">1 soat</option></select>`;\n    const btns = expiry + `<button class="ghost stk-btn" type="button" title="Stiker" aria-label="Stiker" onclick="toggleStk()">😊</button>` +
       (isG ? "" : `<input id="cmfile" type="file" accept="image/*" hidden onchange="uploadChatMedia(this)"><button class="ghost media-attach" type="button" title="Rasm yuborish" aria-label="Rasm yuborish" onclick="$('cmfile').click()">${I("paperclip", 18)}</button>`);
     h = h.replace('<button class="go" onclick="send()">', btns + '<button class="go" onclick="send()">');
     if (st.stk) h = h.replace('<div class="send', panel() + '<div class="send');
