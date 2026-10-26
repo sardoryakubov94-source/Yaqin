@@ -547,3 +547,5 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .cb-a{flex:1 1 100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cb-b{background:#ffffff18;color:var(--t);border-radius:10px;padding:7px 12px;font-size:13px}.cb-b.y{background:var(--a);color:#222;font-weight:700}
 .cb-st{font-size:13px;color:#34c759}
+
+.group-member-name{cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}.group-member-name:focus-visible{outline:2px solid var(--a);outline-offset:3px;border-radius:3px}
