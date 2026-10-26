@@ -477,3 +477,31 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 @keyframes vlockup{50%{transform:translateY(-6px)}}
 
 .older{display:block;margin:6px auto 12px;background:#ffffff14;color:var(--t);border-radius:16px;padding:8px 16px;font-size:13px}
+
+/* Ikonlar (emoji oʻrniga ilova uslubidagi SVG) */
+.yi{display:inline-block;flex:none;vertical-align:middle}
+.yi.rot{transform:rotate(135deg)}
+.vm-play{display:flex;align-items:center;justify-content:center}
+.vm-play .yi{display:block;margin-left:2px}
+.vm-play .yi:has(rect){margin-left:0}
+.send.tg .tg-i .yi{display:block}
+.tk{display:inline-flex;align-items:center;margin-left:4px;color:#ffffff90;font-size:0;letter-spacing:0;vertical-align:middle}
+.tk.r{color:#5ec8ff}
+.tk .yi{display:block}
+.mm-i>span{display:inline-flex;align-items:center;justify-content:center;width:24px;color:var(--m)}
+.mm-i.danger>span{color:#ff6b6b}
+.m.mdel i{display:inline-flex;align-items:center;gap:6px}
+.rbar button{display:flex;align-items:center;justify-content:center;padding:0}
+.send.tg .vcancel{display:flex;align-items:center;justify-content:center;padding:0;width:40px;height:40px;color:var(--m)}
+.vlockhint .yi{display:block}
+.yaqin-call-btn .yi{margin-right:6px;vertical-align:-3px}
+.yc-b span .yi{display:block}
+.m.cb{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.m.cb small{flex:1 1 100%}
+.cb-i{width:34px;height:34px;border-radius:50%;background:#ffffff1f;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cb-i.miss{color:#ff6b6b}
+.cb-t{font-weight:600}
+/* Koʻp qatorli xabar */
+.m{white-space:pre-wrap}
+.send.tg .tg-in{align-items:flex-end;border-radius:24px}
+.send.tg .tg-in #mi{resize:none;height:24px;max-height:232px;line-height:1.35;padding:12px 6px;overflow-y:hidden;font-family:inherit;display:block}

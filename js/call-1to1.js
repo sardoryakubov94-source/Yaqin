@@ -230,14 +230,14 @@
   function renderCtl() {
     const ctl = q("ycCtl"); if (!ctl || !C) return;
     const s = q("yc").dataset.state;
-    if (s === "incoming") ctl.innerHTML = btn("red", "callDecline()", "✖", "Rad etish") + btn("green", "callAccept()", C.mode === "video" ? "📹" : "📞", "Javob berish");
-    else if (s === "calling") ctl.innerHTML = btn("red", "callEnd()", "✖", "Bekor qilish");
+    if (s === "incoming") ctl.innerHTML = btn("red", "callDecline()", YI("phone", 26, "rot"), "Rad etish") + btn("green", "callAccept()", C.mode === "video" ? YI("video", 26) : YI("phone", 26), "Javob berish");
+    else if (s === "calling") ctl.innerHTML = btn("red", "callEnd()", YI("phone", 26, "rot"), "Bekor qilish");
     else {
       const video = !!C.cam;
-      ctl.innerHTML = btn(C.muted ? "off" : "", "callMute()", C.muted ? "🔇" : "🎙️", "Mikrofon") +
-        btn(video ? "" : "off", "callCamera()", video ? "📹" : "📷", video ? "Kamera" : "Kamerani yoq") +
-        (video ? btn("", "callFlip()", "🔄", "Almashtirish") + btn(C.cam.beauty > 0 ? "on" : "", "callBeauty()", "✨", "Tiniq") + btn(C.filterOpen ? "on" : "", "callFilters()", "🎨", "Filtr") : "") +
-        btn("red", "callEnd()", "✖", "Tugatish");
+      ctl.innerHTML = btn(C.muted ? "off" : "", "callMute()", C.muted ? YI("micoff", 24) : YI("mic", 24), "Mikrofon") +
+        btn(video ? "" : "off", "callCamera()", video ? YI("video", 24) : YI("videooff", 24), video ? "Kamera" : "Kamerani yoq") +
+        (video ? btn("", "callFlip()", YI("flip", 24), "Almashtirish") + btn(C.cam.beauty > 0 ? "on" : "", "callBeauty()", YI("sparkle", 24), "Tiniq") + btn(C.filterOpen ? "on" : "", "callFilters()", YI("sliders", 24), "Filtr") : "") +
+        btn("red", "callEnd()", YI("phone", 26, "rot"), "Tugatish");
     }
   }
   function status(t) { const e = q("ycSt"); if (e) e.textContent = t; }
@@ -440,6 +440,13 @@
     status(msg); const f = q("ycFil"); if (f) f.hidden = true; const c = q("ycCtl"); if (c) c.innerHTML = "";
     setTimeout(() => closeUi(my), 900);
   }
+
+  // chatdagi qoʻngʻiroq yozuvi (emoji oʻrniga ilova ikoni)
+  window.callBubble = function (x) {
+    const me = st.user && x.from === st.user.uid, t = String(x.text || ""), video = /Video/.test(t), miss = /Javobsiz|rad etildi/.test(t);
+    const label = t.replace(/^[^A-Za-z0-9]+/, "");
+    return `<div class="m cb ${me ? "me" : ""}" data-mid="${x.id}"><span class="cb-i${miss ? " miss" : ""}">${YI(video ? "video" : "phone", 18)}</span><span class="cb-t">${esc(label)}</span><small>${tm(x.t)}${typeof msgTick === "function" ? msgTick(x) : ""}</small></div>`;
+  };
 
   // ---------- chat sarlavhasiga tugmalar ----------
   const base = window.chatV;

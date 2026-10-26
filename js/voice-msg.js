@@ -14,7 +14,7 @@
     const el = document.querySelector('[data-vid="' + id + '"]');
     if (!el) return;
     const playing = VP.id === id && VP.audio && !VP.audio.paused;
-    const b = el.querySelector(".vm-play"); if (b) b.textContent = playing ? "⏸" : "▶";
+    const b = el.querySelector(".vm-play"); if (b) b.innerHTML = playing ? YI("pause", 18) : YI("play", 18);
     const m = (st.cm || []).find(x => x.id === id), dur = Math.max(1, (m && m.dur) || 1);
     const cur = VP.id === id && VP.audio ? VP.audio.currentTime : 0;
     const n = Math.round(Math.min(1, cur / dur) * BARS);
@@ -40,17 +40,17 @@
       await a.play();
       ui(id);
     } catch (e) {
-      stopPlay(); if (b) b.textContent = "▶";
+      stopPlay(); if (b) b.innerHTML = YI("play", 18);
       uiAlert("Ovozli xabarni ijro etib boʻlmadi. Internetni tekshiring yoki brauzer bu formatni qoʻllamasligi mumkin.");
     }
   };
   window.voiceBubble = function (x, g) {
     const me = x.from == st.user.uid, d = Math.max(1, Math.round(x.dur || 1));
-    return `<div class="m vm-msg ${me ? "me" : ""}" data-vid="${x.id}" data-mid="${x.id}">${g && !me ? `<b>${esc(x.name || "")}</b>` : ""}${typeof replyQuote === "function" ? replyQuote(x) : ""}<div class="vm-row"><button type="button" class="vm-play" aria-label="Ijro" onclick="voicePlay('${x.id}')">▶</button><div class="vm-wave">${bars(x.id)}</div><span class="vm-t">${fmt(d)}</span></div><small>${tm(x.t)}${typeof msgTick === "function" ? msgTick(x) : ""}</small></div>`;
+    return `<div class="m vm-msg ${me ? "me" : ""}" data-vid="${x.id}" data-mid="${x.id}">${g && !me ? `<b>${esc(x.name || "")}</b>` : ""}${typeof replyQuote === "function" ? replyQuote(x) : ""}<div class="vm-row"><button type="button" class="vm-play" aria-label="Ijro" onclick="voicePlay('${x.id}')">${YI("play", 18)}</button><div class="vm-wave">${bars(x.id)}</div><span class="vm-t">${fmt(d)}</span></div><small>${tm(x.t)}${typeof msgTick === "function" ? msgTick(x) : ""}</small></div>`;
   };
 
   // ---------- yozish ----------
-  function bar() { return `<div class="vrec" id="vrec"><button type="button" class="ghost vcancel" aria-label="Bekor qilish" onclick="voiceStop(false)">🗑</button><span class="vdot"></span><b id="vrecT">0:00</b><span class="vhint">‹ Bekor qilish uchun chapga suring</span><button type="button" class="go vsend" aria-label="Yuborish" onclick="voiceStop(true)">${SEND}</button></div><div class="vlockhint" id="vlockHint">🔒<i>↑</i></div>`; }
+  function bar() { return `<div class="vrec" id="vrec"><button type="button" class="ghost vcancel" aria-label="Bekor qilish" onclick="voiceStop(false)">${YI("trash", 20)}</button><span class="vdot"></span><b id="vrecT">0:00</b><span class="vhint">‹ Bekor qilish uchun chapga suring</span><button type="button" class="go vsend" aria-label="Yuborish" onclick="voiceStop(true)">${SEND}</button></div><div class="vlockhint" id="vlockHint">${YI("lock", 18)}<i>↑</i></div>`; }
   window.voiceBarHtml = bar;
   function showBar() {
     const s = document.querySelector(".ov .send");

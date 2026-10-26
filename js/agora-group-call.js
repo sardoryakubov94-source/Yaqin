@@ -122,7 +122,7 @@
       const panel = document.getElementById("groupCallPanel");
       if (panel) panel.style.display = "block";
       wireButtons(call);
-      setStatus("🎙️ Ovozli chat yoniq · guruh aʼzolari ulanishi kutilmoqda");
+      setStatus("Ovozli chat yoniq · guruh aʼzolari ulanishi kutilmoqda");
       toast("Ovozli chat boshlandi");
       if (mode === "video") await toggleCamera(call);
     } catch (e) {
@@ -144,13 +144,13 @@
         call.videoTrack.close();
         call.videoTrack = null;
         document.getElementById("agora_local")?.querySelector(".agora-media")?.replaceChildren();
-        setStatus("🎙️ Ovozli chat yoniq · video oʻchirilgan");
+        setStatus("Ovozli chat yoniq · video oʻchirilgan");
       } else {
         call.videoTrack = await AgoraRTC.createCameraVideoTrack({ encoderConfig: "360p_7" });
         await call.client.publish(call.videoTrack);
         const el = node("local", "Siz");
         if (el) call.videoTrack.play(el);
-        setStatus("🎙️ Ovozli chat yoniq · 📹 video ham yoqilgan");
+        setStatus("Ovozli chat yoniq · video ham yoqilgan");
       }
       call.videoEnabled = !!call.videoTrack;
       updateButtons(call);

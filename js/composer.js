@@ -21,21 +21,33 @@
     const rec = canRec();
     const cls = "send tg" + (obs ? " obs" : "") + (st.vrec ? " recording" : "") + (st.vrec && st.vrec.locked ? " locked" : "") + (rec ? "" : " hastext");
     const left = (premium ? `<button class="tg-i sch-t" type="button" title="Xabar vaqtini belgilash" aria-label="Xabar vaqtini belgilash" onclick="$('schRow').classList.toggle('show')">${I("clock", 20)}</button>` : "") +
-      '<button class="tg-i stk-btn" type="button" title="Stiker" aria-label="Stiker" onclick="toggleStk()">😊</button>';
+      '<button class="tg-i stk-btn" type="button" title="Stiker" aria-label="Stiker" onclick="toggleStk()">' + YI("smile", 24) + '</button>';
     const clip = I("paperclip", 20);
     const right = isG
       ? (gm ? `<input id="gmfile" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" hidden onchange="uploadGroupMedia(this)"><button class="tg-i media-attach" type="button" title="Rasm yoki video biriktirish" aria-label="Rasm yoki video biriktirish" onclick="$('gmfile').click()">${clip}</button>` : "")
       : (cm ? `<input id="cmfile" type="file" accept="image/*" hidden onchange="uploadChatMedia(this)"><button class="tg-i media-attach" type="button" title="Rasm yuborish" aria-label="Rasm yuborish" onclick="$('cmfile').click()">${clip}</button>` : "");
     const bar = st.vrec && window.voiceBarHtml ? window.voiceBarHtml() : "";
-    return h.slice(0, i) + `<div class="${cls}">${premium ? SCH : ""}${bar}<div class="tg-in">${left}<input class="in" id="mi" maxlength="1000" placeholder="Xabar yozing.." autocomplete="off" onkeydown="if(event.key=='Enter')send()">${right}</div>` +
+    return h.slice(0, i) + `<div class="${cls}">${premium ? SCH : ""}${bar}<div class="tg-in">${left}<textarea class="in" id="mi" rows="1" maxlength="1000" placeholder="Xabar yozing.." autocomplete="off" enterkeyhint="enter" onkeydown="if(event.key=='Enter'&&!event.shiftKey&&!matchMedia('(pointer:coarse)').matches){event.preventDefault();send()}"></textarea>${right}</div>` +
       `<button class="tg-act tg-mic" type="button" aria-label="Ovozli xabar: bosib turing">${MIC}</button><button class="tg-act tg-send go" type="button" aria-label="Yuborish" onclick="send()">${SEND}</button></div></div>`;
   };
 
   // xabar yuborilgach (maydon tozalanadi) tugma yana mikrofonga aylansin
+  // yozish maydoni matn koʻpayganda oʻsadi (taxminan 10 qatorgacha), keyin aylantiriladi
+  const MAXH = 232;
+  function autosize(el) {
+    if (!el || el.tagName !== "TEXTAREA") return;
+    el.style.height = "auto";
+    const full = el.scrollHeight || 0;
+    el.style.height = Math.max(24, Math.min(full, MAXH)) + "px";
+    el.style.overflowY = full > MAXH ? "auto" : "hidden";
+  }
   function sync() {
     const mi = document.getElementById("mi"), s = document.querySelector(".ov .send.tg");
     if (mi && s && canRec()) s.classList.toggle("hastext", !!mi.value.trim());
+    autosize(mi);
   }
+  window.syncComposer = sync;
+  document.addEventListener("input", e => { if (e.target && e.target.id === "mi") autosize(e.target); });
   const _send = window.send;
   if (typeof _send === "function") window.send = function () { const r = _send.apply(this, arguments); sync(); return r; };
 

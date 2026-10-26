@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const q = id => document.getElementById(id);
-  const PREV = x => x.deleted ? "Xabar oʻchirildi" : x.kind === "media" ? "📷 Rasm" : x.kind === "voice" ? "🎤 Ovozli xabar" : x.kind === "sticker" ? "Stiker " + (x.text || "") : String(x.text || "").slice(0, 100);
+  const PREV = x => x.deleted ? "Xabar oʻchirildi" : x.kind === "media" ? "Rasm" : x.kind === "voice" ? "Ovozli xabar" : x.kind === "sticker" ? "Stiker " + (x.text || "") : String(x.text || "").slice(0, 100);
   const col = () => (st.chat && st.chat.t === "g" ? "groups" : "chats");
   const find = id => (st.cm || []).find(x => x.id === id);
   const mine = x => st.user && x.from === st.user.uid;
@@ -14,7 +14,7 @@
   };
   function barHtml() {
     const r = st.replyTo; if (!r) return "";
-    return `<div class="rbar" id="rbar"><div class="rb-t"><b>${esc(r.name || "Xabar")}</b><span>${esc(r.text || "")}</span></div><button type="button" aria-label="Bekor qilish" onclick="replyCancel()">✕</button></div>`;
+    return `<div class="rbar" id="rbar"><div class="rb-t"><b>${esc(r.name || "Xabar")}</b><span>${esc(r.text || "")}</span></div><button type="button" aria-label="Bekor qilish" onclick="replyCancel()">${YI("x", 16)}</button></div>`;
   }
   window.replyBarSync = function () {
     const old = q("rbar"); if (old) old.remove();
@@ -37,14 +37,14 @@
   };
 
   // ---------- oʻchirilgan xabar ----------
-  window.deletedBubble = (x, g) => `<div class="m mdel ${mine(x) ? "me" : ""}">${g && !mine(x) ? `<b>${esc(x.name || "")}</b>` : ""}<i>🚫 Xabar oʻchirildi</i><small>${tm(x.t)}</small></div>`;
+  window.deletedBubble = (x, g) => `<div class="m mdel ${mine(x) ? "me" : ""}">${g && !mine(x) ? `<b>${esc(x.name || "")}</b>` : ""}<i>${YI("ban", 14)} Xabar oʻchirildi</i><small>${tm(x.t)}</small></div>`;
 
   // ---------- belgilar: tahrirlangan, ✓ / ✓✓ ----------
   window.msgTick = x => {
     let s = x.edited ? " · tahrirlangan" : "";
     if (st.chat && st.chat.t === "c" && mine(x)) {
       const list = st.cm || [], idx = list.findIndex(y => y.id === x.id), rm = st.peerState && st.peerState.readMsg, ri = rm ? list.findIndex(y => y.id === rm) : -1;
-      s += ri >= 0 && idx >= 0 && idx <= ri ? ' <span class="tk r" title="Oʻqildi">✓✓</span>' : ' <span class="tk" title="Yuborildi">✓</span>';
+      s += ri >= 0 && idx >= 0 && idx <= ri ? ' <span class="tk r" title="Oʻqildi">' + YI("checks", 16) + '</span>' : ' <span class="tk" title="Yuborildi">' + YI("check", 16) + '</span>';
     }
     return s;
   };
@@ -64,10 +64,10 @@
     const own = mine(m), plain = !m.kind && !m.deleted;
     const gOwner = st.chat.t === "g" && (st.groups || []).some(g => g.id === st.chat.id && g.owner === st.user.uid);
     const items = [];
-    if (!m.deleted) items.push(["↩️", "Javob berish", () => startReply(id)]);
-    if (plain) items.push(["📋", "Nusxalash", () => { try { navigator.clipboard.writeText(m.text); toast("Nusxalandi"); } catch (_) { uiAlert("Nusxalab boʻlmadi."); } }]);
-    if (own && plain) items.push(["✏️", "Tahrirlash", () => editDialog(id)]);
-    if (!m.deleted && (own || gOwner)) items.push(["🗑️", "Oʻchirish", () => deleteDialog(id, !own), true]);
+    if (!m.deleted) items.push([YI("reply", 20), "Javob berish", () => startReply(id)]);
+    if (plain) items.push([YI("copy", 20), "Nusxalash", () => { try { navigator.clipboard.writeText(m.text); toast("Nusxalandi"); } catch (_) { uiAlert("Nusxalab boʻlmadi."); } }]);
+    if (own && plain) items.push([YI("edit", 20), "Tahrirlash", () => editDialog(id)]);
+    if (!m.deleted && (own || gOwner)) items.push([YI("trash", 20), "Oʻchirish", () => deleteDialog(id, !own), true]);
     if (!items.length) return;
     modal(items.map((it, i) => `<button type="button" class="mm-i${it[3] ? " danger" : ""}" data-i="${i}"><span>${it[0]}</span>${it[1]}</button>`).join("") + '<button type="button" class="mm-i cancel">Bekor qilish</button>', bg => {
       bg.querySelectorAll(".mm-i[data-i]").forEach(b => b.addEventListener("click", () => { closeMenu(); items[+b.dataset.i][2](); }));
