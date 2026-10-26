@@ -38,7 +38,7 @@
     if (!el || el.tagName !== "TEXTAREA") return;
     el.style.height = "auto";
     const full = el.scrollHeight || 0;
-    el.style.height = Math.max(24, Math.min(full, MAXH)) + "px";
+    el.style.height = Math.max(46, Math.min(full, MAXH)) + "px";
     el.style.overflowY = full > MAXH ? "auto" : "hidden";
   }
   function sync() {

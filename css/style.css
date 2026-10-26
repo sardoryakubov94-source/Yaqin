@@ -503,8 +503,8 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .cb-t{font-weight:600}
 /* Koʻp qatorli xabar */
 .m{white-space:pre-wrap}
-.send.tg .tg-in{align-items:flex-end;border-radius:24px}
-.send.tg .tg-in #mi{resize:none;height:24px;max-height:232px;line-height:1.35;padding:12px 6px;overflow-y:hidden;font-family:inherit;display:block}
+.send.tg .tg-in{align-items:flex-end;border-radius:24px;min-height:50px}
+.send.tg .tg-in #mi{resize:none;height:46px;min-height:46px;max-height:232px;line-height:22px;padding:12px 6px;box-sizing:border-box;overflow-y:hidden;font-family:inherit;display:block}
 
 /* Telegram uslubidagi profil / sozlamalar */
 :root{--mfs:14px}
