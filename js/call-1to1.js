@@ -261,6 +261,32 @@
     try { const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: mode === "video" }); s.getTracks().forEach(t => t.stop()); }
     catch (_) { throw new Error(mode === "video" ? "Kamera va mikrofondan foydalanishga ruxsat bering." : "Mikrofondan foydalanishga ruxsat bering."); }
   }
+  // ---------- qabul qiluvchi sozlamalari: kim qoʻngʻiroq qila oladi ----------
+  function askPermission(chatId, name) {
+    const nm = esc(name || "Suhbatdosh");
+    if (typeof ysModal !== "function") { uiAlert(nm + " qoʻngʻiroqlarni faqat oʻzi ruxsat bergan suhbatdoshlardan qabul qiladi."); return; }
+    ysModal(`<h4>Qoʻngʻiroq uchun ruxsat kerak</h4><p class="mm-p">${nm} qoʻngʻiroqlarni faqat oʻzi ruxsat bergan suhbatdoshlardan qabul qiladi. Ruxsat soʻrab xabar yuborasizmi?</p><div class="mm-row"><button type="button" class="mm-i cancel">Bekor qilish</button><button type="button" class="mm-i ok">Soʻrov yuborish</button></div>`, bg => {
+      bg.querySelector(".cancel").addEventListener("click", () => ysCloseModal());
+      bg.querySelector(".ok").addEventListener("click", () => {
+        ysCloseModal();
+        st.creq = st.creq || {};
+        if (st.creq[chatId] && Date.now() - st.creq[chatId] < 10 * 60000) { toast("Soʻrov allaqachon yuborilgan. Javobni kuting."); return; }
+        st.creq[chatId] = Date.now();
+        FB.send("chats", chatId, "Qoʻngʻiroq qilishga ruxsat soʻralmoqda", st.user.name, "callreq").then(() => toast("Soʻrov yuborildi")).catch(e => uiAlert("Soʻrov yuborilmadi: " + (e.message || e)));
+      });
+    });
+  }
+  async function gate(mode, peer, chatId, name) {
+    let p = {};
+    try { p = await FB.getPrefs(peer); } catch (_) {}
+    const cm = p.calls || "approved";
+    if (cm === "none") { uiAlert("Bu foydalanuvchi qoʻngʻiroqlarni qabul qilmaydi."); return false; }
+    if (mode === "video" && p.video === false) { uiAlert("Bu foydalanuvchi video qoʻngʻiroqlarni qabul qilmaydi. Ovozli qoʻngʻiroq qilib koʻring."); return false; }
+    const allowed = st.peerState ? st.peerState.allowCalls === true : null;
+    if (cm !== "all" && allowed === false) { askPermission(chatId, name); return false; }
+    return true;
+  }
+
   window.callStart = async function (mode) {
     const ch = st.chat;
     if (C && !C.ended) { uiAlert("Siz allaqachon qoʻngʻiroqdasiz."); return; }
@@ -273,13 +299,18 @@
     const own = chat.owner === me;
     const name = own ? chat.askerName : ((st.csh && st.csh.name) || chat.ownerName);
     const ava = own ? ava2(chat.askerImg) : ava2(chat.ownerImg, chat.ownerAva);
+    if (!(await gate(mode, peer, ch.id, name))) return;
     try { await preflight(mode); } catch (e) { uiAlert(e.message); return; }
     if (C && !C.ended) return;
     if (C) closeUi(C);
     C = { role: "caller", mode, chatId: ch.id, peer, peerName: name, peerAva: ava, ended: false };
     ui("calling"); status("Qoʻngʻiroq qilinmoqda…"); ring("out");
     try { C.id = await FB.callCreate(ch.id, peer, mode, st.user.name); }
-    catch (e) { const m = e && e.message ? e.message : e; closeUi(C); uiAlert("Qoʻngʻiroq boshlanmadi: " + m); return; }
+    catch (e) {
+      const m = e && e.message ? e.message : e; closeUi(C);
+      if (e && e.code === "permission-denied") askPermission(ch.id, name); else uiAlert("Qoʻngʻiroq boshlanmadi: " + m);
+      return;
+    }
     const my = C;
     my.unsub = FB.callWatch(my.id, d => {
       if (!d || C !== my || my.ended) return;

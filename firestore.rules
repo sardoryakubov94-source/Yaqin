@@ -4,6 +4,14 @@ service cloud.firestore {
     function signed() { return request.auth != null; }
     function isAdmin() { return signed() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
     function chatOf(cid) { return get(/databases/$(db)/documents/chats/$(cid)).data; }
+    function prefsOf(uid) { return exists(/databases/$(db)/documents/uprefs/$(uid)) ? get(/databases/$(db)/documents/uprefs/$(uid)).data : {}; }
+    function callOk(to, cid, mode) {
+      return prefsOf(to).get('calls', 'approved') != 'none'
+        && (mode != 'video' || prefsOf(to).get('video', true) == true)
+        && (prefsOf(to).get('calls', 'approved') == 'all'
+            || (exists(/databases/$(db)/documents/chats/$(cid)/state/$(to))
+                && get(/databases/$(db)/documents/chats/$(cid)/state/$(to)).data.get('allowCalls', false) == true));
+    }
     function otherOf(cid) { return chatOf(cid).owner == request.auth.uid ? chatOf(cid).asker : chatOf(cid).owner; }
     function validAd(d) { return d.age is int && d.age >= 18 && d.age <= 80 && d.name is string && d.name.size() <= 40
       && d.about is string && d.about.size() <= 500 && d.g in ['kelin','kuyov'] && d.pur in ['oila','nikoh','tanish']; }
@@ -95,7 +103,8 @@ service cloud.firestore {
       match /state/{uid} {
         allow read: if signed() && request.auth.uid in chatOf(cid).members;
         allow write: if signed() && request.auth.uid == uid && request.auth.uid in chatOf(cid).members
-          && request.resource.data.keys().hasOnly(['readMsg', 'readT', 'typing'])
+          && request.resource.data.keys().hasOnly(['readMsg', 'readT', 'typing', 'allowCalls'])
+          && (!('allowCalls' in request.resource.data) || request.resource.data.allowCalls is bool)
           && (!('readMsg' in request.resource.data) || (request.resource.data.readMsg is string && request.resource.data.readMsg.size() <= 40))
           && (!('readT' in request.resource.data) || request.resource.data.readT is int)
           && (!('typing' in request.resource.data) || request.resource.data.typing is int);
@@ -122,7 +131,8 @@ service cloud.firestore {
         && request.resource.data.status == 'ringing' && request.resource.data.mode in ['audio', 'video']
         && request.resource.data.chatId is string
         && chatOf(request.resource.data.chatId).members.hasAll(request.resource.data.members)
-        && !exists(/databases/$(db)/documents/blocks/$(request.resource.data.to + '_' + request.auth.uid));
+        && !exists(/databases/$(db)/documents/blocks/$(request.resource.data.to + '_' + request.auth.uid))
+        && callOk(request.resource.data.to, request.resource.data.chatId, request.resource.data.mode);
       allow update: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endedAt', 'acceptedAt'])
         && request.resource.data.status in ['ringing', 'accepted', 'declined', 'ended', 'missed'];
@@ -280,5 +290,14 @@ service cloud.firestore {
       allow delete: if signed() && resource.data.by == request.auth.uid;
     }
     match /fcm/{uid} { allow read, write: if signed() && request.auth.uid == uid; }
+    match /uprefs/{uid} {
+      allow read: if signed();
+      allow write: if signed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['calls', 'video', 'rr', 'typ'])
+        && (!('calls' in request.resource.data) || request.resource.data.calls in ['none', 'approved', 'all'])
+        && (!('video' in request.resource.data) || request.resource.data.video is bool)
+        && (!('rr' in request.resource.data) || request.resource.data.rr is bool)
+        && (!('typ' in request.resource.data) || request.resource.data.typ is bool);
+    }
   }
 }
