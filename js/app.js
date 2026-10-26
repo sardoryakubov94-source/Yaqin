@@ -150,7 +150,7 @@ function applyYaqinLang(root){
 function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("mi")?$("mi").value:null;
  const v={home,fav:favs,circ:groupsV,msg:msgs,prof,map:mapV}[st.tab]();
  $("app").innerHTML=v;
- const ov=st.form?formV():st.chat?chatV():st.swProfile?swipeProfileV():st.sw?swipeV():"";if(ov)$("app").insertAdjacentHTML("beforeend",ov);
+ const ov=st.form?formV():st.chat?chatV():st.sw?swipeV():"";if(ov)$("app").insertAdjacentHTML("beforeend",ov);if(!st.form&&st.swProfile)$("app").insertAdjacentHTML("beforeend",swipeProfileV());
  const N=[["home",I("home",24),"Bosh"],["msg",I("chat",24),"Xabarlar"],["fav",I("heart",24),"Sevimli"],["+","+",""],["map",I("map",24),"Xarita"],["circ",I("users",24),"Guruhlar"],["prof",I("user",24),"Profil"]];
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',38)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m){if(st.chat&&st.cm&&st.cm.length&&typeof chatMsgs=="function")chatMsgs();m.scrollTop=m.scrollHeight}if(a==="q"&&$("q")){$("q").focus()}
