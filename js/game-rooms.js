@@ -10,7 +10,7 @@
     "Qanday sovgʻa sizni eng koʻp xursand qiladi?", "Hayotdagi eng katta saboqingiz?", "Safar qilishni yoqtirasizmi? Eng yaxshi joyingiz?",
     "Ertalab qanday boshlaysiz: choy, qahva yoki sport?", "Birinchi uchrashuvda eng muhim narsa nima deb oylaysiz?"
   ];
-  const FL = [["atirgul", "🌹", "Atirgul"], ["lola", "🌷", "Lola"], ["gul", "🌸", "Gul"], ["guldasta", "💐", "Guldasta"]];
+  const FL = [["kiss", "💋", "Oʻpich"], ["atirgul", "🌹", "Atirgul"], ["lola", "🌷", "Lola"], ["gul", "🌸", "Gul"], ["guldasta", "💐", "Guldasta"]];
   const FLE = Object.fromEntries(FL.map(f => [f[0], f[1]]));
   const $ = id => document.getElementById(id);
   const uidFor = v => { let h = 2166136261; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; };
@@ -174,7 +174,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmSeat = function (u) {
     if (!R || u === st.user.uid) return;
     const sh = document.createElement("div"); sh.className = "gm-sheet"; sh.id = "gmSheet";
-    sh.innerHTML = `<div class="gm-sheet-in"><b>${esc(pn(R, u))} ga gul yuborish</b><div class="gm-fl">${FL.map(f => `<button onclick="gmSend('${u}','${f[0]}')"><span>${f[1]}</span><small>${f[2]}</small></button>`).join("")}</div><button class="ghost" onclick="document.getElementById('gmSheet').remove()">Yopish</button></div>`;
+    sh.innerHTML = `<div class="gm-sheet-in"><b>${esc(pn(R, u))} ga sovgʻa yuborish</b><div class="gm-fl">${FL.map(f => `<button onclick="gmSend('${u}','${f[0]}')"><span>${f[1]}</span><small>${f[2]}</small></button>`).join("")}</div><button class="ghost" onclick="document.getElementById('gmSheet').remove()">Yopish</button></div>`;
     sh.addEventListener("click", e => { if (e.target === sh) sh.remove(); });
     $("gm").appendChild(sh);
   };
@@ -183,8 +183,16 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if (seenG === null) { seenG = new Set(list.map(g => g.id)); return; }
     list.slice().reverse().forEach(g => {
       if (seenG.has(g.id)) return; seenG.add(g.id);
-      const el = $("gs_" + g.to); if (!el) return;
-      const f = document.createElement("div"); f.className = "gm-fly"; f.textContent = FLE[g.kind] || "🌸"; el.appendChild(f); setTimeout(() => f.remove(), 2600);
+      const fromEl = $("gs_" + g.from), toEl = $("gs_" + g.to);
+      if (fromEl && toEl) {
+        const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+        const f = document.createElement("div"); f.className = "gm-gift-flight"; f.textContent = FLE[g.kind] || "🌸";
+        f.style.left = (a.left + a.width / 2) + "px"; f.style.top = (a.top + a.height / 2) + "px";
+        f.style.setProperty("--gift-dx", (b.left + b.width / 2 - a.left - a.width / 2) + "px");
+        f.style.setProperty("--gift-dy", (b.top + b.height / 2 - a.top - a.height / 2) + "px");
+        document.body.appendChild(f); setTimeout(() => f.remove(), 1500);
+        const badge = document.createElement("div"); badge.className = "gm-fly"; badge.textContent = FLE[g.kind] || "🌸"; toEl.appendChild(badge); setTimeout(() => badge.remove(), 2600);
+      }
       if (g.to === st.user.uid) toast(`${g.fromName || "Kimdir"} sizga ${FLE[g.kind] || "🌸"} yubordi`);
     });
   }
