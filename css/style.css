@@ -613,3 +613,28 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-room-msg.mine{align-self:flex-end;background:rgba(95,82,160,.4);border-radius:12px 12px 4px 12px}
 .gm-room-msg b{font-size:11px;color:var(--m)}.gm-room-msg span{font-size:14px;white-space:pre-wrap}
 .gm-room-send{display:flex;gap:7px}.gm-room-send input{flex:1;min-width:0;background:var(--bg);color:var(--t);border:1px solid var(--c2);border-radius:12px;padding:11px;font-size:14px}.gm-room-send button{flex:none;padding:10px 12px;border-radius:12px}
+
+/* Guruhli oʻyin xonasi: mobil joylashuvni tartibga solish */
+.gm-stage{flex:0 0 auto;min-height:0;padding:5px 8px 2px}
+.gm-ring{width:min(78vw,38vh,340px)}
+.gm-bottle{width:52px;height:52px;margin:-26px 0 0 -26px;font-size:44px;line-height:52px}
+.gm-seat{width:58px}
+.gm-seat small{max-width:58px;font-size:10px}
+.gm-info{padding:3px 10px;min-height:0;flex:0 0 auto}
+.gm-info p{margin:3px 0 6px}
+.gm-card{flex:0 0 auto;margin:4px 10px 6px;padding:10px;gap:7px;max-height:32vh;overflow-y:auto}
+.gm-q{font-size:16px}
+.gm-vs{flex:0 0 auto;padding:3px 10px 5px}
+.gm-room-chat{flex:0 0 auto;width:calc(100% - 20px);max-width:620px;margin:8px auto 12px;padding:9px}
+.gm-room-chat-title{margin-bottom:6px;font-size:14px}
+.gm-room-messages{height:92px;min-height:62px;max-height:92px;gap:5px;margin-bottom:7px}
+.gm-room-msg{padding:6px 9px}
+.gm-room-msg span{font-size:13px}
+.gm-room-send input{padding:9px;font-size:13px}
+.gm-room-send button{padding:8px 10px}
+@media(max-height:740px){
+ .gm-ring{width:min(70vw,32vh,290px)}
+ .gm-stage{padding-top:2px;padding-bottom:0}
+ .gm-card{max-height:28vh}
+ .gm-room-messages{height:72px;max-height:72px}
+}
