@@ -74,7 +74,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-note" id="gmNote" hidden>🤖 Boʻsh oʻrinlarni Yaqin yordamchi oʻyinchilari toʻldiradi. Ular bilan chat ochilmaydi va sovgʻa yubormaydi. Odam kirsa, oʻrin darhol boʻshaydi.</div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-note" id="gmNote" hidden></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
