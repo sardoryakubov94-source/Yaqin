@@ -616,7 +616,7 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 
 /* Guruhli oʻyin xonasi: chat paneli yuqoriroq va 10–15 xabar uchun balandroq */
 .gm-stage{flex:0 0 auto;min-height:0;padding:5px 8px 2px}
-.gm-ring{width:min(70vw,34vh,305px)}
+.gm-ring{width:min(86vw,40vh,360px)}
 .gm-bottle{width:52px;height:52px;margin:-26px 0 0 -26px;font-size:44px;line-height:52px}
 .gm-seat{width:58px}
 .gm-seat small{max-width:58px;font-size:10px}
@@ -634,7 +634,7 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-room-send input{padding:9px;font-size:14px}
 .gm-room-send button{padding:9px 11px}
 @media(max-height:740px){
- .gm-ring{width:min(64vw,28vh,255px)}
+ .gm-ring{width:min(78vw,33vh,310px)}
  .gm-stage{padding-top:2px;padding-bottom:0}
  .gm-card{max-height:23vh}
  .gm-room-chat{transform:translate(-50%,-8px);padding:5px 8px calc(5px + env(safe-area-inset-bottom,0px))}
