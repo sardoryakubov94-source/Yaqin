@@ -592,3 +592,14 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-seat.gf .gm-av{border-color:rgba(224,88,122,.5)}.gm-seat.gmm .gm-av{border-color:rgba(80,140,230,.5)}.gm-seat.turn .gm-av{border-color:var(--a)}.gm-seat.target .gm-av{border-color:var(--r)}
 .gm-bot{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.5px;color:#14111f;background:var(--a);border-radius:6px;padding:1px 5px;margin-top:1px}.gm-chk{display:flex;gap:8px;align-items:center;color:var(--m);font-size:13px}
 .gm-note{margin:0 12px 6px;padding:8px 10px;border-radius:10px;background:rgba(240,179,74,.12);color:var(--m);font-size:11.5px;line-height:1.35;text-align:center}.gm-note[hidden]{display:none}
+
+/* Oʻyin savollariga matnli javob va mini-chat */
+.gm-text-chat{display:flex;flex-direction:column;gap:8px;text-align:left}
+.gm-text-messages{display:flex;flex-direction:column;gap:7px;max-height:150px;overflow:auto}
+.gm-text-msg{align-self:flex-start;max-width:92%;display:flex;flex-direction:column;gap:3px;padding:8px 11px;border-radius:12px 12px 12px 4px;background:var(--c2);overflow-wrap:anywhere}
+.gm-text-msg.mine{align-self:flex-end;background:rgba(95,82,160,.35);border-radius:12px 12px 4px 12px}
+.gm-text-msg b{font-size:11px;color:var(--m)}
+.gm-text-msg span{font-size:14px;line-height:1.35;white-space:pre-wrap}
+.gm-text-send{display:flex;gap:7px;align-items:center}
+.gm-text-send input{flex:1;min-width:0;background:var(--bg);color:var(--t);border:1px solid var(--c2);border-radius:12px;padding:11px;font-size:14px}
+.gm-text-send button{flex:none;padding:10px 12px;border-radius:12px}
