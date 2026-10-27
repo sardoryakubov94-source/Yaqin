@@ -74,7 +74,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-note" id="gmNote" hidden></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
@@ -83,7 +83,6 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const d = R;
     if (!d || d.status !== "open" || !(d.players || []).includes(st.user.uid)) { if (!closing) { closing = true; toast(!d || d.status !== "open" ? "Xona yopildi" : "Siz xonadan chiqdingiz"); gmCloseAll(); } return; }
     $("gmTitle").textContent = d.title;
-    const nt = $("gmNote"); if (nt) nt.hidden = !d.players.some(u => isBot(d, u));
     const ord = ordOf(d), n = d.players.length, sp = d.spin || { seq: 0 }, me = st.user.uid;
     $("gmSeats").innerHTML = ord.map((u, i) => {
       const a = (i / n) * 2 * Math.PI - Math.PI / 2, x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
