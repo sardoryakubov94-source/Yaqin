@@ -76,19 +76,20 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       unChat = FB.gmRoomChat(id, msgs => {
         const box = $("gmRoomMessages"); if (!box) return;
         const d = R, sp = d && d.spin, me = st.user.uid;
-        const questionActive = d && sp && sp.open && sp.to === me && sp.by !== me && animDone;
-        const question = questionActive ? (() => {
-          const sender = sp.by, avatar = pav(d, sender), name = pn(d, sender);
-          return `<div class="gm-room-msg gm-room-question"><div class="gm-room-author">${avatar}<b>${esc(name)}</b><small>sizga savol berdi</small></div><div class="gm-room-question-text">❓ ${esc(QS[sp.q % QS.length])}</div><small class="gm-room-question-hint">Javobni pastdagi odatiy xabar maydoniga yozing</small></div>`;
-        })() : "";
+        const askPrompt = d && sp && sp.open && sp.by === me && sp.to !== me && animDone
+          ? `<div class="gm-room-msg gm-room-question gm-room-ask-prompt"><div class="gm-room-author">${pav(d, sp.to)}<b>${esc(pn(d, sp.to))}</b></div><div class="gm-room-question-text">💬 ${esc(pn(d, sp.to))} ga savolingizni bering</div><small class="gm-room-question-hint">Savolni pastdagi chat maydoniga yozing</small></div>` : "";
+        const answerPrompt = d && sp && sp.open && sp.to === me && sp.by !== me && animDone
+          ? `<div class="gm-room-msg gm-room-question"><div class="gm-room-author">${pav(d, sp.by)}<b>${esc(pn(d, sp.by))}</b><small>sizga savol berdi</small></div><div class="gm-room-question-text">❓ ${esc(sp.customQ || QS[sp.q % QS.length])}</div><small class="gm-room-question-hint">Javobni pastdagi chat maydoniga yozing</small></div>` : "";
         const rendered = msgs.map(m => {
           const text = String(m.text || "");
           const isQA = text.startsWith("❓ Savol: ") && text.includes("\\n💬 Javob: ");
-          const body = isQA ? (() => { const p = text.split("\\n💬 Javob: "); return `<div class="gm-room-qa-question">❓ ${esc(p[0].replace(/^❓ Savol: /, ""))}</div><div class="gm-room-qa-answer">💬 Javob: ${esc(p.slice(1).join("\\n💬 Javob: "))}</div>`; })() : esc(text);
+          const isQuestion = text.startsWith("❓ SAVOL → ");
+          const body = isQA ? (() => { const p = text.split("\\n💬 Javob: "); return `<div class="gm-room-qa-question">❓ ${esc(p[0].replace(/^❓ Savol: /, ""))}</div><div class="gm-room-qa-answer">💬 Javob: ${esc(p.slice(1).join("\\n💬 Javob: "))}</div>`; })()
+            : isQuestion ? `<div class="gm-room-qa-question">${esc(text)}</div>` : esc(text);
           const avatar = d && d.pm && d.pm[m.from] ? pav(d, m.from) : "";
-          return `<div class="gm-room-msg${m.from === me ? " mine" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
+          return `<div class="gm-room-msg${m.from === me ? " mine" : ""}${isQuestion ? " gm-room-question" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
         }).join("");
-        box.innerHTML = question + rendered;
+        box.innerHTML = askPrompt + answerPrompt + rendered;
         box.scrollTop = box.scrollHeight;
       });
       tick = setInterval(() => R && render(true), 4000);
@@ -135,6 +136,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     else if (d.turn === me) h = `<p>Navbat sizda!</p><button class="go" onclick="gmSpin()">🍾 Shishani aylantirish</button>`;
     else { h = `<p>Navbat: <b>${esc(turnName)}</b></p>`; if (Date.now() - (d.turnAt || 0) > 40000) h += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`; }
     info.innerHTML = h;
+    const roomInput = $("gmRoomInput");
+    if (roomInput) roomInput.placeholder = sp.open && animDone && sp.by === me && sp.to !== me
+      ? "Savolingizni yozing..." : sp.open && animDone && sp.to === me && sp.by !== me
+      ? "Javobingizni yozing..." : "Xabaringizni yozing...";
     // savol kartochkasi
     const card = $("gmCard");
     if (sp.open && animDone) {
@@ -144,7 +149,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const msgs = sp.msgs || {};
       const myMsg = msgs[me] || {};
       const otherMsg = msgs[other] || {};
-      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>
+      card.innerHTML = `<div class="gm-q">${esc(sp.customQ || QS[sp.q % QS.length])}</div>
         <div class="gm-text-chat"><div class="gm-text-messages">${myMsg.text ? `<div class="gm-text-msg mine"><b>${esc(myMsg.name || "Siz")}</b><span>${esc(myMsg.text)}</span></div>` : ""}${otherMsg.text ? `<div class="gm-text-msg"><b>${esc(otherMsg.name || pn(d, other))}</b><span>${esc(otherMsg.text)}</span></div>` : ""}${(!myMsg.text && !otherMsg.text) ? '<p class="gm-hint">Javobni ovoz bilan ayting yoki xabar yozing.</p>' : ""}</div>
         ${inv && !botInv && sp.to !== me ? `<form class="gm-text-send" onsubmit="event.preventDefault();gmSendText('${other}')"><input id="gmTextInput" maxlength="500" placeholder="Javobingizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form>` : ""}</div>
         ${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">Ovozli javob ham berishingiz mumkin.</p>`}` +
@@ -198,12 +203,20 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmSendRoomText = async () => {
     const input = $("gmRoomInput"); let text = String(input?.value || "").trim();
     if (!text) return;
-    const d = R, sp = d && d.spin;
-    if (d && sp && sp.open && animDone && sp.to === st.user.uid && sp.by !== st.user.uid) {
-      text = "❓ Savol: " + QS[sp.q % QS.length] + "\\n💬 Javob: " + text;
-    }
-    try { await FB.gmRoomSend(RID, text); if (input) input.value = ""; }
-    catch (e) { uiAlert("Xabar yuborilmadi: " + (e.message || e)); }
+    const d = R, sp = d && d.spin, me = st.user.uid;
+    try {
+      if (d && sp && sp.open && animDone && sp.by === me && sp.to !== me) {
+        const question = text.slice(0, 500);
+        await FB.gmSetQuestion(RID, question);
+        await FB.gmRoomSend(RID, "❓ SAVOL → " + pn(d, sp.to) + ": " + question);
+      } else if (d && sp && sp.open && animDone && sp.to === me && sp.by !== me) {
+        text = "❓ Savol: " + (sp.customQ || QS[sp.q % QS.length]) + "\\n💬 Javob: " + text;
+        await FB.gmRoomSend(RID, text);
+      } else {
+        await FB.gmRoomSend(RID, text);
+      }
+      if (input) input.value = "";
+    } catch (e) { uiAlert("Xabar yuborilmadi: " + (e.message || e)); }
   };
   window.gmSendText = async other => {
     const input = $("gmTextInput"), text = String(input?.value || "").trim();
