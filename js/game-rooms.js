@@ -25,14 +25,14 @@
 
   // ---------- Xonalar roʻyxati ----------
   window.gmOpenList = function () {
-    if (!st.user) { uiAlert("Oʻyin xonalariga kirish uchun avval tizimga kiring."); return; }
+    if (!st.user) { uiAlert("Guruhli oʻyinlarga kirish uchun avval tizimga kiring."); return; }
     view = "list"; unL && unL();
     drawList([]);
     unL = FB.gmRooms(rs => { if (view === "list") drawList(rs); });
   };
   function drawList(rs) {
     rs = rs.filter(r => r.status === "open" && (r.players || []).length).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Oʻyin xonalari</b></div>
+    layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
 <div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi</option><option value="6" selected>6 kishi</option><option value="8">8 kishi</option></select><button class="go" onclick="gmCreate()">Xona ochish</button></div>
 ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.map(u => esc(pn(r, u))).slice(0, 3).join(", ")}</small></div><span>${r.players.length}/${r.max}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
@@ -187,6 +187,6 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
   if (typeof base === "function") window.groupsV = function () {
     const h = base.apply(this, arguments);
     if (!st.user) return h;
-    return `<button class="gm-entry" onclick="gmOpenList()"><span>🎲</span><div><b>Oʻyin xonalari</b><small>Ovozli shisha oʻyini · gul yuborish</small></div></button>` + h;
+    return `<button class="gm-entry" onclick="gmOpenList()"><span>🎲</span><div><b>Guruhli oʻyinlar</b><small>Ovozli shisha oʻyini · gul yuborish</small></div></button>` + h;
   };
 })();
