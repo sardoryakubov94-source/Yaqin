@@ -99,7 +99,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
@@ -140,6 +140,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if (roomInput) roomInput.placeholder = sp.open && animDone && sp.by === me && sp.to !== me
       ? "Savolingizni yozing..." : sp.open && animDone && sp.to === me && sp.by !== me
       ? "Javobingizni yozing..." : "Xabaringizni yozing...";
+    const templateBtn = $("gmTemplateBtn");
+    if (templateBtn) templateBtn.hidden = !(sp.open && animDone && sp.by === me && sp.to !== me && !isBot(d, sp.to));
     // savol kartochkasi
     const card = $("gmCard");
     if (sp.open && animDone) {
@@ -200,6 +202,27 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmNext = async () => { try { await FB.gmNext(RID, false); } catch (e) { uiAlert(e.message || e); } };
   window.gmSkip = async () => { try { await FB.gmNext(RID, true); } catch (e) { uiAlert(e.message || e); } };
   window.gmLike = async y => { try { await FB.gmAnswer(RID, y); } catch (e) { uiAlert(e.message || e); } };
+  window.gmShowQuestionTemplates = function () {
+    const d = R, sp = d && d.spin, me = st.user && st.user.uid;
+    if (!d || !sp || !sp.open || !animDone || sp.by !== me || sp.to === me || isBot(d, sp.to)) return;
+    const old = document.getElementById("gmQuestionTemplates");
+    if (old) old.remove();
+    const sheet = document.createElement("div");
+    sheet.id = "gmQuestionTemplates";
+    sheet.className = "gm-sheet gm-question-template-sheet";
+    sheet.innerHTML = `<div class="gm-sheet-in"><div class="gm-sheet-head"><b>❓ Savol shablonlari</b><button type="button" class="gm-sheet-close" onclick="document.getElementById('gmQuestionTemplates')?.remove()">×</button></div><p class="gm-hint">Savolni tanlang — u chatga yuboriladi va oʻyin ekranida chiqadi.</p><div class="gm-question-template-list">${QS.map((q, i) => `<button type="button" class="gm-question-template-item" data-q-index="${i}"><span>${i + 1}.</span><b>${esc(q)}</b><small>Tanlash →</small></button>`).join("")}</div></div>`;
+    sheet.addEventListener("click", e => {
+      const b = e.target.closest("[data-q-index]");
+      if (!b) return;
+      const q = QS[Number(b.dataset.qIndex)];
+      sheet.remove();
+      const input = $("gmRoomInput");
+      if (input) input.value = q;
+      window.gmSendRoomText();
+    });
+    document.body.appendChild(sheet);
+  };
+
   window.gmSendRoomText = async () => {
     const input = $("gmRoomInput"); let text = String(input?.value || "").trim();
     if (!text) return;
