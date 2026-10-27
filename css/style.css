@@ -588,3 +588,4 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-fly{position:absolute;left:50%;top:0;font-size:38px;pointer-events:none;animation:gmfly 2.4s ease-out forwards}
 @keyframes gmfly{0%{transform:translate(-50%,10px) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-90px) scale(1.5);opacity:0}}
 .gm-seat.gf .gm-av{border-color:rgba(224,88,122,.5)}.gm-seat.gmm .gm-av{border-color:rgba(80,140,230,.5)}.gm-seat.turn .gm-av{border-color:var(--a)}.gm-seat.target .gm-av{border-color:var(--r)}
+.gm-bot{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.5px;color:#14111f;background:var(--a);border-radius:6px;padding:1px 5px;margin-top:1px}.gm-chk{display:flex;gap:8px;align-items:center;color:var(--m);font-size:13px}

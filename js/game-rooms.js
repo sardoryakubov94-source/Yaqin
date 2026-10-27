@@ -30,6 +30,10 @@
       document.body.appendChild(sh);
     });
   }
+  const isBot = (d, u) => !!(d.pm && d.pm[u] && d.pm[u].bot);
+  const hCnt = (d, g) => d.players.filter(u => !isBot(d, u) && (g === "f" ? gOf(d, u) === "f" : gOf(d, u) !== "f")).length;
+  const BOT_SAY = ["Qiziq savol! Menimcha, eng muhimi — oʻzaro hurmat va samimiyat.", "Men uchun oila tinchligi hammasidan ustun.", "Hmm, oʻylab koʻrish kerak… Menimcha, sabr va mehr hal qiladi.", "Odamlarning samimiyligini qadrlayman, shuning uchun ochiq gaplashishni yaxshi koʻraman.", "Hayotda eng muhimi — sogʻlik va yaqinlar bilan birga boʻlish.", "Tinch, oddiy kunlarni yaxshi koʻraman, yaqinlar bilan choy ustida suhbat.", "Yangi joylarni koʻrish va yangi odamlar bilan tanishish menga yoqadi.", "Men halollik va mehnatsevarlikni hammadan koʻproq qadrlayman."];
+  let botT = {};
   const gOf = (d, u) => (d.pm && d.pm[u] && d.pm[u].g) || "";
   function ordOf(d) { const m = d.players.filter(u => gOf(d, u) !== "f"), f = d.players.filter(u => gOf(d, u) === "f"), a = gOf(d, d.owner) === "f" ? f : m, b = a === f ? m : f, o = []; for (let i = 0; i < Math.max(m.length, f.length); i++) { if (a[i]) o.push(a[i]); if (b[i]) o.push(b[i]); } return o; }
   const pn = (d, u) => (d.pm && d.pm[u] && d.pm[u].n) || "Oʻyinchi";
@@ -43,15 +47,15 @@
     unL = FB.gmRooms(rs => { if (view === "list") drawList(rs); });
   };
   function drawList(rs) {
-    rs = rs.filter(r => r.status === "open" && (r.players || []).length).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    rs = rs.filter(r => r.status === "open" && (r.players || []).some(u => !isBot(r, u))).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
-<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><button class="go" onclick="gmCreate()">Xona ochish</button></div>
-${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.map(u => esc(pn(r, u))).slice(0, 3).join(", ")}</small></div><span>👩 ${r.players.filter(u => gOf(r, u) === "f").length}/${r.max / 2}<br>👨 ${r.players.filter(u => gOf(r, u) !== "f").length}/${r.max / 2}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
+<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><label class="gm-chk"><input type="checkbox" id="gmB" checked> Odam yetmasa 🤖 bot toʻldirsin (BOT belgisi bilan)</label><button class="go" onclick="gmCreate()">Xona ochish</button></div>
+${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.filter(u => !isBot(r, u)).map(u => esc(pn(r, u))).slice(0, 3).join(", ")}${r.bots ? " · 🤖" : ""}</small></div><span>👩 ${hCnt(r, "f")}/${r.max / 2}<br>👨 ${hCnt(r, "m")}/${r.max / 2}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
   }
   window.gmCreate = async function () {
     const t = ($("gmT") || {}).value || "", m = ($("gmM") || {}).value || 6;
-    try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta()); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
+    try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta(), !!($("gmB") || {}).checked); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
   };
 
   // ---------- Xonaga kirish ----------
@@ -63,7 +67,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
-      tick = setInterval(() => R && render(true), 5000);
+      tick = setInterval(() => R && render(true), 4000);
       startVoice(id);
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
   };
@@ -83,7 +87,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     $("gmSeats").innerHTML = ord.map((u, i) => {
       const a = (i / n) * 2 * Math.PI - Math.PI / 2, x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
       const cls = (gOf(d, u) === "f" ? " gf" : " gmm") + (d.turn === u ? " turn" : "") + (sp.open && sp.to === u ? " target" : "");
-      return `<div class="gm-seat${cls}" id="gs_${u}" style="left:${x}%;top:${y}%" onclick="gmSeat('${u}')"><div class="gm-av">${pav(d, u)}</div><small>${esc(pn(d, u).split(" ")[0])}${u === me ? " (siz)" : ""}</small></div>`;
+      return `<div class="gm-seat${cls}" id="gs_${u}" style="left:${x}%;top:${y}%" onclick="gmSeat('${u}')"><div class="gm-av">${pav(d, u)}</div><small>${esc(pn(d, u).split(" ")[0])}${u === me ? " (siz)" : ""}</small>${isBot(d, u) ? "<i class=\"gm-bot\">BOT</i>" : ""}</div>`;
     }).join("");
     // shisha
     if (sp.seq > 0 && sp.to) {
@@ -111,14 +115,40 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const card = $("gmCard");
     if (sp.open && animDone) {
       const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
-      const match = ans[sp.by] && ans[sp.to];
+      const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
       card.hidden = false;
-      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div><p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>` +
-        (inv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
+      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>${isBot(d, sp.to) ? `<p class="gm-hint">🤖 ${esc(pn(d, sp.to))} (bot): ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>`}` +
+        (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
         ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
         ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
     } else if (!sp.open) card.hidden = true;
+    if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
+    botTick();
+  }
+
+  // ---------- Botlar (xonadagi birinchi odam mijozi boshqaradi) ----------
+  function botTick() {
+    const d = R; if (!d || d.status !== "open" || !RID) return;
+    const hs = d.players.filter(u => !isBot(d, u)).sort(); if (hs[0] !== st.user.uid) return;
+    const now = Date.now(), sp = d.spin || {}, id = RID, rnd = (a, b) => a + Math.random() * (b - a);
+    if (d.bots && d.players.length < d.max && now - (d.lj || d.createdAt || 0) > 20000 && !botT.add) { botT.add = 1; FB.gmAddBot(id).catch(() => {}).finally(() => setTimeout(() => { botT.add = 0; }, 4000)); }
+    if (isBot(d, d.turn) && !sp.open) {
+      const k = "s" + d.turn + ":" + (sp.seq || 0) + ":" + (d.turnAt || 0), t = d.turn;
+      if (botT.k1 !== k) { botT.k1 = k; setTimeout(() => { if (R && RID === id && R.turn === t && !(R.spin && R.spin.open)) FB.gmSpin(id, QS.length, t).catch(() => {}); }, rnd(3000, 6500)); }
+    }
+    if (sp.open) {
+      const k = "o" + sp.seq, seq = sp.seq, by = sp.by, to = sp.to;
+      if (botT.k2 !== k) {
+        botT.k2 = k;
+        const live = () => R && RID === id && R.spin && R.spin.seq === seq && R.spin.open;
+        if (isBot(d, to)) setTimeout(() => { if (live()) FB.gmBotSay(id, BOT_SAY[Math.floor(Math.random() * BOT_SAY.length)]).catch(() => {}); }, rnd(5500, 8500));
+        if (isBot(d, by)) {
+          if (!isBot(d, to) && Math.random() < 0.45) setTimeout(() => { if (live()) FB.gmGift(id, to, FL[Math.floor(Math.random() * FL.length)][0], { name: pn(d, by) }, by).catch(() => {}); }, rnd(6000, 9000));
+          setTimeout(() => { if (live()) FB.gmNext(id, false, by).catch(() => {}); }, rnd(14000, 22000));
+        }
+      }
+    }
   }
 
   // ---------- Amallar ----------
