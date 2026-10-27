@@ -586,6 +586,8 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-sheet-in{width:100%;background:var(--c);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;text-align:center}
 .gm-fl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.gm-fl button{background:var(--c2);border-radius:14px;padding:12px 4px;color:var(--t);display:flex;flex-direction:column;align-items:center;gap:4px}.gm-fl span{font-size:34px}.gm-fl small{font-size:11px;color:var(--m)}
 .gm-fly{position:absolute;left:50%;top:0;font-size:38px;pointer-events:none;animation:gmfly 2.4s ease-out forwards}
+.gm-gift-flight{position:fixed;z-index:99999;left:0;top:0;font-size:38px;line-height:1;pointer-events:none;filter:drop-shadow(0 3px 8px #0008);animation:gmGiftFlight 1.45s cubic-bezier(.2,.75,.25,1) forwards}
+@keyframes gmGiftFlight{0%{transform:translate(0,0) scale(.45) rotate(-15deg);opacity:0}12%{opacity:1}55%{transform:translate(calc(var(--gift-dx)*.55),calc(var(--gift-dy)*.55 - 70px)) scale(1.25) rotate(12deg);opacity:1}100%{transform:translate(var(--gift-dx),var(--gift-dy)) scale(.75) rotate(0);opacity:0}}
 @keyframes gmfly{0%{transform:translate(-50%,10px) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-90px) scale(1.5);opacity:0}}
 .gm-seat.gf .gm-av{border-color:rgba(224,88,122,.5)}.gm-seat.gmm .gm-av{border-color:rgba(80,140,230,.5)}.gm-seat.turn .gm-av{border-color:var(--a)}.gm-seat.target .gm-av{border-color:var(--r)}
 .gm-bot{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.5px;color:#14111f;background:var(--a);border-radius:6px;padding:1px 5px;margin-top:1px}.gm-chk{display:flex;gap:8px;align-items:center;color:var(--m);font-size:13px}
