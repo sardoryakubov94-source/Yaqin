@@ -135,8 +135,9 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const now = Date.now(), sp = d.spin || {}, id = RID, rnd = (a, b) => a + Math.random() * (b - a);
     // Xona boshqaruvi faqat birinchi haqiqiy foydalanuvchida; dastlab 30 soniya, keyin har 60 soniyada bitta yordamchi.
     const hasBot = d.players.some(u => isBot(d, u));
-    const waitMs = hasBot ? 60000 : 30000;
-    if (d.bots && d.players.length < d.max && now - (d.lj || d.createdAt || 0) >= waitMs && !botT.add) { botT.add = 1; FB.gmAddBot(id).catch(() => {}).finally(() => setTimeout(() => { botT.add = 0; }, 4000)); }
+    const fastRefill = !!d.humanLeftAt && now - d.humanLeftAt >= 30000;
+    const waitMs = fastRefill ? 30000 : (hasBot ? 60000 : 30000);
+    if (d.bots && d.players.length < d.max && now - (d.lj || d.createdAt || 0) >= waitMs && (!d.humanLeftAt || fastRefill) && !botT.add) { botT.add = 1; FB.gmAddBot(id).catch(() => {}).finally(() => setTimeout(() => { botT.add = 0; }, 4000)); }
     if (isBot(d, d.turn) && !sp.open) {
       const k = "s" + d.turn + ":" + (sp.seq || 0) + ":" + (d.turnAt || 0), t = d.turn;
       if (botT.k1 !== k) { botT.k1 = k; setTimeout(() => { if (R && RID === id && R.turn === t && !(R.spin && R.spin.open)) FB.gmSpin(id, QS.length, t).catch(() => {}); }, rnd(3000, 6500)); }
