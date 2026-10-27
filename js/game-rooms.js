@@ -50,8 +50,8 @@
     rs = rs.filter(r => r.status === "open" && (r.players || []).some(u => !isBot(r, u))).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
-<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><label class="gm-chk"><input type="checkbox" id="gmB" checked> Odam yetmasa 🤖 bot toʻldirsin (BOT belgisi bilan)</label><button class="go" onclick="gmCreate()">Xona ochish</button></div>
-${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.filter(u => !isBot(r, u)).map(u => esc(pn(r, u))).slice(0, 3).join(", ")}${r.bots ? " · 🤖" : ""}</small></div><span>👩 ${hCnt(r, "f")}/${r.max / 2}<br>👨 ${hCnt(r, "m")}/${r.max / 2}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
+<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><label class="gm-chk"><input type="checkbox" id="gmB" checked> Odam yetmasa 1 daqiqadan keyin yordamchi oʻyinchilar toʻldirsin</label><button class="go" onclick="gmCreate()">Xona ochish</button></div>
+${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.filter(u => !isBot(r, u)).map(u => esc(pn(r, u))).slice(0, 3).join(", ")}</small></div><span>👩 ${hCnt(r, "f")}/${r.max / 2}<br>👨 ${hCnt(r, "m")}/${r.max / 2}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
   }
   window.gmCreate = async function () {
     const t = ($("gmT") || {}).value || "", m = ($("gmM") || {}).value || 6;
@@ -74,7 +74,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-note" id="gmNote" hidden>🤖 Boʻsh oʻrinlarni Yaqin yordamchi oʻyinchilari toʻldiradi. Ular bilan chat ochilmaydi va sovgʻa yubormaydi. Odam kirsa, oʻrin darhol boʻshaydi.</div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
@@ -83,11 +83,12 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const d = R;
     if (!d || d.status !== "open" || !(d.players || []).includes(st.user.uid)) { if (!closing) { closing = true; toast(!d || d.status !== "open" ? "Xona yopildi" : "Siz xonadan chiqdingiz"); gmCloseAll(); } return; }
     $("gmTitle").textContent = d.title;
+    const nt = $("gmNote"); if (nt) nt.hidden = !d.players.some(u => isBot(d, u));
     const ord = ordOf(d), n = d.players.length, sp = d.spin || { seq: 0 }, me = st.user.uid;
     $("gmSeats").innerHTML = ord.map((u, i) => {
       const a = (i / n) * 2 * Math.PI - Math.PI / 2, x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
       const cls = (gOf(d, u) === "f" ? " gf" : " gmm") + (d.turn === u ? " turn" : "") + (sp.open && sp.to === u ? " target" : "");
-      return `<div class="gm-seat${cls}" id="gs_${u}" style="left:${x}%;top:${y}%" onclick="gmSeat('${u}')"><div class="gm-av">${pav(d, u)}</div><small>${esc(pn(d, u).split(" ")[0])}${u === me ? " (siz)" : ""}</small>${isBot(d, u) ? "<i class=\"gm-bot\">BOT</i>" : ""}</div>`;
+      return `<div class="gm-seat${cls}" id="gs_${u}" style="left:${x}%;top:${y}%" onclick="gmSeat('${u}')"><div class="gm-av">${pav(d, u)}</div><small>${esc(pn(d, u).split(" ")[0])}${u === me ? " (siz)" : ""}</small></div>`;
     }).join("");
     // shisha
     if (sp.seq > 0 && sp.to) {
@@ -117,7 +118,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
       const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
       const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
       card.hidden = false;
-      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>${isBot(d, sp.to) ? `<p class="gm-hint">🤖 ${esc(pn(d, sp.to))} (bot): ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>`}` +
+      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>`}` +
         (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
         ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
@@ -132,7 +133,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const d = R; if (!d || d.status !== "open" || !RID) return;
     const hs = d.players.filter(u => !isBot(d, u)).sort(); if (hs[0] !== st.user.uid) return;
     const now = Date.now(), sp = d.spin || {}, id = RID, rnd = (a, b) => a + Math.random() * (b - a);
-    if (d.bots && d.players.length < d.max && now - (d.lj || d.createdAt || 0) > 20000 && !botT.add) { botT.add = 1; FB.gmAddBot(id).catch(() => {}).finally(() => setTimeout(() => { botT.add = 0; }, 4000)); }
+    if (d.bots && d.players.length < d.max && now - (d.lj || d.createdAt || 0) > (d.players.some(u => isBot(d, u)) ? 25000 : 60000) && !botT.add) { botT.add = 1; FB.gmAddBot(id).catch(() => {}).finally(() => setTimeout(() => { botT.add = 0; }, 4000)); }
     if (isBot(d, d.turn) && !sp.open) {
       const k = "s" + d.turn + ":" + (sp.seq || 0) + ":" + (d.turnAt || 0), t = d.turn;
       if (botT.k1 !== k) { botT.k1 = k; setTimeout(() => { if (R && RID === id && R.turn === t && !(R.spin && R.spin.open)) FB.gmSpin(id, QS.length, t).catch(() => {}); }, rnd(3000, 6500)); }
@@ -144,7 +145,6 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
         const live = () => R && RID === id && R.spin && R.spin.seq === seq && R.spin.open;
         if (isBot(d, to)) setTimeout(() => { if (live()) FB.gmBotSay(id, BOT_SAY[Math.floor(Math.random() * BOT_SAY.length)]).catch(() => {}); }, rnd(5500, 8500));
         if (isBot(d, by)) {
-          if (!isBot(d, to) && Math.random() < 0.45) setTimeout(() => { if (live()) FB.gmGift(id, to, FL[Math.floor(Math.random() * FL.length)][0], { name: pn(d, by) }, by).catch(() => {}); }, rnd(6000, 9000));
           setTimeout(() => { if (live()) FB.gmNext(id, false, by).catch(() => {}); }, rnd(14000, 22000));
         }
       }
