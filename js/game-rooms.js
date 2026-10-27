@@ -14,7 +14,7 @@
   const FLE = Object.fromEntries(FL.map(f => [f[0], f[1]]));
   const $ = id => document.getElementById(id);
   const uidFor = v => { let h = 2166136261; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; };
-  let view = "", R = null, RID = null, unW = null, unG = null, unL = null, tick = null, call = null;
+  let view = "", R = null, RID = null, unW = null, unG = null, unChat = null, unL = null, tick = null, call = null;
   let rot = 0, lastSeq = null, animDone = true, animTimer = null, seenG = null, closing = false;
 
   function layer(html) { let l = $("gm"); if (!l) { l = document.createElement("div"); l.id = "gm"; l.className = "gm"; document.body.appendChild(l); } l.innerHTML = html; return l; }
@@ -68,11 +68,16 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmEnter = async function (id, created) {
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
-      unL && unL(); unL = null;
+      unL && unL(); unL = null; unChat && unChat(); unChat = null;
       RID = id; view = "room"; R = null; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
+      unChat = FB.gmRoomChat(id, msgs => {
+        const box = $("gmRoomMessages"); if (!box) return;
+        box.innerHTML = msgs.map(m => `<div class="gm-room-msg${m.from === st.user.uid ? " mine" : ""}"><b>${esc(m.name || "Oʻyinchi")}</b><span>${esc(m.text || "")}</span></div>`).join("");
+        box.scrollTop = box.scrollHeight;
+      });
       tick = setInterval(() => R && render(true), 4000);
       startVoice(id);
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
@@ -80,7 +85,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
@@ -136,6 +141,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
     } else if (!sp.open) card.hidden = true;
     if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
+    if (sp.open && Date.now() - (sp.at || 0) >= 18000 && !botT.timeout) {
+      const seq = sp.seq; botT.timeout = seq;
+      FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
+    }
     botTick();
   }
 
@@ -173,6 +182,12 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmNext = async () => { try { await FB.gmNext(RID, false); } catch (e) { uiAlert(e.message || e); } };
   window.gmSkip = async () => { try { await FB.gmNext(RID, true); } catch (e) { uiAlert(e.message || e); } };
   window.gmLike = async y => { try { await FB.gmAnswer(RID, y); } catch (e) { uiAlert(e.message || e); } };
+  window.gmSendRoomText = async () => {
+    const input = $("gmRoomInput"), text = String(input?.value || "").trim();
+    if (!text) return;
+    try { await FB.gmRoomSend(RID, text); if (input) input.value = ""; }
+    catch (e) { uiAlert("Xabar yuborilmadi: " + (e.message || e)); }
+  };
   window.gmSendText = async other => {
     const input = $("gmTextInput"), text = String(input?.value || "").trim();
     if (!text) return;
