@@ -156,7 +156,7 @@ service cloud.firestore {
         allow create: if signed() && request.resource.data.from == request.auth.uid
           && request.auth.uid in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
           && request.resource.data.to in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
-          && request.resource.data.kind in ['atirgul','lola','gul','guldasta'];
+          && request.resource.data.kind in ['kiss','atirgul','lola','gul','guldasta'];
       }
     }
 
