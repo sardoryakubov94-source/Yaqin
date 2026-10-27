@@ -161,7 +161,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
     } else if (!sp.open) card.hidden = true;
     if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
-    if (sp.open && Date.now() - (sp.at || 0) >= 18000 && !botT.timeout) {
+    if (sp.open && Date.now() - (sp.at || 0) >= 35000 && !botT.timeout) {
       const seq = sp.seq; botT.timeout = seq;
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
