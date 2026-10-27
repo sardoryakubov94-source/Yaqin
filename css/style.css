@@ -710,3 +710,21 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
   max-height:20vh;
  }
 }
+
+/* Ovozli chatni xona nomi qatorining oʻng tomonida ixcham joylash */
+.gm-room-top{gap:7px;padding:8px 10px;min-height:52px;box-sizing:border-box}
+.gm-room-top .gm-ic{width:34px;height:34px;flex:0 0 34px;font-size:16px}
+.gm-room-top #gmTitle{flex:1;min-width:0;font-size:15px}
+.gm-room-top .yaqin-call-controls{flex:0 0 auto;width:auto;max-width:46%;min-width:0;margin:0;padding:0;background:transparent;border:0;box-shadow:none}
+.gm-room-top .yaqin-call-head{display:none}
+.gm-room-top .yaqin-call-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:0}
+.gm-room-top .yaqin-call-btn{min-height:30px;padding:5px 7px;border-radius:9px;font-size:10px;line-height:1.15;white-space:nowrap}
+.gm-room-top .yaqin-call-btn svg{width:13px;height:13px}
+.gm-room-top .yaqin-call-primary{grid-column:auto!important}
+@media(max-width:380px){
+ .gm-room-top{gap:5px;padding:7px 8px}
+ .gm-room-top .gm-ic{width:30px;height:30px;flex-basis:30px}
+ .gm-room-top #gmTitle{font-size:13px}
+ .gm-room-top .yaqin-call-controls{max-width:48%}
+ .gm-room-top .yaqin-call-btn{padding:5px 6px;font-size:9px}
+}
