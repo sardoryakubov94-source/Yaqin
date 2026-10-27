@@ -658,3 +658,7 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-room-question-hint{display:block;color:#c5d9ff;font-size:10px;margin-top:5px}
 .gm-room-msg .gm-room-qa-question{font-weight:700;color:#a9ccff;margin-bottom:4px;white-space:pre-wrap}
 .gm-room-msg .gm-room-qa-answer{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.gm-room-ask-prompt{background:linear-gradient(135deg,rgba(38,112,224,.38),rgba(28,83,171,.3));border-color:rgba(83,157,255,.9)}
+.gm-room-ask-prompt .gm-room-question-text{color:#d9e8ff}
+.gm-room-qa-question{overflow-wrap:anywhere}
