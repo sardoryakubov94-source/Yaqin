@@ -266,6 +266,24 @@ export default {
       } catch { return fail("Openinary xizmatiga ulanib boʻlmadi.", 502); }
     }
 
+    // ---- Agora: oʻyin xonasi (ovozli) tokeni ----
+    if (path === "/api/game/token") {
+      if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);
+      const roomId = String(body.roomId || "");
+      if (!/^[A-Za-z0-9]{10,40}$/.test(roomId)) return fail("Xona ID notoʻgʻri.", 400);
+      const gr = await fs(`/gamerooms/${enc(roomId)}`);
+      if (gr.status === 401 || gr.status === 403) return fail("Sessiya yaroqsiz. Qayta kiring.", 401);
+      if (gr.status === 404) return fail("Xona topilmadi.", 404);
+      if (!gr.ok) return fail("Xonani tekshirib boʻlmadi.", 502);
+      const gf = (await gr.json()).fields || {};
+      const players = (gf.players?.arrayValue?.values || []).map(v => v.stringValue);
+      if (!players.includes(uid)) return fail("Siz bu xonada emassiz.", 403);
+      if ((gf.status?.stringValue || "") !== "open") return fail("Xona yopilgan.", 403);
+      const gch = "yg_" + roomId, gauid = hashUid(uid);
+      const gtoken = await rtcToken(APP_ID, env.AGORA_APP_CERT, gch, gauid, TOKEN_TTL);
+      return out({ appId: APP_ID, channel: gch, uid: gauid, token: gtoken, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
+    }
+
     // ---- Agora: shaxsiy (1:1) qoʻngʻiroq tokeni ----
     if (path === "/api/call/token") {
       if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);

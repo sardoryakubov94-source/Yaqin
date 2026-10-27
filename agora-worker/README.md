@@ -2,6 +2,7 @@
 
 Uchta ish qiladi:
 - `POST /` — guruh ovozli chat / video translatsiya uchun Agora token (1 soatlik)
+- `POST /api/game/token` — oʻyin xonasi (ovozli) uchun Agora tokeni
 - `POST /api/openinary/sign` — guruhga rasm/video yuklash uchun imzo
 - `POST /api/call/token` — shaxsiy qoʻngʻiroq tokeni
 - `POST /api/push` — push bildirishnoma (FCM): yangi xabar, kiruvchi qoʻngʻiroq va "Sizga eng mos inson yangi eʼlon joyladi" (anketa asosida, kuniga 2 tagacha)
