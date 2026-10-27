@@ -291,16 +291,17 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     });
   }
 
-  // ---------- Ovoz (Agora) ----------
+  // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
     try {
       if (!window.AgoraRTC) await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js"; sc.onload = res; sc.onerror = () => rej(new Error("Agora SDK yuklanmadi")); document.head.appendChild(sc); });
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Mikrofon uchun sayt HTTPS orqali ochilishi kerak");
       const cr = await FB.gmToken(id);
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      const c = { id, client, mic: null, muted: false, left: false }; call = c;
-      const renew = async () => { try { client.renewToken((await FB.gmToken(id)).token); } catch (e) { console.warn(e); } };
+      const c = { id, client, mic: null, muted: true, left: false }; call = c;
+      const btn = $("gmMic");
+      if (btn) { btn.textContent = "🔇"; btn.title = "Mikrofonni yoqish"; btn.setAttribute("aria-label", "Mikrofonni yoqish"); }
+      const renew = async () => { try { await client.renewToken((await FB.gmToken(id)).token); } catch (e) { console.warn(e); } };
       client.on("token-privilege-will-expire", renew); client.on("token-privilege-did-expire", renew);
       client.on("user-published", async (u, t) => { await client.subscribe(u, t); if (t === "audio" && u.audioTrack) u.audioTrack.play(); });
       client.enableAudioVolumeIndicator();
@@ -310,22 +311,42 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       });
       await client.join(cr.appId, cr.channel, cr.token, cr.uid);
       if (c.left) { await client.leave(); return; }
-      c.mic = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
-      await client.publish([c.mic]);
-      say("🎙️ Ovozli aloqa yoniq");
+      say("🔊 Ovozli xona ulandi · mikrofon oʻchiq");
     } catch (e) {
       console.error("gm voice:", e);
-      say("⚠️ Ovoz ulanmadi: " + (e.message || e) + " (mikrofon ruxsati va Worker sozlamasini tekshiring)");
+      say("⚠️ Ovozli xonaga ulanilmadi: " + (e.message || e));
     }
   }
-  window.gmMute = function () {
-    if (!call || !call.mic) { toast("Mikrofon hali ulanmagan"); return; }
-    call.muted = !call.muted; call.mic.setEnabled(!call.muted);
-    const b = $("gmMic"); if (b) b.textContent = call.muted ? "🔇" : "🎙️";
+  window.gmMute = async function () {
+    const c = call;
+    if (!c || c.left || !c.client) { toast("Ovozli xona hali ulanmagan"); return; }
+    const b = $("gmMic"), vs = $("gmVs");
+    try {
+      if (c.muted) {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Mikrofon uchun sayt HTTPS orqali ochilishi kerak");
+        if (!c.mic) c.mic = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
+        await c.client.publish([c.mic]);
+        c.muted = false;
+        if (b) { b.textContent = "🎙️"; b.title = "Mikrofonni oʻchirish"; b.setAttribute("aria-label", "Mikrofonni oʻchirish"); }
+        if (vs) vs.textContent = "🎙️ Siz gapira olasiz · mikrofon yoqilgan";
+      } else {
+        if (c.mic) {
+          try { await c.client.unpublish(c.mic); } catch (_) {}
+          c.mic.stop(); c.mic.close(); c.mic = null;
+        }
+        c.muted = true;
+        if (b) { b.textContent = "🔇"; b.title = "Mikrofonni yoqish"; b.setAttribute("aria-label", "Mikrofonni yoqish"); }
+        if (vs) vs.textContent = "🔊 Ovozli xona ulandi · mikrofon oʻchiq";
+      }
+    } catch (e) {
+      console.error("gm mic toggle:", e);
+      if (vs) vs.textContent = "⚠️ Mikrofon yoqilmadi: " + (e.message || e);
+      toast("Mikrofonni yoqib boʻlmadi. Ruxsatni tekshiring.");
+    }
   };
   async function stopVoice() {
     const c = call; call = null; if (!c) return; c.left = true;
-    try { c.mic?.close(); await c.client.leave(); } catch (_) {}
+    try { if (c.mic) { try { await c.client.unpublish(c.mic); } catch (_) {} c.mic.stop(); c.mic.close(); } await c.client.leave(); } catch (_) {}
   }
 
   // ---------- Chiqish ----------
