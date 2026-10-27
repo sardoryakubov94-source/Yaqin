@@ -647,12 +647,14 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
  .gm-room-send button{padding:7px 9px}
 }
 
-/* Shaxsiy savol chat ichida aniq ajralib turadi */
-.gm-question-notice{background:linear-gradient(135deg,rgba(38,112,224,.30),rgba(28,83,171,.22));border:1px solid rgba(83,157,255,.8);border-radius:14px;padding:11px;margin:0 0 9px;box-shadow:0 0 0 1px rgba(70,140,255,.08) inset}
-.gm-question-notice[hidden]{display:none}
-.gm-question-label{font-size:11px;font-weight:800;letter-spacing:.6px;color:#83baff;margin-bottom:5px}
-.gm-question-text{font-size:15px;font-weight:750;line-height:1.35;color:#fff;overflow-wrap:anywhere}
-.gm-question-from{font-size:11px;color:#c5d9ff;margin:6px 0 9px}
-.gm-question-send{display:flex;gap:6px;align-items:stretch}
-.gm-question-send input{flex:1;min-width:0;background:rgba(5,20,48,.7);color:#fff;border:1px solid rgba(126,177,255,.6);border-radius:10px;padding:10px;font-size:13px}
-.gm-question-send button{flex:none;border:0;border-radius:10px;background:#3478e5;color:#fff;font-weight:700;padding:9px 11px}
+/* Shisha savoli odatiy xona chatidagi ko‘k xabar sifatida ko‘rinadi */
+.gm-room-author{display:flex;align-items:center;gap:7px;min-width:0;margin-bottom:5px}
+.gm-room-author img{width:27px;height:27px;flex:0 0 27px;object-fit:cover;border-radius:50%;border:1px solid rgba(120,170,255,.65)}
+.gm-room-author b{font-size:12px;color:var(--t)}
+.gm-room-author small{font-size:10px;color:var(--m);font-weight:400}
+.gm-room-msg.gm-room-question{align-self:stretch;max-width:100%;background:linear-gradient(135deg,rgba(38,112,224,.34),rgba(28,83,171,.25));border:1px solid rgba(83,157,255,.85);border-radius:13px;padding:9px 10px;box-shadow:0 0 0 1px rgba(70,140,255,.08) inset}
+.gm-room-question .gm-room-author small{color:#b8d5ff}
+.gm-room-question-text{font-size:14px;line-height:1.4;font-weight:750;color:#fff;overflow-wrap:anywhere}
+.gm-room-question-hint{display:block;color:#c5d9ff;font-size:10px;margin-top:5px}
+.gm-room-msg .gm-room-qa-question{font-weight:700;color:#a9ccff;margin-bottom:4px;white-space:pre-wrap}
+.gm-room-msg .gm-room-qa-answer{white-space:pre-wrap;overflow-wrap:anywhere}
