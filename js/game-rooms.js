@@ -123,7 +123,13 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
       const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
       card.hidden = false;
-      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>`}` +
+      const msgs = sp.msgs || {};
+      const myMsg = msgs[me] || {};
+      const otherMsg = msgs[other] || {};
+      card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>
+        <div class="gm-text-chat"><div class="gm-text-messages">${myMsg.text ? `<div class="gm-text-msg mine"><b>${esc(myMsg.name || "Siz")}</b><span>${esc(myMsg.text)}</span></div>` : ""}${otherMsg.text ? `<div class="gm-text-msg"><b>${esc(otherMsg.name || pn(d, other))}</b><span>${esc(otherMsg.text)}</span></div>` : ""}${(!myMsg.text && !otherMsg.text) ? '<p class="gm-hint">Javobni ovoz bilan ayting yoki xabar yozing.</p>' : ""}</div>
+        ${inv && !botInv ? `<form class="gm-text-send" onsubmit="event.preventDefault();gmSendText('${other}')"><input id="gmTextInput" maxlength="500" placeholder="Javobingizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form>` : ""}</div>
+        ${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">Ovozli javob ham berishingiz mumkin.</p>`}` +
         (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
         ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
@@ -167,6 +173,12 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmNext = async () => { try { await FB.gmNext(RID, false); } catch (e) { uiAlert(e.message || e); } };
   window.gmSkip = async () => { try { await FB.gmNext(RID, true); } catch (e) { uiAlert(e.message || e); } };
   window.gmLike = async y => { try { await FB.gmAnswer(RID, y); } catch (e) { uiAlert(e.message || e); } };
+  window.gmSendText = async other => {
+    const input = $("gmTextInput"), text = String(input?.value || "").trim();
+    if (!text) return;
+    try { await FB.gmText(RID, text); if (input) input.value = ""; }
+    catch (e) { uiAlert("Xabar yuborilmadi: " + (e.message || e)); }
+  };
   window.gmChat = async u => {
     try { const id = await FB.openDirectChat(u, pn(R, u), (R.pm[u] || {}).a || "", (R.pm[u] || {}).i || "", st.user); await gmLeave(true); st.tab = "msg"; openC(id); }
     catch (e) { uiAlert("Chat ochilmadi: " + (e.message || e)); }
