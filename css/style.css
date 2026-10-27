@@ -616,7 +616,7 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 
 /* Guruhli oʻyin xonasi: chat doim pastda, klaviatura ochilganda viewport bilan yuqoriga chiqadi */
 .gm-stage{flex:0 0 auto;min-height:0;padding:5px 8px 2px}
-.gm-ring{width:min(78vw,38vh,340px)}
+.gm-ring{width:min(70vw,34vh,305px)}
 .gm-bottle{width:52px;height:52px;margin:-26px 0 0 -26px;font-size:44px;line-height:52px}
 .gm-seat{width:58px}
 .gm-seat small{max-width:58px;font-size:10px}
@@ -625,18 +625,18 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-card{flex:0 0 auto;margin:4px 10px 6px;padding:10px;gap:7px;max-height:32vh;overflow-y:auto}
 .gm-q{font-size:16px}
 .gm-vs{flex:0 0 auto;padding:3px 10px 5px}
-.gm-room-chat{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:905;flex:0 0 auto;width:100%;max-width:620px;margin:0;padding:7px 10px calc(7px + env(safe-area-inset-bottom,0px));border-radius:15px 15px 0 0;background:var(--bg);box-shadow:0 -5px 18px rgba(0,0,0,.22);box-sizing:border-box}
-.gm-room-chat-title{margin-bottom:4px;font-size:13px}
-.gm-room-messages{height:66px;min-height:42px;max-height:66px;gap:4px;margin-bottom:5px}
-.gm-room-msg{padding:5px 8px}
+.gm-room-chat{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:905;flex:0 0 auto;width:calc(100% - 16px);max-width:600px;margin:0;padding:5px 9px calc(5px + env(safe-area-inset-bottom,0px));border-radius:14px 14px 0 0;background:var(--bg);box-shadow:0 -5px 18px rgba(0,0,0,.22);box-sizing:border-box}
+.gm-room-chat-title{margin-bottom:3px;font-size:12px}
+.gm-room-messages{height:54px;min-height:36px;max-height:54px;gap:4px;margin-bottom:4px}
+.gm-room-msg{padding:4px 7px}
 .gm-room-msg span{font-size:12px}
-.gm-room-send input{padding:8px;font-size:13px}
-.gm-room-send button{padding:8px 10px}
+.gm-room-send input{padding:7px;font-size:12px}
+.gm-room-send button{padding:7px 9px}
 @media(max-height:740px){
- .gm-ring{width:min(70vw,32vh,290px)}
+ .gm-ring{width:min(64vw,29vh,265px)}
  .gm-stage{padding-top:2px;padding-bottom:0}
  .gm-card{max-height:28vh}
- .gm-room-messages{height:54px;max-height:54px}
+ .gm-room-messages{height:44px;max-height:44px}
 }
 /* Yozish maydoni fokusda: chat ko‘rinadigan viewport pastida qoladi; fokus yo‘qolsa pastga qaytadi */
 .gm-room-send input{scroll-margin-bottom:8px}
