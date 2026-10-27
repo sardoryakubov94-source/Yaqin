@@ -93,11 +93,11 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         box.scrollTop = box.scrollHeight;
       });
       tick = setInterval(() => R && render(true), 4000);
-      startVoice(id);
+      vstate = "off"; vmsg = ""; voiceUI();
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
   };
   function buildRoom() {
-    layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
+    layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><span style="width:40px"></span></div><div class="yaqin-call-controls" id="gmCall"></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
 <div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
@@ -292,6 +292,23 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
 
   // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
+  let vstate = "off", vmsg = "";
+  function voiceUI() {
+    const el = $("gmCall"); if (!el) return;
+    const on = vstate === "on", c = call, ic = (n, s, x) => (typeof YI === "function" ? YI(n, s, x) : "");
+    const msg = on ? (c && !c.muted ? "🎙️ Mikrofon yoqilgan · siz gapira olasiz" : "🔊 Ovozli chat yoniq · mikrofon oʻchiq") : vmsg;
+    el.innerHTML = `<div class="yaqin-call-head"><span class="yaqin-call-live-dot"></span><span class="yaqin-call-status">${esc(msg || "")}</span></div><div class="yaqin-call-actions">` +
+      (on ? `<button class="yaqin-call-btn" type="button" onclick="gmMute()">${c && !c.muted ? "🎙️ Mikrofonni oʻchirish" : "🔇 Mikrofonni yoqish"}</button><button class="yaqin-call-btn yaqin-call-end" type="button" onclick="gmVoiceEnd()">${ic("phone", 18, "rot")} Tugatish</button>`
+        : `<button class="yaqin-call-btn yaqin-call-primary" style="grid-column:1/-1" type="button" onclick="gmVoice()"${vstate === "conn" ? " disabled" : ""}>${ic("mic", 18)} ${vstate === "conn" ? "Ulanmoqda…" : "Ovozli chat"}</button>`) + `</div>`;
+  }
+  window.gmVoice = async function () {
+    if (vstate !== "off" || !RID) return;
+    vstate = "conn"; vmsg = ""; voiceUI();
+    await startVoice(RID);
+    if (call && !call.left && vmsg === "") { vstate = "on"; voiceUI(); await window.gmMute(); } else vstate = "off";
+    voiceUI();
+  };
+  window.gmVoiceEnd = async function () { await stopVoice(); vstate = "off"; vmsg = ""; voiceUI(); };
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
     try {
@@ -315,6 +332,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     } catch (e) {
       console.error("gm voice:", e);
       say("⚠️ Ovozli xonaga ulanilmadi: " + (e.message || e));
+      vmsg = "⚠️ Ulanilmadi: " + (e.message || e); try { call && call.client && call.client.leave(); } catch (_) {} call = null;
     }
   }
   window.gmMute = async function () {
@@ -344,6 +362,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       toast("Mikrofonni yoqib boʻlmadi. Ruxsatni tekshiring.");
     }
   };
+  { const _m = window.gmMute; window.gmMute = async function () { await _m.apply(this, arguments); voiceUI(); }; }
   async function stopVoice() {
     const c = call; call = null; if (!c) return; c.left = true;
     try { if (c.mic) { try { await c.client.unpublish(c.mic); } catch (_) {} c.mic.stop(); c.mic.close(); } await c.client.leave(); } catch (_) {}
@@ -356,7 +375,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try { id && await FB.gmLeave(id); } catch (e) { console.warn(e); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };
-  function cleanup() { unW && unW(); unG && unG(); clearInterval(tick); clearTimeout(animTimer); unW = unG = null; RID = null; R = null; }
+  function cleanup() { vstate = "off"; vmsg = ""; unW && unW(); unG && unG(); clearInterval(tick); clearTimeout(animTimer); unW = unG = null; RID = null; R = null; }
   window.gmCloseAll = function () { stopVoice(); unL && unL(); unL = null; if (RID) { const id = RID; FB.gmLeave(id).catch(() => {}); } cleanup(); view = ""; drop(); };
 
   // ---------- Guruhlar sahifasiga kirish tugmasi ----------
