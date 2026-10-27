@@ -675,3 +675,38 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-question-template-item>b{flex:1;font-size:13px;line-height:1.35;font-weight:600}
 .gm-question-template-item>small{flex:none;color:#9fc5ff;font-size:10px}
 @media(max-width:380px){.gm-room-send{gap:5px}.gm-room-send .gm-template-trigger{padding:8px 7px;font-size:11px}.gm-room-send button.go{padding:8px 8px}}
+
+
+/* Savol kartasi doim chat paneli ustida ko‘rinsin; uzun savol kesilib qolmasin */
+.gm-card:not([hidden]){
+ position:fixed;
+ z-index:904;
+ left:50%;
+ bottom:calc(310px + env(safe-area-inset-bottom,0px));
+ transform:translateX(-50%);
+ width:calc(100% - 20px);
+ max-width:620px;
+ max-height:min(30vh,260px);
+ overflow-y:auto;
+ overscroll-behavior:contain;
+ margin:0;
+ padding:12px;
+ background:rgba(30,26,46,.98);
+ box-shadow:0 8px 28px rgba(0,0,0,.38);
+}
+.gm-q,.gm-hint,.gm-text-msg span{overflow-wrap:anywhere;word-break:normal}
+@media(max-height:740px){
+ .gm-card:not([hidden]){
+  bottom:calc(238px + env(safe-area-inset-bottom,0px));
+  max-height:22vh;
+  padding:9px;
+  gap:6px;
+ }
+ .gm-q{font-size:14px;line-height:1.3}
+}
+@media(max-height:600px){
+ .gm-card:not([hidden]){
+  bottom:calc(218px + env(safe-area-inset-bottom,0px));
+  max-height:20vh;
+ }
+}
