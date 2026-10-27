@@ -200,10 +200,24 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
   window.gmSeat = function (u) {
     if (!R || u === st.user.uid) return;
+    $("gmSheet")?.remove();
     const sh = document.createElement("div"); sh.className = "gm-sheet"; sh.id = "gmSheet";
-    sh.innerHTML = `<div class="gm-sheet-in"><b>${esc(pn(R, u))} ga sovgʻa yuborish</b><div class="gm-fl">${FL.map(f => `<button onclick="gmSend('${u}','${f[0]}')"><span>${f[1]}</span><small>${f[2]}</small></button>`).join("")}</div><button class="ghost" onclick="document.getElementById('gmSheet').remove()">Yopish</button></div>`;
+    const name = pn(R, u), meta = (R.pm && R.pm[u]) || {};
+    sh.innerHTML = `<div class="gm-sheet-in" role="dialog" aria-modal="true"><div class="gm-sheet-head"><b>${esc(name)}</b><button class="gm-sheet-close" aria-label="Yopish" onclick="document.getElementById('gmSheet')?.remove()">✕</button></div><div class="gm-sheet-actions"><button class="ghost" onclick="gmShowPlayerProfile('${u}')">👤 Profilini ko‘rish</button><button class="ghost" onclick="gmShowPlayerGifts('${u}')">🎁 Sovg‘a yuborish</button></div><div id="gmSheetContent"></div><button class="ghost" onclick="document.getElementById('gmSheet')?.remove()">Yopish</button></div>`;
     sh.addEventListener("click", e => { if (e.target === sh) sh.remove(); });
-    $("gm").appendChild(sh);
+    document.body.appendChild(sh);
+    window.gmShowPlayerGifts(u);
+  };
+  window.gmShowPlayerGifts = function (u) {
+    if (!R || !document.getElementById("gmSheetContent")) return;
+    const content = $("gmSheetContent");
+    content.innerHTML = `<b>${esc(pn(R, u))} ga sovg‘a yuborish</b><div class="gm-fl">${FL.map(f => `<button onclick="gmSend('${u}','${f[0]}')"><span>${f[1]}</span><small>${f[2]}</small></button>`).join("")}</div>`;
+  };
+  window.gmShowPlayerProfile = function (u) {
+    if (!R || !document.getElementById("gmSheetContent")) return;
+    const meta = (R.pm && R.pm[u]) || {};
+    const avatar = pav(R, u);
+    $("gmSheetContent").innerHTML = `<div class="gm-player-profile"><div class="gm-player-avatar">${avatar}</div><b>${esc(pn(R, u))}</b><p>O‘yin ishtirokchisi</p><small>Ushbu o‘yin xonasidagi ishtirokchi profili</small></div>`;
   };
   window.gmSend = async (u, k) => { $("gmSheet")?.remove(); try { await FB.gmGift(RID, u, k, myMeta()); } catch (e) { uiAlert("Gul yuborilmadi: " + (e.message || e)); } };
   function onGifts(list) {
