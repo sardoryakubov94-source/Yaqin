@@ -19,7 +19,19 @@
 
   function layer(html) { let l = $("gm"); if (!l) { l = document.createElement("div"); l.id = "gm"; l.className = "gm"; document.body.appendChild(l); } l.innerHTML = html; return l; }
   function drop() { $("gm")?.remove(); }
-  const myMeta = () => ({ name: st.user.name, ava: st.user.ava || "", img: st.user.img || "" });
+  const gKey = () => "yqGmG:" + st.user.uid;
+  const myMeta = () => ({ name: st.user.name, ava: st.user.ava || "", img: st.user.img || "", g: localStorage.getItem(gKey()) || "" });
+  function askGender() {
+    return new Promise(res => {
+      const old = localStorage.getItem(gKey()); if (old === "m" || old === "f") return res(old);
+      const sh = document.createElement("div"); sh.className = "gm-sheet"; sh.style.position = "fixed"; sh.style.zIndex = "950";
+      sh.innerHTML = `<div class="gm-sheet-in"><b>Siz kimsiz?</b><p class="gm-hint">Xonalarda qizlar va yigitlar teng boʻladi. Tanlovingiz saqlanadi.</p><div class="gm-fl" style="grid-template-columns:1fr 1fr"><button data-g="f"><span>👩</span><small>Qiz</small></button><button data-g="m"><span>👨</span><small>Yigit</small></button></div><button class="ghost" data-g="">Bekor qilish</button></div>`;
+      sh.addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (!b && e.target !== sh) return; const g = b ? b.dataset.g : ""; if (g) localStorage.setItem(gKey(), g); sh.remove(); res(g); });
+      document.body.appendChild(sh);
+    });
+  }
+  const gOf = (d, u) => (d.pm && d.pm[u] && d.pm[u].g) || "";
+  function ordOf(d) { const m = d.players.filter(u => gOf(d, u) !== "f"), f = d.players.filter(u => gOf(d, u) === "f"), a = gOf(d, d.owner) === "f" ? f : m, b = a === f ? m : f, o = []; for (let i = 0; i < Math.max(m.length, f.length); i++) { if (a[i]) o.push(a[i]); if (b[i]) o.push(b[i]); } return o; }
   const pn = (d, u) => (d.pm && d.pm[u] && d.pm[u].n) || "Oʻyinchi";
   const pav = (d, u) => av({ img: d.pm && d.pm[u] && d.pm[u].i, ava: d.pm && d.pm[u] && d.pm[u].a });
 
@@ -34,19 +46,19 @@
     rs = rs.filter(r => r.status === "open" && (r.players || []).length).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
-<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi</option><option value="6" selected>6 kishi</option><option value="8">8 kishi</option></select><button class="go" onclick="gmCreate()">Xona ochish</button></div>
-${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.map(u => esc(pn(r, u))).slice(0, 3).join(", ")}</small></div><span>${r.players.length}/${r.max}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
+<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><button class="go" onclick="gmCreate()">Xona ochish</button></div>
+${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${r.players.map(u => esc(pn(r, u))).slice(0, 3).join(", ")}</small></div><span>👩 ${r.players.filter(u => gOf(r, u) === "f").length}/${r.max / 2}<br>👨 ${r.players.filter(u => gOf(r, u) !== "f").length}/${r.max / 2}</span></div>`).join("") : '<p class="gm-empty">Hozircha ochiq xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
   }
   window.gmCreate = async function () {
     const t = ($("gmT") || {}).value || "", m = ($("gmM") || {}).value || 6;
-    try { const id = await FB.gmCreate(t, m, myMeta()); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
+    try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta()); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
   };
 
   // ---------- Xonaga kirish ----------
   window.gmEnter = async function (id, created) {
     try {
+      if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null;
-      if (!created) await FB.gmJoin(id, myMeta());
       RID = id; view = "room"; R = null; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
@@ -67,15 +79,15 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     const d = R;
     if (!d || d.status !== "open" || !(d.players || []).includes(st.user.uid)) { if (!closing) { closing = true; toast(!d || d.status !== "open" ? "Xona yopildi" : "Siz xonadan chiqdingiz"); gmCloseAll(); } return; }
     $("gmTitle").textContent = d.title;
-    const n = d.players.length, sp = d.spin || { seq: 0 }, me = st.user.uid;
-    $("gmSeats").innerHTML = d.players.map((u, i) => {
+    const ord = ordOf(d), n = d.players.length, sp = d.spin || { seq: 0 }, me = st.user.uid;
+    $("gmSeats").innerHTML = ord.map((u, i) => {
       const a = (i / n) * 2 * Math.PI - Math.PI / 2, x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
-      const cls = (d.turn === u ? " turn" : "") + (sp.open && sp.to === u ? " target" : "");
+      const cls = (gOf(d, u) === "f" ? " gf" : " gmm") + (d.turn === u ? " turn" : "") + (sp.open && sp.to === u ? " target" : "");
       return `<div class="gm-seat${cls}" id="gs_${u}" style="left:${x}%;top:${y}%" onclick="gmSeat('${u}')"><div class="gm-av">${pav(d, u)}</div><small>${esc(pn(d, u).split(" ")[0])}${u === me ? " (siz)" : ""}</small></div>`;
     }).join("");
     // shisha
     if (sp.seq > 0 && sp.to) {
-      const i = d.players.indexOf(sp.to);
+      const i = ord.indexOf(sp.to);
       if (i >= 0) {
         const ang = (i / n) * 360;
         if (lastSeq === null) { rot = ang; $("gmBottle").style.transition = "none"; $("gmBottle").style.transform = `rotate(${rot}deg)`; animDone = true; }
@@ -90,7 +102,7 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
     // axborot / tugmalar
     const info = $("gmInfo"), turnName = pn(d, d.turn);
     let h = "";
-    if (n < 2) h = `<p>Boshqa oʻyinchilar kutilmoqda… (${n}/${d.max})</p>`;
+    if (!d.players.some(u => gOf(d, u) && gOf(d, u) !== gOf(d, me))) h = `<p>Qarshi tomondan oʻyinchi kutilmoqda… (${n}/${d.max})</p>`;
     else if (sp.open) h = `<p>${esc(pn(d, sp.by))} → <b>${esc(pn(d, sp.to))}</b></p>`;
     else if (d.turn === me) h = `<p>Navbat sizda!</p><button class="go" onclick="gmSpin()">🍾 Shishani aylantirish</button>`;
     else { h = `<p>Navbat: <b>${esc(turnName)}</b></p>`; if (Date.now() - (d.turnAt || 0) > 40000) h += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`; }
@@ -104,12 +116,14 @@ ${rs.length ? rs.map(r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><di
       card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div><p class="gm-hint">${esc(pn(d, sp.to))} ovoz orqali javob beradi.</p>` +
         (inv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
+        ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
         ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
     } else if (!sp.open) card.hidden = true;
   }
 
   // ---------- Amallar ----------
   window.gmSpin = async () => { try { await FB.gmSpin(RID, QS.length); } catch (e) { uiAlert(e.message || e); } };
+  window.gmRespin = async () => { try { await FB.gmRespin(RID); } catch (e) { uiAlert(e.message || e); } };
   window.gmNext = async () => { try { await FB.gmNext(RID, false); } catch (e) { uiAlert(e.message || e); } };
   window.gmSkip = async () => { try { await FB.gmNext(RID, true); } catch (e) { uiAlert(e.message || e); } };
   window.gmLike = async y => { try { await FB.gmAnswer(RID, y); } catch (e) { uiAlert(e.message || e); } };

@@ -587,3 +587,4 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-fl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.gm-fl button{background:var(--c2);border-radius:14px;padding:12px 4px;color:var(--t);display:flex;flex-direction:column;align-items:center;gap:4px}.gm-fl span{font-size:34px}.gm-fl small{font-size:11px;color:var(--m)}
 .gm-fly{position:absolute;left:50%;top:0;font-size:38px;pointer-events:none;animation:gmfly 2.4s ease-out forwards}
 @keyframes gmfly{0%{transform:translate(-50%,10px) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-90px) scale(1.5);opacity:0}}
+.gm-seat.gf .gm-av{border-color:rgba(224,88,122,.5)}.gm-seat.gmm .gm-av{border-color:rgba(80,140,230,.5)}.gm-seat.turn .gm-av{border-color:var(--a)}.gm-seat.target .gm-av{border-color:var(--r)}
