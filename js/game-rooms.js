@@ -85,7 +85,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><button class="gm-ic" id="gmMic" onclick="gmMute()">🎙️</button></div>
 <div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmQuestionNotice" class="gm-question-notice" hidden></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
   // ---------- Render ----------
@@ -122,6 +122,14 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     else if (d.turn === me) h = `<p>Navbat sizda!</p><button class="go" onclick="gmSpin()">🍾 Shishani aylantirish</button>`;
     else { h = `<p>Navbat: <b>${esc(turnName)}</b></p>`; if (Date.now() - (d.turnAt || 0) > 40000) h += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`; }
     info.innerHTML = h;
+    // Savol aynan menga kelgan bo‘lsa, uni chat ichida ko‘rsatish.
+    const qNotice = $("gmQuestionNotice");
+    if (qNotice) {
+      if (sp.open && animDone && sp.to === me && sp.by !== me) {
+        qNotice.hidden = false;
+        qNotice.innerHTML = '<div class="gm-question-label">❓ SIZGA SAVOL</div><div class="gm-question-text">' + esc(QS[sp.q % QS.length]) + '</div><div class="gm-question-from">' + esc(pn(d, sp.by)) + ' sizdan javob kutmoqda</div><form class="gm-question-send" onsubmit="event.preventDefault();gmSendText(\'' + sp.by + '\')"><input id="gmTextInput" maxlength="500" placeholder="Javobingizni shu yerga yozing..." autocomplete="off"><button type="submit">Javob berish</button></form>';
+      } else { qNotice.hidden = true; qNotice.innerHTML = ""; }
+    }
     // savol kartochkasi
     const card = $("gmCard");
     if (sp.open && animDone) {
@@ -133,7 +141,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const otherMsg = msgs[other] || {};
       card.innerHTML = `<div class="gm-q">${esc(QS[sp.q % QS.length])}</div>
         <div class="gm-text-chat"><div class="gm-text-messages">${myMsg.text ? `<div class="gm-text-msg mine"><b>${esc(myMsg.name || "Siz")}</b><span>${esc(myMsg.text)}</span></div>` : ""}${otherMsg.text ? `<div class="gm-text-msg"><b>${esc(otherMsg.name || pn(d, other))}</b><span>${esc(otherMsg.text)}</span></div>` : ""}${(!myMsg.text && !otherMsg.text) ? '<p class="gm-hint">Javobni ovoz bilan ayting yoki xabar yozing.</p>' : ""}</div>
-        ${inv && !botInv ? `<form class="gm-text-send" onsubmit="event.preventDefault();gmSendText('${other}')"><input id="gmTextInput" maxlength="500" placeholder="Javobingizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form>` : ""}</div>
+        ${inv && !botInv && sp.to !== me ? `<form class="gm-text-send" onsubmit="event.preventDefault();gmSendText('${other}')"><input id="gmTextInput" maxlength="500" placeholder="Javobingizni yozing..." autocomplete="off"><button class="go" type="submit">Yuborish</button></form>` : ""}</div>
         ${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">Ovozli javob ham berishingiz mumkin.</p>`}` +
         (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
