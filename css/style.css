@@ -662,3 +662,16 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gm-room-ask-prompt{background:linear-gradient(135deg,rgba(38,112,224,.38),rgba(28,83,171,.3));border-color:rgba(83,157,255,.9)}
 .gm-room-ask-prompt .gm-room-question-text{color:#d9e8ff}
 .gm-room-qa-question{overflow-wrap:anywhere}
+
+
+/* Odamlar uchun savol shablonlari — faqat savol berish navbatida */
+.gm-room-send .gm-template-trigger{flex:none;padding:9px 10px;border:1px solid rgba(83,157,255,.55);color:#b9d7ff;background:rgba(38,112,224,.15);white-space:nowrap;font-size:12px}
+.gm-room-send .gm-template-trigger[hidden]{display:none}
+.gm-question-template-sheet{z-index:100010}
+.gm-question-template-list{display:flex;flex-direction:column;gap:7px;text-align:left}
+.gm-question-template-item{display:flex;align-items:center;gap:9px;width:100%;padding:11px 12px;border-radius:12px;background:var(--c2);color:var(--t);text-align:left;border:1px solid rgba(255,255,255,.08)}
+.gm-question-template-item:active{background:rgba(38,112,224,.28)}
+.gm-question-template-item>span{flex:0 0 24px;color:#9fc5ff;font-size:12px;font-weight:800}
+.gm-question-template-item>b{flex:1;font-size:13px;line-height:1.35;font-weight:600}
+.gm-question-template-item>small{flex:none;color:#9fc5ff;font-size:10px}
+@media(max-width:380px){.gm-room-send{gap:5px}.gm-room-send .gm-template-trigger{padding:8px 7px;font-size:11px}.gm-room-send button.go{padding:8px 8px}}
