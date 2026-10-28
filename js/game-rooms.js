@@ -105,7 +105,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="yaqin-call-controls" id="gmCall"></div></div>
-<div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
+<div class="gm-vbar" id="gmVoiceBar" hidden></div><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
 <div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
   }
 
@@ -173,7 +173,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
-    if (!vInit) { vInit = true; if (vstate === "off" && voiceLive(d)) window.gmVoice(true); }
+    voiceBar();
     botTick();
   }
 
@@ -306,7 +306,17 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   const voiceLive = d => { const v = d && d.voice; if (!v || typeof v !== "object") return false; const now = Date.now(); return Object.keys(v).some(u => typeof v[u] === "number" && now - v[u] < VOICE_TTL); };
   function stopBeat() { clearInterval(beatT); beatT = null; }
   function startBeat(id) { stopBeat(); const go = () => FB.gmVoiceBeat(id, true).catch(e => console.warn("voice beat:", e)); go(); beatT = setInterval(() => { if (RID === id && call && !call.left) go(); else stopBeat(); }, VOICE_BEAT); }
+  function voiceCount(d) { const v = d && d.voice; if (!v || typeof v !== "object") return 0; const now = Date.now(); return Object.keys(v).filter(u => typeof v[u] === "number" && now - v[u] < VOICE_TTL).length; }
+  function voiceBar() {
+    const el = $("gmVoiceBar"); if (!el) return;
+    const on = vstate === "on", conn = vstate === "conn", n = Math.max(voiceCount(R), on ? 1 : 0);
+    if (!on && !conn && !voiceLive(R)) { el.hidden = true; el.innerHTML = ""; return; }
+    el.hidden = false;
+    el.innerHTML = on ? `<span class="dot"></span><span>🔊 Siz ovozdasiz · ${n} kishi ulangan</span>`
+      : `<span class="dot"></span><span>🎙️ Ovozli chat ochiq · ${n} kishi ulangan</span><button type="button" class="go" onclick="gmVoice(true)"${conn ? " disabled" : ""}>${conn ? "Ulanmoqda…" : "Qoʻshilish"}</button>`;
+  }
   function voiceUI() {
+    voiceBar();
     const el = $("gmCall"); if (!el) return;
     const on = vstate === "on", c = call, ic = (n, s, x) => (typeof YI === "function" ? YI(n, s, x) : "");
     const msg = on ? (c && !c.muted ? "🎙️ Mikrofon yoqilgan · siz gapira olasiz" : "🔊 Ovozli chat yoniq · mikrofon oʻchiq") : vmsg;
