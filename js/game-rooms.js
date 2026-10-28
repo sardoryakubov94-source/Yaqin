@@ -390,11 +390,18 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     }));
   }
   window.gmCopyDiag = function () { const t = window._gmDiag || ""; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Nusxalandi"), () => { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Nusxalandi"); } catch (_) {} ta.remove(); }); };
+  // Hal qiluvchi sinov: tokensiz, vaqtinchalik kanalga join. Tez xato qaytsa — Agora serveriga yetib boryapti; javob yoʻq — yetib bormayapti.
+  async function probeJoin(appId) {
+    if (!window.AgoraRTC || !appId) return "AgoraRTC yoki appId yoʻq";
+    const t0 = performance.now(), ms = () => Math.round(performance.now() - t0) + "ms", cl = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    try { await withTO(cl.join(appId, "yq_probe_" + (Date.now() % 1000), null, null), 12000, "__TIMEOUT__"); try { await cl.leave(); } catch (_) {} return "ULANDI (" + ms() + "): tokensiz ham qabul qildi — loyihada sertifikat oʻchiq"; }
+    catch (e) { try { cl.leave(); } catch (_) {} return e && e.message === "__TIMEOUT__" ? "12s ichida javob YOʻQ — Agora serveriga yetib bormayapti (tarmoq)" : "Agora JAVOB BERDI (" + ms() + "): " + ((e && e.code) || "") + " " + String((e && e.message) || e).slice(0, 160); }
+  }
   async function showDiag(errMsg, cr, lastCS) {
-    const probes = await probeNet().catch(() => ["probe xatosi"]);
+    const [probes, pj] = await Promise.all([probeNet().catch(() => ["probe xatosi"]), probeJoin(cr && cr.appId).catch(e => "sinov xatosi: " + e)]);
     const skew = cr && cr.expiresAt ? (cr.expiresAt - TOKEN_TTL_CLIENT) - Math.floor(Date.now() / 1000) : "?";
     const logs = diagLines.filter(l => /agora|client-|gateway|join|\bap\b|websocket|signal|token|fail|error|timeout|connect/i.test(l)).slice(-25);
-    const text = "XATO: " + errMsg + "\nHolat: " + (lastCS || "yoʻq") + "\nBrauzer: " + navigator.userAgent.slice(0, 120) + "\nTokendagi appId: " + (cr ? cr.appId : "?") + " kanal: " + (cr ? cr.channel : "?") + " uid: " + (cr ? cr.uid : "?") + "\nSoat farqi (server-telefon): " + skew + " s\nTarmoq (taxminiy):\n " + probes.join("\n ") + "\nSDK log:\n" + (logs.join("\n") || "(boʻsh)");
+    const text = "XATO: " + errMsg + "\nHolat: " + (lastCS || "yoʻq") + "\nBrauzer: " + navigator.userAgent.slice(0, 120) + "\nTokendagi appId: " + (cr ? cr.appId : "?") + " kanal: " + (cr ? cr.channel : "?") + " uid: " + (cr ? cr.uid : "?") + "\nSoat farqi (server-telefon): " + skew + " s\nAGORA SINOVI (tokensiz join): " + pj + "\nTarmoq (taxminiy):\n " + probes.join("\n ") + "\nSDK log:\n" + (logs.join("\n") || "(boʻsh)");
     window._gmDiag = text;
     const el = $("gmVs"); if (!el) return;
     el.innerHTML = esc("⚠️ Ovozli xonaga ulanilmadi: " + errMsg) + '<details style="margin-top:8px;text-align:left"><summary>🔧 Texnik maʼlumot</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto;margin:6px 0">' + esc(text) + '</pre><button type="button" class="go" onclick="gmCopyDiag()">📋 Nusxa olish</button></details>';
