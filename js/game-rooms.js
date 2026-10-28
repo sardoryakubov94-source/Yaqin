@@ -94,14 +94,13 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      RID = id; view = "room"; R = null; chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      RID = id; view = "room"; R = null; vOptOut = false; vAuto = false; chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
       unChat = FB.gmRoomChat(id, msgs => { chatMsgs = msgs; renderChat(); });
       tick = setInterval(() => R && render(true), 4000);
       vstate = "off"; vmsg = ""; voiceUI();
-      setTimeout(() => { if (RID === id && vstate === "off") window.gmVoice(true); }, 300); // tinglash avtomatik
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
   };
   function buildRoom() {
@@ -174,6 +173,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
+    if (d.voice === true && vstate === "off" && !vOptOut && !vAuto) { vAuto = true; window.gmVoice(true); }
+    if (d.voice !== true) vAuto = false;
     botTick();
   }
 
@@ -301,7 +302,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
 
   // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
-  let vstate = "off", vmsg = "";
+  let vstate = "off", vmsg = "", vOptOut = false, vAuto = false;
   function voiceUI() {
     const el = $("gmCall"); if (!el) return;
     const on = vstate === "on", c = call, ic = (n, s, x) => (typeof YI === "function" ? YI(n, s, x) : "");
@@ -312,12 +313,21 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
   window.gmVoice = async function (auto) {
     if (vstate !== "off" || !RID) return;
-    vstate = "conn"; vmsg = ""; voiceUI();
+    vstate = "conn"; vmsg = ""; if (auto !== true) vOptOut = false; voiceUI();
+    const rid = RID;
     await startVoice(RID);
-    if (call && !call.left && vmsg === "") { vstate = "on"; voiceUI(); if (auto !== true) await window.gmMute(); } else vstate = "off";
+    if (call && !call.left && vmsg === "") {
+      vstate = "on"; voiceUI();
+      if (auto !== true) { FB.gmVoiceFlag(rid, true).catch(e => console.warn("voice flag:", e)); await window.gmMute(); }
+    } else vstate = "off";
     voiceUI();
   };
-  window.gmVoiceEnd = async function () { await stopVoice(); vstate = "off"; vmsg = ""; voiceUI(); };
+  window.gmVoiceEnd = async function () {
+    vOptOut = true;
+    const alone = !(call && call.client && call.client.remoteUsers && call.client.remoteUsers.length), rid = RID;
+    await stopVoice(); vstate = "off"; vmsg = ""; voiceUI();
+    if (alone && rid) FB.gmVoiceFlag(rid, false).catch(() => {});
+  };
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
     try {
