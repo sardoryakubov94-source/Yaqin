@@ -94,7 +94,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      RID = id; view = "room"; R = null; vOptOut = false; vAuto = false; chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
@@ -173,8 +173,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
-    if (d.voice === true && vstate === "off" && !vOptOut && !vAuto) { vAuto = true; window.gmVoice(true); }
-    if (d.voice !== true) vAuto = false;
+    if (!vInit) { vInit = true; if (vstate === "off" && voiceLive(d)) window.gmVoice(true); }
     botTick();
   }
 
@@ -302,7 +301,11 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
 
   // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
-  let vstate = "off", vmsg = "", vOptOut = false, vAuto = false;
+  let vstate = "off", vmsg = "", vInit = false, beatT = null;
+  const VOICE_TTL = 60000, VOICE_BEAT = 20000;
+  const voiceLive = d => { const v = d && d.voice; if (!v || typeof v !== "object") return false; const now = Date.now(); return Object.keys(v).some(u => typeof v[u] === "number" && now - v[u] < VOICE_TTL); };
+  function stopBeat() { clearInterval(beatT); beatT = null; }
+  function startBeat(id) { stopBeat(); const go = () => FB.gmVoiceBeat(id, true).catch(e => console.warn("voice beat:", e)); go(); beatT = setInterval(() => { if (RID === id && call && !call.left) go(); else stopBeat(); }, VOICE_BEAT); }
   function voiceUI() {
     const el = $("gmCall"); if (!el) return;
     const on = vstate === "on", c = call, ic = (n, s, x) => (typeof YI === "function" ? YI(n, s, x) : "");
@@ -313,20 +316,19 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
   window.gmVoice = async function (auto) {
     if (vstate !== "off" || !RID) return;
-    vstate = "conn"; vmsg = ""; if (auto !== true) vOptOut = false; voiceUI();
+    vstate = "conn"; vmsg = ""; voiceUI();
     const rid = RID;
     await startVoice(RID);
     if (call && !call.left && vmsg === "") {
-      vstate = "on"; voiceUI();
-      if (auto !== true) { FB.gmVoiceFlag(rid, true).catch(e => console.warn("voice flag:", e)); await window.gmMute(); }
+      vstate = "on"; voiceUI(); startBeat(rid);
+      if (auto !== true) await window.gmMute();
     } else vstate = "off";
     voiceUI();
   };
   window.gmVoiceEnd = async function () {
-    vOptOut = true;
-    const alone = !(call && call.client && call.client.remoteUsers && call.client.remoteUsers.length), rid = RID;
+    const rid = RID; stopBeat();
     await stopVoice(); vstate = "off"; vmsg = ""; voiceUI();
-    if (alone && rid) FB.gmVoiceFlag(rid, false).catch(() => {});
+    if (rid) FB.gmVoiceBeat(rid, false).catch(() => {});
   };
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
@@ -386,7 +388,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
   { const _m = window.gmMute; window.gmMute = async function () { await _m.apply(this, arguments); voiceUI(); }; }
   async function stopVoice() {
-    const c = call; call = null; if (!c) return; c.left = true;
+    stopBeat(); const c = call; call = null; if (!c) return; c.left = true;
     try { if (c.mic) { try { await c.client.unpublish(c.mic); } catch (_) {} c.mic.stop(); c.mic.close(); } await c.client.leave(); } catch (_) {}
   }
 
