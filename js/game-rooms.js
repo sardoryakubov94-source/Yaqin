@@ -94,6 +94,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       });
       tick = setInterval(() => R && render(true), 4000);
       vstate = "off"; vmsg = ""; voiceUI();
+      setTimeout(() => { if (RID === id && vstate === "off") window.gmVoice(true); }, 300); // tinglash avtomatik
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
   };
   function buildRoom() {
@@ -301,11 +302,11 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       (on ? `<button class="yaqin-call-btn" type="button" onclick="gmMute()">${c && !c.muted ? "🎙️ Mikrofonni oʻchirish" : "🔇 Mikrofonni yoqish"}</button><button class="yaqin-call-btn yaqin-call-end" type="button" onclick="gmVoiceEnd()">${ic("phone", 18, "rot")} Tugatish</button>`
         : `<button class="yaqin-call-btn yaqin-call-primary" style="grid-column:1/-1" type="button" onclick="gmVoice()"${vstate === "conn" ? " disabled" : ""}>${ic("mic", 18)} ${vstate === "conn" ? "Ulanmoqda…" : "Ovozli chat"}</button>`) + `</div>`;
   }
-  window.gmVoice = async function () {
+  window.gmVoice = async function (auto) {
     if (vstate !== "off" || !RID) return;
     vstate = "conn"; vmsg = ""; voiceUI();
     await startVoice(RID);
-    if (call && !call.left && vmsg === "") { vstate = "on"; voiceUI(); await window.gmMute(); } else vstate = "off";
+    if (call && !call.left && vmsg === "") { vstate = "on"; voiceUI(); if (auto !== true) await window.gmMute(); } else vstate = "off";
     voiceUI();
   };
   window.gmVoiceEnd = async function () { await stopVoice(); vstate = "off"; vmsg = ""; voiceUI(); };
@@ -320,7 +321,9 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       if (btn) { btn.textContent = "🔇"; btn.title = "Mikrofonni yoqish"; btn.setAttribute("aria-label", "Mikrofonni yoqish"); }
       const renew = async () => { try { await client.renewToken((await FB.gmToken(id)).token); } catch (e) { console.warn(e); } };
       client.on("token-privilege-will-expire", renew); client.on("token-privilege-did-expire", renew);
-      client.on("user-published", async (u, t) => { await client.subscribe(u, t); if (t === "audio" && u.audioTrack) u.audioTrack.play(); });
+      try { AgoraRTC.onAutoplayFailed = () => { toast("🔊 Ovozni yoqish uchun ekranga bir marta bosing"); const un = () => { document.removeEventListener("pointerdown", un, true); try { (call && call.client ? call.client.remoteUsers : []).forEach(x => x.audioTrack && x.audioTrack.play()); } catch (_) {} }; document.addEventListener("pointerdown", un, true); }; } catch (_) {}
+      const playRemote = async (u, t) => { try { await client.subscribe(u, t); if (t === "audio" && u.audioTrack) { u.audioTrack.setVolume(100); u.audioTrack.play(); } } catch (e) { console.warn("gm subscribe:", e); } };
+      client.on("user-published", playRemote);
       client.enableAudioVolumeIndicator();
       client.on("volume-indicator", vols => {
         if (!R) return;
@@ -328,6 +331,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       });
       await client.join(cr.appId, cr.channel, cr.token, cr.uid);
       if (c.left) { await client.leave(); return; }
+      for (const u of client.remoteUsers) if (u.hasAudio) await playRemote(u, "audio");
       say("🔊 Ovozli xona ulandi · mikrofon oʻchiq");
     } catch (e) {
       console.error("gm voice:", e);
