@@ -64,16 +64,9 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta(), !!($("gmB") || {}).checked); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
   };
 
-  // ---------- Xonaga kirish ----------
-  window.gmEnter = async function (id, created) {
-    try {
-      if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
-      unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      RID = id; view = "room"; R = null; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
-      buildRoom();
-      unW = FB.gmWatch(id, d => { R = d; render(); });
-      unG = FB.gmGifts(id, onGifts);
-      unChat = FB.gmRoomChat(id, msgs => {
+  let chatMsgs = [], chatSig = "", chatKey = "";
+  function renderChat() {
+    const msgs = chatMsgs;
         const box = $("gmRoomMessages"); if (!box) return;
         const d = R, sp = d && d.spin, me = st.user.uid;
         const askPrompt = d && sp && sp.open && sp.by === me && sp.to !== me && animDone
@@ -89,9 +82,23 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           const avatar = d && d.pm && d.pm[m.from] ? pav(d, m.from) : "";
           return `<div class="gm-room-msg${m.from === me ? " mine" : ""}${isQuestion ? " gm-room-question" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
         }).join("");
+        const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80, sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0);
         box.innerHTML = askPrompt + answerPrompt + rendered;
-        box.scrollTop = box.scrollHeight;
-      });
+        if (near || sig !== chatSig) box.scrollTop = box.scrollHeight;
+        chatSig = sig;
+        const inp = $("gmRoomInput"); if (inp) inp.placeholder = askPrompt ? "Savolingizni yozing…" : answerPrompt ? "Javobingizni yozing…" : "Xabaringizni yozing...";
+        }
+
+  // ---------- Xonaga kirish ----------
+  window.gmEnter = async function (id, created) {
+    try {
+      if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
+      unL && unL(); unL = null; unChat && unChat(); unChat = null;
+      RID = id; view = "room"; R = null; chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      buildRoom();
+      unW = FB.gmWatch(id, d => { R = d; render(); });
+      unG = FB.gmGifts(id, onGifts);
+      unChat = FB.gmRoomChat(id, msgs => { chatMsgs = msgs; renderChat(); });
       tick = setInterval(() => R && render(true), 4000);
       vstate = "off"; vmsg = ""; voiceUI();
       setTimeout(() => { if (RID === id && vstate === "off") window.gmVoice(true); }, 300); // tinglash avtomatik
@@ -166,6 +173,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const seq = sp.seq; botT.timeout = seq;
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
+    { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
     botTick();
   }
 
