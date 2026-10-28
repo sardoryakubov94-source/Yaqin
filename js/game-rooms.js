@@ -321,7 +321,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
 
   // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
   let vstate = "off", vmsg = "", vInit = false, beatT = null, vStep = "";
-  const VOICE_TTL = 60000, VOICE_BEAT = 20000;
+  const VOICE_TTL = 60000, VOICE_BEAT = 20000, TOKEN_TTL_CLIENT = 3600;
   const voiceLive = d => { const v = d && d.voice; if (!v || typeof v !== "object") return false; const now = Date.now(); return Object.keys(v).some(u => typeof v[u] === "number" && now - v[u] < VOICE_TTL); };
   function stopBeat() { clearInterval(beatT); beatT = null; }
   function startBeat(id) { stopBeat(); const go = () => FB.gmVoiceBeat(id, true).catch(e => console.warn("voice beat:", e)); go(); beatT = setInterval(() => { if (RID === id && call && !call.left) go(); else stopBeat(); }, VOICE_BEAT); }
@@ -374,14 +374,41 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     }
     throw err || new Error("Agora SDK yuklanmadi. Internetni tekshiring.");
   }
+  const diagLines = [];
+  function hookConsole() {
+    const orig = {}, add = lvl => (...a) => { try { diagLines.push(Math.round(performance.now() / 1000) + "s " + lvl + " " + a.map(x => typeof x === "string" ? x : (x && x.message) || JSON.stringify(x)).join(" ").slice(0, 240)); if (diagLines.length > 200) diagLines.shift(); } catch (_) {} };
+    ["log", "info", "warn", "error"].forEach(k => { orig[k] = console[k]; const h = add(k); console[k] = function () { h.apply(null, arguments); return orig[k].apply(console, arguments); }; });
+    return () => ["log", "info", "warn", "error"].forEach(k => { console[k] = orig[k]; });
+  }
+  async function probeNet() {
+    const hosts = [["internet (cloudflare)", "https://www.cloudflare.com/cdn-cgi/trace"], ["download.agora.io", "https://download.agora.io/"], ["ap-web-1.agora.io", "https://ap-web-1.agora.io/"], ["webrtc2-ap-web-1.agora.io", "https://webrtc2-ap-web-1.agora.io/"], ["api.sd-rtn.com", "https://api.sd-rtn.com/"]];
+    return Promise.all(hosts.map(async ([n, u]) => {
+      const t0 = performance.now(), ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+      try { await fetch(u, { mode: "no-cors", cache: "no-store", signal: ac.signal }); return n + ": OK " + Math.round(performance.now() - t0) + "ms"; }
+      catch (e) { return n + ": XATO " + (ac.signal.aborted ? "(6s ichida javob yoʻq)" : "(ulanish rad etildi)"); }
+      finally { clearTimeout(to); }
+    }));
+  }
+  window.gmCopyDiag = function () { const t = window._gmDiag || ""; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Nusxalandi"), () => { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Nusxalandi"); } catch (_) {} ta.remove(); }); };
+  async function showDiag(errMsg, cr, lastCS) {
+    const probes = await probeNet().catch(() => ["probe xatosi"]);
+    const skew = cr && cr.expiresAt ? (cr.expiresAt - TOKEN_TTL_CLIENT) - Math.floor(Date.now() / 1000) : "?";
+    const logs = diagLines.filter(l => /agora|client-|gateway|join|\bap\b|websocket|signal|token|fail|error|timeout|connect/i.test(l)).slice(-25);
+    const text = "XATO: " + errMsg + "\nHolat: " + (lastCS || "yoʻq") + "\nBrauzer: " + navigator.userAgent.slice(0, 120) + "\nTokendagi appId: " + (cr ? cr.appId : "?") + " kanal: " + (cr ? cr.channel : "?") + " uid: " + (cr ? cr.uid : "?") + "\nSoat farqi (server-telefon): " + skew + " s\nTarmoq (taxminiy):\n " + probes.join("\n ") + "\nSDK log:\n" + (logs.join("\n") || "(boʻsh)");
+    window._gmDiag = text;
+    const el = $("gmVs"); if (!el) return;
+    el.innerHTML = esc("⚠️ Ovozli xonaga ulanilmadi: " + errMsg) + '<details style="margin-top:8px;text-align:left"><summary>🔧 Texnik maʼlumot</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto;margin:6px 0">' + esc(text) + '</pre><button type="button" class="go" onclick="gmCopyDiag()">📋 Nusxa olish</button></details>';
+  }
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
-    let client = null, c = null, lastCS = "";
+    let client = null, c = null, lastCS = "", cr = null;
+    diagLines.length = 0; const unhook = hookConsole();
+    try { AgoraRTC && AgoraRTC.setLogLevel && AgoraRTC.setLogLevel(1); } catch (_) {}
     try {
       setStep("SDK yuklanmoqda…");
       await loadAgora();
       setStep("Server bilan aloqa…");
-      const cr = await withTO(FB.gmToken(id), 15000, "Server javob bermadi (token olinmadi). Internetni tekshiring.");
+      cr = await withTO(FB.gmToken(id), 15000, "Server javob bermadi (token olinmadi). Internetni tekshiring.");
       const connect = async proxy => {
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         const me = c = { id, client, mic: null, muted: true, left: false }; call = me;
@@ -418,7 +445,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       console.error("gm voice:", e);
       say("⚠️ Ovozli xonaga ulanilmadi: " + (e.message || e));
       vmsg = "⚠️ Ulanilmadi: " + (e.message || e); toast(vmsg); try { call && call.client && call.client.leave(); } catch (_) {} call = null;
-    } finally { vStep = ""; }
+      showDiag(String(e.message || e), cr, lastCS).catch(() => {});
+    } finally { vStep = ""; unhook(); }
   }
   window.gmMute = async function () {
     const c = call;
