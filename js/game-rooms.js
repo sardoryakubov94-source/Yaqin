@@ -33,7 +33,8 @@
   const isBot = (d, u) => !!(d.pm && d.pm[u] && d.pm[u].bot);
   const hCnt = (d, g) => d.players.filter(u => !isBot(d, u) && (g === "f" ? gOf(d, u) === "f" : gOf(d, u) !== "f")).length;
   const BOT_SAY = ["Qiziq savol! Menimcha, eng muhimi — oʻzaro hurmat va samimiyat.", "Men uchun oila tinchligi hammasidan ustun.", "Hmm, oʻylab koʻrish kerak… Menimcha, sabr va mehr hal qiladi.", "Odamlarning samimiyligini qadrlayman, shuning uchun ochiq gaplashishni yaxshi koʻraman.", "Hayotda eng muhimi — sogʻlik va yaqinlar bilan birga boʻlish.", "Tinch, oddiy kunlarni yaxshi koʻraman, yaqinlar bilan choy ustida suhbat.", "Yangi joylarni koʻrish va yangi odamlar bilan tanishish menga yoqadi.", "Men halollik va mehnatsevarlikni hammadan koʻproq qadrlayman."];
-  let botT = {};
+  let botT = {}, busyEnter = false, pingT = null;
+  const leavingRooms = new Set(), ROOM_STALE = 150000;
   const gOf = (d, u) => (d.pm && d.pm[u] && d.pm[u].g) || "";
   function ordOf(d) { const m = d.players.filter(u => gOf(d, u) !== "f"), f = d.players.filter(u => gOf(d, u) === "f"), a = gOf(d, d.owner) === "f" ? f : m, b = a === f ? m : f, o = []; for (let i = 0; i < Math.max(m.length, f.length); i++) { if (a[i]) o.push(a[i]); if (b[i]) o.push(b[i]); } return o; }
   const pn = (d, u) => (d.pm && d.pm[u] && d.pm[u].n) || "Oʻyinchi";
@@ -49,9 +50,12 @@
   function drawList(rs) {
     const live = r => (r.players || []).some(u => !isBot(r, u));
     rs = rs.filter(r => r.status === "open");
-    const mine = rs.filter(r => !live(r) && r.owner === st.user.uid).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    // Roʻyxat ekranida turgan boʻlsam, men yozilgan xona — "arvoh": ilova yopilgan/uzilgan. Oʻzimni chiqaraman (oxirgi odam boʻlsam xona yopiladi).
+    if (!busyEnter) rs.filter(r => (r.players || []).includes(st.user.uid) && r.id !== RID && !leavingRooms.has(r.id)).forEach(r => { leavingRooms.add(r.id); FB.gmLeave(r.id).catch(() => {}).finally(() => setTimeout(() => leavingRooms.delete(r.id), 8000)); });
+    const stale = r => Date.now() - (r.updatedAt || 0) > ROOM_STALE;
+    const mine = rs.filter(r => (!live(r) || stale(r)) && r.owner === st.user.uid).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     mine.forEach(r => FB.gmDelete(r.id).catch(() => {}));
-    rs = rs.filter(live).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    rs = rs.filter(r => live(r) && !stale(r) && !(r.players || []).includes(st.user.uid)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     const row = r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${live(r) ? r.players.filter(u => !isBot(r, u)).map(u => esc(pn(r, u))).slice(0, 3).join(", ") : "Hozircha boʻsh · kirishingiz mumkin"}</small></div><span>👩 ${hCnt(r, "f")}/${r.max / 2}<br>👨 ${hCnt(r, "m")}/${r.max / 2}${r.owner === st.user.uid ? `<br><b onclick="event.stopPropagation();gmDel('${r.id}')" style="font-size:16px">🗑</b>` : ""}</span></div>`;
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
@@ -61,7 +65,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmDel = function (id) { if (confirm("Bu xonani butunlay oʻchirasizmi?")) FB.gmDelete(id).catch(e => uiAlert("Oʻchirilmadi: " + (e.message || e))); };
   window.gmCreate = async function () {
     const t = ($("gmT") || {}).value || "", m = ($("gmM") || {}).value || 6;
-    try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta(), !!($("gmB") || {}).checked); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); }
+    busyEnter = true;
+    try { if (!(await askGender())) return; const id = await FB.gmCreate(t, m, myMeta(), !!($("gmB") || {}).checked); await gmEnter(id, true); } catch (e) { uiAlert(e.message || e); } finally { busyEnter = false; }
   };
 
   let chatMsgs = [], chatSig = "", chatKey = "";
@@ -91,6 +96,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
 
   // ---------- Xonaga kirish ----------
   window.gmEnter = async function (id, created) {
+    busyEnter = true;
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
@@ -100,8 +106,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       unG = FB.gmGifts(id, onGifts);
       unChat = FB.gmRoomChat(id, msgs => { chatMsgs = msgs; renderChat(); });
       tick = setInterval(() => R && render(true), 4000);
+      clearInterval(pingT); pingT = setInterval(() => { if (RID === id && !closing) FB.gmPing(id).catch(() => {}); }, 30000);
       vstate = "off"; vmsg = ""; voiceUI();
     } catch (e) { uiAlert("Xonaga kirib boʻlmadi: " + (e.message || e)); if (view === "list") gmOpenList(); }
+    finally { busyEnter = false; }
   };
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="yaqin-call-controls" id="gmCall"></div></div>
@@ -409,7 +417,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try { id && await FB.gmLeave(id); } catch (e) { console.warn(e); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };
-  function cleanup() { vstate = "off"; vmsg = ""; unW && unW(); unG && unG(); clearInterval(tick); clearTimeout(animTimer); unW = unG = null; RID = null; R = null; }
+  function cleanup() { clearInterval(pingT); pingT = null; vstate = "off"; vmsg = ""; unW && unW(); unG && unG(); clearInterval(tick); clearTimeout(animTimer); unW = unG = null; RID = null; R = null; }
   window.gmCloseAll = function () { stopVoice(); unL && unL(); unL = null; if (RID) { const id = RID; FB.gmLeave(id).catch(() => {}); } cleanup(); view = ""; drop(); };
 
   // ---------- Guruhlar sahifasiga kirish tugmasi ----------
