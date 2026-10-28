@@ -376,29 +376,43 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
+    let client = null, c = null, lastCS = "";
     try {
       setStep("SDK yuklanmoqda…");
       await loadAgora();
       setStep("Server bilan aloqa…");
       const cr = await withTO(FB.gmToken(id), 15000, "Server javob bermadi (token olinmadi). Internetni tekshiring.");
+      const connect = async proxy => {
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        const me = c = { id, client, mic: null, muted: true, left: false }; call = me;
+        const btn = $("gmMic");
+        if (btn) { btn.textContent = "🔇"; btn.title = "Mikrofonni yoqish"; btn.setAttribute("aria-label", "Mikrofonni yoqish"); }
+        const renew = async () => { try { await client.renewToken((await FB.gmToken(id)).token); } catch (e) { console.warn(e); } };
+        client.on("token-privilege-will-expire", renew); client.on("token-privilege-did-expire", renew);
+        client.on("connection-state-change", (cur, prev, reason) => { lastCS = cur + (reason ? "/" + reason : ""); console.log("agora state:", cur, prev, reason); });
+        try { AgoraRTC.onAutoplayFailed = () => { toast("🔊 Ovozni yoqish uchun ekranga bir marta bosing"); const un = () => { document.removeEventListener("pointerdown", un, true); try { (call && call.client ? call.client.remoteUsers : []).forEach(x => x.audioTrack && x.audioTrack.play()); } catch (_) {} }; document.addEventListener("pointerdown", un, true); }; } catch (_) {}
+        const playRemote = async (u, t) => { try { await client.subscribe(u, t); if (t === "audio" && u.audioTrack) { u.audioTrack.setVolume(100); u.audioTrack.play(); } } catch (e) { console.warn("gm subscribe:", e); } };
+        me.playRemote = playRemote;
+        client.on("user-published", playRemote);
+        client.enableAudioVolumeIndicator();
+        client.on("volume-indicator", vols => {
+          if (!R) return;
+          R.players.forEach(p => { const lv = vols.find(v => v.uid === uidFor(p) || (p === st.user.uid && v.uid === 0)); $("gs_" + p)?.classList.toggle("speak", !!lv && lv.level > 8); });
+        });
+        if (proxy) { try { client.startProxyServer(3); } catch (e) { console.warn("proxy:", e); } }
+        await withTO(client.join(cr.appId, cr.channel, cr.token, cr.uid), proxy ? 20000 : 15000, "Agora serveriga ulanib boʻlmadi" + (proxy ? " (zaxira kanal ham ishlamadi)" : "") + ". Holat: " + (lastCS || "javob yoʻq") + ". Internet sekin yoki tarmoq/VPN bloklamoqda boʻlishi mumkin.");
+      };
       setStep("Ovozli xonaga ulanmoqda…");
-      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      const c = { id, client, mic: null, muted: true, left: false }; call = c;
-      const btn = $("gmMic");
-      if (btn) { btn.textContent = "🔇"; btn.title = "Mikrofonni yoqish"; btn.setAttribute("aria-label", "Mikrofonni yoqish"); }
-      const renew = async () => { try { await client.renewToken((await FB.gmToken(id)).token); } catch (e) { console.warn(e); } };
-      client.on("token-privilege-will-expire", renew); client.on("token-privilege-did-expire", renew);
-      try { AgoraRTC.onAutoplayFailed = () => { toast("🔊 Ovozni yoqish uchun ekranga bir marta bosing"); const un = () => { document.removeEventListener("pointerdown", un, true); try { (call && call.client ? call.client.remoteUsers : []).forEach(x => x.audioTrack && x.audioTrack.play()); } catch (_) {} }; document.addEventListener("pointerdown", un, true); }; } catch (_) {}
-      const playRemote = async (u, t) => { try { await client.subscribe(u, t); if (t === "audio" && u.audioTrack) { u.audioTrack.setVolume(100); u.audioTrack.play(); } } catch (e) { console.warn("gm subscribe:", e); } };
-      client.on("user-published", playRemote);
-      client.enableAudioVolumeIndicator();
-      client.on("volume-indicator", vols => {
-        if (!R) return;
-        R.players.forEach(p => { const lv = vols.find(v => v.uid === uidFor(p) || (p === st.user.uid && v.uid === 0)); $("gs_" + p)?.classList.toggle("speak", !!lv && lv.level > 8); });
-      });
-      await withTO(client.join(cr.appId, cr.channel, cr.token, cr.uid), 25000, "Agora serveriga ulanib boʻlmadi (internet sekin yoki VPN/tarmoq bloklamoqda).");
+      try { await connect(false); }
+      catch (e) {
+        if (!/Agora serveriga/.test(String(e && e.message))) throw e;
+        console.warn("gm voice: oddiy ulanish ishlamadi, zaxira kanal:", e);
+        try { client.leave(); } catch (_) {}
+        setStep("Zaxira kanal orqali ulanmoqda…");
+        await connect(true);
+      }
       if (c.left) { await client.leave(); return; }
-      for (const u of client.remoteUsers) if (u.hasAudio) await playRemote(u, "audio");
+      for (const u of client.remoteUsers) if (u.hasAudio) await c.playRemote(u, "audio");
       say("🔊 Ovozli xona ulandi · mikrofon oʻchiq");
     } catch (e) {
       console.error("gm voice:", e);
