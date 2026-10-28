@@ -381,7 +381,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     return () => ["log", "info", "warn", "error"].forEach(k => { console[k] = orig[k]; });
   }
   async function probeNet() {
-    const hosts = [["internet (cloudflare)", "https://www.cloudflare.com/cdn-cgi/trace"], ["download.agora.io", "https://download.agora.io/"], ["ap-web-1.agora.io", "https://ap-web-1.agora.io/"], ["webrtc2-ap-web-1.agora.io", "https://webrtc2-ap-web-1.agora.io/"], ["api.sd-rtn.com", "https://api.sd-rtn.com/"]];
+    const hosts = [["internet (cloudflare)", "https://www.cloudflare.com/cdn-cgi/trace"], ["download.agora.io", "https://download.agora.io/"], ["webrtc2-ap-web-1.agora.io", "https://webrtc2-ap-web-1.agora.io/"], ["webrtc2-2.ap.sd-rtn.com", "https://webrtc2-2.ap.sd-rtn.com/"], ["webrtc-cloud-proxy.agora.io", "https://webrtc-cloud-proxy.agora.io/"]];
     return Promise.all(hosts.map(async ([n, u]) => {
       const t0 = performance.now(), ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
       try { await fetch(u, { mode: "no-cors", cache: "no-store", signal: ac.signal }); return n + ": OK " + Math.round(performance.now() - t0) + "ms"; }
@@ -434,7 +434,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           R.players.forEach(p => { const lv = vols.find(v => v.uid === uidFor(p) || (p === st.user.uid && v.uid === 0)); $("gs_" + p)?.classList.toggle("speak", !!lv && lv.level > 8); });
         });
         if (proxy) { try { client.startProxyServer(3); } catch (e) { console.warn("proxy:", e); } }
-        await withTO(client.join(cr.appId, cr.channel, cr.token, cr.uid), proxy ? 20000 : 15000, "Agora serveriga ulanib boʻlmadi" + (proxy ? " (zaxira kanal ham ishlamadi)" : "") + ". Holat: " + (lastCS || "javob yoʻq") + ". Internet sekin yoki tarmoq/VPN bloklamoqda boʻlishi mumkin.");
+        await withTO(client.join(cr.appId, cr.channel, cr.token, cr.uid), proxy ? 20000 : 15000, "Agora serverlari (agora.io / sd-rtn.com) bu tarmoqda javob bermayapti" + (proxy ? " (zaxira kanal ham)" : "") + ". Holat: " + (lastCS || "javob yoʻq") + ". Wi-Fi bilan sinab koʻring.");
       };
       setStep("Ovozli xonaga ulanmoqda…");
       try { await connect(false); }

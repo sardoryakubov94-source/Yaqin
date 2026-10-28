@@ -46,8 +46,23 @@ async function stunTest() {
   } catch (e) { P("WebRTC testi xatosi: " + e.message); }
 }
 
+const clean = l => l.replace(/%cAgora-SDK \[(\w+)\]: color: #[0-9A-Fa-f]+;( font-weight: bold;)?\s*/, "[$1] ").replace(/\[client-[0-9a-f]+\]/, "").replace(/\s+/g, " ").slice(0, 200);
+function showLogs(from) {
+  const seen = new Set(), keep = [];
+  logs.slice(from).filter(l => /choose_server|NETWORK_|unilbs|gateway|websocket|proxy|reconnect|failed/i.test(l)).forEach(l => { const c = clean(l).replace(/^\S+ \S+ \d\d:\d\d:\d\d:\d+ /, ""); if (!seen.has(c)) { seen.add(c); keep.push("   · " + c); } });
+  P(keep.slice(0, 10).join("\n") || "   (muhim log qatorlari yo'q)");
+}
+async function hostProbe() {
+  const hosts = ["webrtc2-ap-web-1.agora.io", "webrtc2-ap-web-3.agora.io", "webrtc2-2.ap.sd-rtn.com", "webrtc2-4.ap.sd-rtn.com", "webrtc-cloud-proxy.agora.io", "webrtc-cloud-proxy.sd-rtn.com", "download.agora.io"];
+  P("\nAgora manzillari (HTTPS, brauzerdan):");
+  await Promise.all(hosts.map(async h => { const s = performance.now(), ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000); try { await fetch("https://" + h + "/", { mode: "no-cors", cache: "no-store", signal: ac.signal }); P("   ✅ " + h + " — javob keldi (" + Math.round(performance.now() - s) + "ms)"); } catch (e) { P("   ❌ " + h + " — " + (ac.signal.aborted ? "8s ichida javob yo'q" : "ulanish rad etildi/uzildi")); } finally { clearTimeout(to); } }));
+}
+async function areaTest(appId, area) {
+  try { try { AgoraRTC.setArea({ areaCode: [area] }); } catch (e1) { AgoraRTC.setArea([area]); } } catch (e) { P("\n(region " + area + ": setArea xatosi: " + e.message + ")"); return; }
+  await joinTest(appId, "region " + area + " (tokensiz)", false, 15000);
+}
 async function joinTest(appId, label, proxy, waitMs) {
-  P("\n▶ " + label + " (" + waitMs / 1000 + "s gacha kutiladi)");
+  P("\n▶ " + label + " (" + waitMs / 1000 + "s gacha kutiladi)"); const li = logs.length;
   const cl = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" }), s0 = performance.now(); let last = "";
   cl.on("connection-state-change", (cur, prev, reason) => { last = cur + (reason ? "/" + reason : ""); P("   holat: " + prev + " → " + cur + (reason ? " (" + reason + ")" : "") + "  @" + Math.round(performance.now() - s0) + "ms"); });
   if (proxy) { try { cl.startProxyServer(3); P("   TCP proksi yoqildi (mode 3)"); } catch (e) { P("   proksi xatosi: " + e.message); } }
@@ -60,6 +75,7 @@ async function joinTest(appId, label, proxy, waitMs) {
     if (e.message === "__TIMEOUT__") P("⛔ " + Math.round(waitMs / 1000) + "s ichida JAVOB YO'Q. Oxirgi holat: " + (last || "—") + "  → Agora serveriga yetib bormayapti");
     else P("📨 Agora JAVOB BERDI (" + Math.round(performance.now() - s0) + "ms): " + (e.code || "") + " " + String(e.message || e).slice(0, 220) + "\n   → server bilan aloqa BOR, sabab: loyiha/token/ruxsat (yuqoridagi xato kodiga qarang)");
   }
+  showLogs(li);
 }
 
 document.getElementById("go").onclick = async () => {
@@ -72,11 +88,12 @@ document.getElementById("go").onclick = async () => {
   if (!(await loadSDK())) { P("\nSDK yuklanmadi — keyingi testlarni o'tkazib bo'lmaydi."); b.disabled = false; return; }
   try { P("AgoraRTC.checkSystemRequirements(): " + AgoraRTC.checkSystemRequirements()); AgoraRTC.setLogLevel(0); } catch (e) { P("checkSystemRequirements xatosi: " + e.message); }
   await stunTest();
-  await joinTest(appId, "1-test: oddiy ulanish (tokensiz)", false, 30000);
-  await joinTest(appId, "2-test: TCP/443 zaxira kanal orqali (tokensiz)", true, 20000);
-  const keep = logs.filter(l => !/stats|volume|bitrate|packet/i.test(l)).slice(-70);
-  P("\n──── SDK log (oxirgi " + keep.length + " qator) ────\n" + keep.join("\n"));
-  P("\n✔ Tugadi. Endi '📋 Nusxa olish' ni bosing.");
+  await hostProbe();
+  await joinTest(appId, "1-test: oddiy ulanish (tokensiz)", false, 20000);
+  await joinTest(appId, "2-test: TCP/443 zaxira kanal orqali (tokensiz)", true, 15000);
+  await areaTest(appId, "EUROPE");
+  await areaTest(appId, "ASIA");
+    P("\n✔ Tugadi. Endi '📋 Nusxa olish' ni bosing.");
   b.disabled = false;
 };
 document.getElementById("cp").onclick = async () => { try { await navigator.clipboard.writeText(text); alert("Nusxalandi"); } catch (_) { const r = document.createRange(); r.selectNodeContents(out); const s = getSelection(); s.removeAllRanges(); s.addRange(r); alert("Matn belgilandi — nusxa oling"); } };
