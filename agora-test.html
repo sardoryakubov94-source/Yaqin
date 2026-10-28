@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agora diagnostikasi</title>
+<style>
+body{font:15px system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:14px}
+h2{margin:0 0 8px}
+button{padding:13px 18px;font-size:16px;border-radius:12px;border:0;background:#f0b040;color:#111;font-weight:700;margin:6px 6px 6px 0}
+input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #444;background:#1c1c1c;color:#eee;font-size:13px}
+pre{white-space:pre-wrap;word-break:break-word;background:#000;padding:10px;border-radius:8px;font-size:12px;line-height:1.45}
+small{color:#aaa}
+</style></head><body>
+<h2>🔧 Agora diagnostikasi</h2>
+<small>Bu sahifa Yaqin ilovasidan mustaqil. Faqat Agora'ga ulanishni tekshiradi (~1 daqiqa). Tugagach "Nusxa olish" ni bosib natijani yuboring.</small>
+<p><small>Agora App ID (o'zgartirish mumkin — masalan, OilaNazorati'dagi App ID bilan ham sinab ko'rish uchun):</small>
+<input id="app" value="868b06d16f0f43dc82dec0f4fefb23e9" autocomplete="off" autocapitalize="off" spellcheck="false"></p>
+<button id="go">▶ Sinashni boshlash</button><button id="cp">📋 Nusxa olish</button>
+<pre id="out">Boshlash uchun tugmani bosing.</pre>
+<script>
+const out = document.getElementById("out"); let text = "";
+const t0 = performance.now(), el = () => ((performance.now() - t0) / 1000).toFixed(1) + "s";
+const P = s => { text += s + "\n"; out.textContent = text; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const withTO = (p, ms, tag) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(tag || "TIMEOUT")), ms); })]).finally(() => clearTimeout(t)); };
+const logs = [];
+["log", "info", "warn", "error"].forEach(k => { const o = console[k]; console[k] = function () { try { logs.push(el() + " " + k + " " + [].map.call(arguments, x => typeof x === "string" ? x : (x && x.message) || JSON.stringify(x)).join(" ").slice(0, 260)); if (logs.length > 400) logs.shift(); } catch (_) {} return o.apply(console, arguments); }; });
+
+async function loadSDK() {
+  const srcs = ["https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js", "https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.23.4/AgoraRTC_N-production.js"];
+  for (const src of srcs) {
+    const s0 = performance.now();
+    try {
+      await withTO(new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error("yuklanmadi")); document.head.appendChild(sc); }), 15000, "15s timeout");
+      if (window.AgoraRTC) { P("✅ SDK yuklandi: " + src.split("/")[2] + " (" + Math.round(performance.now() - s0) + "ms)"); return true; }
+    } catch (e) { P("❌ SDK " + src.split("/")[2] + ": " + e.message); }
+  }
+  return false;
+}
+
+async function stunTest() {
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun.cloudflare.com:3478" }] });
+    const types = {}; pc.onicecandidate = e => { if (e.candidate) { const m = / typ (\w+)/.exec(e.candidate.candidate); if (m) types[m[1]] = (types[m[1]] || 0) + 1; } };
+    pc.createDataChannel("x"); await pc.setLocalDescription(await pc.createOffer());
+    await sleep(6000); pc.close();
+    P("WebRTC/UDP (STUN) nomzodlar: " + JSON.stringify(types) + (types.srflx ? "  → UDP ishlayapti ✅" : "  → srflx YO'Q: UDP/STUN to'silgan bo'lishi mumkin ⚠️"));
+  } catch (e) { P("WebRTC testi xatosi: " + e.message); }
+}
+
+async function joinTest(appId, label, proxy, waitMs) {
+  P("\n▶ " + label + " (" + waitMs / 1000 + "s gacha kutiladi)");
+  const cl = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" }), s0 = performance.now(); let last = "";
+  cl.on("connection-state-change", (cur, prev, reason) => { last = cur + (reason ? "/" + reason : ""); P("   holat: " + prev + " → " + cur + (reason ? " (" + reason + ")" : "") + "  @" + Math.round(performance.now() - s0) + "ms"); });
+  if (proxy) { try { cl.startProxyServer(3); P("   TCP proksi yoqildi (mode 3)"); } catch (e) { P("   proksi xatosi: " + e.message); } }
+  try {
+    await withTO(cl.join(appId, "yq_diag_" + Math.floor(Math.random() * 9999), null, null), waitMs, "__TIMEOUT__");
+    P("✅ ULANDI (" + Math.round(performance.now() - s0) + "ms) — Agora serveriga yetib bordi va tokensiz qabul qildi (loyihada sertifikat o'chiq)");
+    try { await cl.leave(); } catch (_) {}
+  } catch (e) {
+    try { cl.leave(); } catch (_) {}
+    if (e.message === "__TIMEOUT__") P("⛔ " + Math.round(waitMs / 1000) + "s ichida JAVOB YO'Q. Oxirgi holat: " + (last || "—") + "  → Agora serveriga yetib bormayapti");
+    else P("📨 Agora JAVOB BERDI (" + Math.round(performance.now() - s0) + "ms): " + (e.code || "") + " " + String(e.message || e).slice(0, 220) + "\n   → server bilan aloqa BOR, sabab: loyiha/token/ruxsat (yuqoridagi xato kodiga qarang)");
+  }
+}
+
+document.getElementById("go").onclick = async () => {
+  const b = document.getElementById("go"); b.disabled = true; text = ""; logs.length = 0;
+  const appId = document.getElementById("app").value.trim();
+  P("Vaqt: " + new Date().toString());
+  P("Brauzer: " + navigator.userAgent);
+  const c = navigator.connection; P("Tarmoq: online=" + navigator.onLine + (c ? " tur=" + (c.type || "?") + " samarali=" + c.effectiveType + " tezlik=" + c.downlink + "Mbit rtt=" + c.rtt + "ms saveData=" + c.saveData : ""));
+  try { const s = performance.now(); await withTO(fetch("https://www.cloudflare.com/cdn-cgi/trace", { cache: "no-store" }), 8000); P("✅ Umumiy internet: OK (" + Math.round(performance.now() - s) + "ms)"); } catch (e) { P("❌ Umumiy internet: " + e.message); }
+  if (!(await loadSDK())) { P("\nSDK yuklanmadi — keyingi testlarni o'tkazib bo'lmaydi."); b.disabled = false; return; }
+  try { P("AgoraRTC.checkSystemRequirements(): " + AgoraRTC.checkSystemRequirements()); AgoraRTC.setLogLevel(0); } catch (e) { P("checkSystemRequirements xatosi: " + e.message); }
+  await stunTest();
+  await joinTest(appId, "1-test: oddiy ulanish (tokensiz)", false, 30000);
+  await joinTest(appId, "2-test: TCP/443 zaxira kanal orqali (tokensiz)", true, 20000);
+  const keep = logs.filter(l => !/stats|volume|bitrate|packet/i.test(l)).slice(-70);
+  P("\n──── SDK log (oxirgi " + keep.length + " qator) ────\n" + keep.join("\n"));
+  P("\n✔ Tugadi. Endi '📋 Nusxa olish' ni bosing.");
+  b.disabled = false;
+};
+document.getElementById("cp").onclick = async () => { try { await navigator.clipboard.writeText(text); alert("Nusxalandi"); } catch (_) { const r = document.createRange(); r.selectNodeContents(out); const s = getSelection(); s.removeAllRanges(); s.addRange(r); alert("Matn belgilandi — nusxa oling"); } };
+</script></body></html>
