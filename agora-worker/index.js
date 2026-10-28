@@ -1,7 +1,10 @@
 // Yaqin Worker (Cloudflare, bepul, kutubxonasiz): Agora token (guruh + 1:1 qoʻngʻiroq) + Openinary yuklash imzosi.
 // Secretlar: AGORA_APP_CERT, OPENINARY_API_KEY, FIREBASE_SA (kodga yozilmaydi).
 const PROJECT = "yaqin-3f9f9";
-const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
+const APP_ID_DEFAULT = "868b06d16f0f43dc82dec0f4fefb23e9"; // env.AGORA_APP_ID berilsa, shu ishlatiladi (masalan OilaNazorati loyihasi)
+const appIdOf = env => (env && env.AGORA_APP_ID) || APP_ID_DEFAULT;
+// Sertifikat yoqilmagan loyiha uchun: AGORA_APP_CERT berilmasa token null (App ID-only rejim)
+const mkToken = (env, channel, uid) => env.AGORA_APP_CERT ? rtcToken(appIdOf(env), env.AGORA_APP_CERT, channel, uid, TOKEN_TTL) : Promise.resolve(null);
 const FS = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
 const TOKEN_TTL = 3600; // soniya
 
@@ -280,8 +283,8 @@ export default {
       if (!players.includes(uid)) return fail("Siz bu xonada emassiz.", 403);
       if ((gf.status?.stringValue || "") !== "open") return fail("Xona yopilgan.", 403);
       const gch = "yg_" + roomId, gauid = hashUid(uid);
-      const gtoken = await rtcToken(APP_ID, env.AGORA_APP_CERT, gch, gauid, TOKEN_TTL);
-      return out({ appId: APP_ID, channel: gch, uid: gauid, token: gtoken, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
+      const gtoken = await mkToken(env, gch, gauid);
+      return out({ appId: appIdOf(env), channel: gch, uid: gauid, token: gtoken, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
     }
 
     // ---- Agora: shaxsiy (1:1) qoʻngʻiroq tokeni ----
@@ -297,8 +300,8 @@ export default {
       if (uid !== f.from?.stringValue && uid !== f.to?.stringValue) return fail("Bu qoʻngʻiroqqa ruxsat yoʻq.", 403);
       if (st !== "ringing" && st !== "accepted") return fail("Qoʻngʻiroq tugagan.", 403);
       const channel = "yc_" + callId, auid = hashUid(uid);
-      const token = await rtcToken(APP_ID, env.AGORA_APP_CERT, channel, auid, TOKEN_TTL);
-      return out({ appId: APP_ID, channel, uid: auid, token, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
+      const token = await mkToken(env, channel, auid);
+      return out({ appId: appIdOf(env), channel, uid: auid, token, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
     }
 
     // ---- Agora: guruh ovozli chat / video translatsiya tokeni ----
@@ -311,7 +314,7 @@ export default {
     if (r.e) return fail(...r.e);
     const pu = r.f.premiumUntil || {};
     if (!(Number(pu.integerValue ?? pu.doubleValue ?? 0) > Date.now())) return fail("Guruh Premium muddati tugagan.", 403);
-    const token = await rtcToken(APP_ID, env.AGORA_APP_CERT, channel, agoraUid, TOKEN_TTL);
-    return out({ appId: APP_ID, channel, uid: agoraUid, token, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
+    const token = await mkToken(env, channel, agoraUid);
+    return out({ appId: appIdOf(env), channel, uid: agoraUid, token, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
   },
 };
