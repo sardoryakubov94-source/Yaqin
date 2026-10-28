@@ -320,7 +320,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
 
   // ---------- Ovozli xona (Agora): tinglash avtomatik, mikrofon ixtiyoriy ----------
-  let vstate = "off", vmsg = "", vInit = false, beatT = null;
+  let vstate = "off", vmsg = "", vInit = false, beatT = null, vStep = "";
   const VOICE_TTL = 60000, VOICE_BEAT = 20000;
   const voiceLive = d => { const v = d && d.voice; if (!v || typeof v !== "object") return false; const now = Date.now(); return Object.keys(v).some(u => typeof v[u] === "number" && now - v[u] < VOICE_TTL); };
   function stopBeat() { clearInterval(beatT); beatT = null; }
@@ -332,7 +332,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if (!on && !conn && !voiceLive(R)) { el.hidden = true; el.innerHTML = ""; return; }
     el.hidden = false;
     el.innerHTML = on ? `<span class="dot"></span><span>🔊 Siz ovozdasiz · ${n} kishi ulangan</span>`
-      : `<span class="dot"></span><span>🎙️ Ovozli chat ochiq · ${n} kishi ulangan</span><button type="button" class="go" onclick="gmVoice(true)"${conn ? " disabled" : ""}>${conn ? "Ulanmoqda…" : "Qoʻshilish"}</button>`;
+      : conn ? `<span class="dot"></span><span>⏳ ${esc(vStep || "Ulanmoqda…")}</span>`
+      : `<span class="dot"></span><span>🎙️ Ovozli chat ochiq · ${n} kishi ulangan</span><button type="button" class="go" onclick="gmVoice(true)">Qoʻshilish</button>`;
   }
   function voiceUI() {
     voiceBar();
@@ -341,7 +342,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     const msg = on ? (c && !c.muted ? "🎙️ Mikrofon yoqilgan · siz gapira olasiz" : "🔊 Ovozli chat yoniq · mikrofon oʻchiq") : vmsg;
     el.innerHTML = `<div class="yaqin-call-head"><span class="yaqin-call-live-dot"></span><span class="yaqin-call-status">${esc(msg || "")}</span></div><div class="yaqin-call-actions">` +
       (on ? `<button class="yaqin-call-btn" type="button" onclick="gmMute()">${c && !c.muted ? "🎙️ Mikrofonni oʻchirish" : "🔇 Mikrofonni yoqish"}</button><button class="yaqin-call-btn yaqin-call-end" type="button" onclick="gmVoiceEnd()">${ic("phone", 18, "rot")} Tugatish</button>`
-        : `<button class="yaqin-call-btn yaqin-call-primary" style="grid-column:1/-1" type="button" onclick="gmVoice()"${vstate === "conn" ? " disabled" : ""}>${ic("mic", 18)} ${vstate === "conn" ? "Ulanmoqda…" : "Ovozli chat"}</button>`) + `</div>`;
+        : `<button class="yaqin-call-btn yaqin-call-primary" style="grid-column:1/-1" type="button" onclick="gmVoice()"${vstate === "conn" ? " disabled" : ""}>${ic("mic", 18)} ${vstate === "conn" ? esc(vStep || "Ulanmoqda…") : "Ovozli chat"}</button>`) + `</div>`;
   }
   window.gmVoice = async function (auto) {
     if (vstate !== "off" || !RID) return;
@@ -359,11 +360,28 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     await stopVoice(); vstate = "off"; vmsg = ""; voiceUI();
     if (rid) FB.gmVoiceBeat(rid, false).catch(() => {});
   };
+  const withTO = (p, ms, msg) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(msg)), ms); })]).finally(() => clearTimeout(t)); };
+  const setStep = t => { vStep = t; voiceUI(); };
+  const AGORA_SRC = ["https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js", "https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.23.4/AgoraRTC_N-production.js"];
+  async function loadAgora() {
+    if (window.AgoraRTC) return;
+    let err;
+    for (const src of AGORA_SRC) {
+      try {
+        await withTO(new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = () => { sc.remove(); rej(new Error("Agora SDK yuklanmadi")); }; document.head.appendChild(sc); }), 12000, "Agora SDK yuklash vaqti tugadi");
+        if (window.AgoraRTC) return;
+      } catch (e) { err = e; }
+    }
+    throw err || new Error("Agora SDK yuklanmadi. Internetni tekshiring.");
+  }
   async function startVoice(id) {
     const vs = () => $("gmVs"); const say = t => { if (vs()) vs().textContent = t; };
     try {
-      if (!window.AgoraRTC) await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js"; sc.onload = res; sc.onerror = () => rej(new Error("Agora SDK yuklanmadi")); document.head.appendChild(sc); });
-      const cr = await FB.gmToken(id);
+      setStep("SDK yuklanmoqda…");
+      await loadAgora();
+      setStep("Server bilan aloqa…");
+      const cr = await withTO(FB.gmToken(id), 15000, "Server javob bermadi (token olinmadi). Internetni tekshiring.");
+      setStep("Ovozli xonaga ulanmoqda…");
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       const c = { id, client, mic: null, muted: true, left: false }; call = c;
       const btn = $("gmMic");
@@ -378,15 +396,15 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         if (!R) return;
         R.players.forEach(p => { const lv = vols.find(v => v.uid === uidFor(p) || (p === st.user.uid && v.uid === 0)); $("gs_" + p)?.classList.toggle("speak", !!lv && lv.level > 8); });
       });
-      await client.join(cr.appId, cr.channel, cr.token, cr.uid);
+      await withTO(client.join(cr.appId, cr.channel, cr.token, cr.uid), 25000, "Agora serveriga ulanib boʻlmadi (internet sekin yoki VPN/tarmoq bloklamoqda).");
       if (c.left) { await client.leave(); return; }
       for (const u of client.remoteUsers) if (u.hasAudio) await playRemote(u, "audio");
       say("🔊 Ovozli xona ulandi · mikrofon oʻchiq");
     } catch (e) {
       console.error("gm voice:", e);
       say("⚠️ Ovozli xonaga ulanilmadi: " + (e.message || e));
-      vmsg = "⚠️ Ulanilmadi: " + (e.message || e); try { call && call.client && call.client.leave(); } catch (_) {} call = null;
-    }
+      vmsg = "⚠️ Ulanilmadi: " + (e.message || e); toast(vmsg); try { call && call.client && call.client.leave(); } catch (_) {} call = null;
+    } finally { vStep = ""; }
   }
   window.gmMute = async function () {
     const c = call;
