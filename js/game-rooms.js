@@ -33,8 +33,8 @@
   const isBot = (d, u) => !!(d.pm && d.pm[u] && d.pm[u].bot);
   const hCnt = (d, g) => d.players.filter(u => !isBot(d, u) && (g === "f" ? gOf(d, u) === "f" : gOf(d, u) !== "f")).length;
   const BOT_SAY = ["Qiziq savol! Menimcha, eng muhimi — oʻzaro hurmat va samimiyat.", "Men uchun oila tinchligi hammasidan ustun.", "Hmm, oʻylab koʻrish kerak… Menimcha, sabr va mehr hal qiladi.", "Odamlarning samimiyligini qadrlayman, shuning uchun ochiq gaplashishni yaxshi koʻraman.", "Hayotda eng muhimi — sogʻlik va yaqinlar bilan birga boʻlish.", "Tinch, oddiy kunlarni yaxshi koʻraman, yaqinlar bilan choy ustida suhbat.", "Yangi joylarni koʻrish va yangi odamlar bilan tanishish menga yoqadi.", "Men halollik va mehnatsevarlikni hammadan koʻproq qadrlayman."];
-  let botT = {}, busyEnter = false, pingT = null;
-  const leavingRooms = new Set(), ROOM_STALE = 150000;
+  let botT = {}, busyEnter = false, pingT = null, listT = null, lastRs = [], newOpen = false;
+  const leavingRooms = new Set(), ROOM_STALE = 150000, ROOM_GRACE = 25000;
   const gOf = (d, u) => (d.pm && d.pm[u] && d.pm[u].g) || "";
   function ordOf(d) { const m = d.players.filter(u => gOf(d, u) !== "f"), f = d.players.filter(u => gOf(d, u) === "f"), a = gOf(d, d.owner) === "f" ? f : m, b = a === f ? m : f, o = []; for (let i = 0; i < Math.max(m.length, f.length); i++) { if (a[i]) o.push(a[i]); if (b[i]) o.push(b[i]); } return o; }
   const pn = (d, u) => (d.pm && d.pm[u] && d.pm[u].n) || "Oʻyinchi";
@@ -43,25 +43,36 @@
   // ---------- Xonalar roʻyxati ----------
   window.gmOpenList = function () {
     if (!st.user) { uiAlert("Guruhli oʻyinlarga kirish uchun avval tizimga kiring."); return; }
-    view = "list"; unL && unL();
+    view = "list"; unL && unL(); newOpen = false;
     drawList([]);
     unL = FB.gmRooms(rs => { if (view === "list") drawList(rs); });
   };
   function drawList(rs) {
+    lastRs = rs;
+    const me = st.user.uid, now = Date.now();
     const live = r => (r.players || []).some(u => !isBot(r, u));
     rs = rs.filter(r => r.status === "open");
-    // Roʻyxat ekranida turgan boʻlsam, men yozilgan xona — "arvoh": ilova yopilgan/uzilgan. Oʻzimni chiqaraman (oxirgi odam boʻlsam xona yopiladi).
-    if (!busyEnter) rs.filter(r => (r.players || []).includes(st.user.uid) && r.id !== RID && !leavingRooms.has(r.id)).forEach(r => { leavingRooms.add(r.id); FB.gmLeave(r.id).catch(() => {}).finally(() => setTimeout(() => leavingRooms.delete(r.id), 8000)); });
-    const stale = r => Date.now() - (r.updatedAt || 0) > ROOM_STALE;
-    const mine = rs.filter(r => (!live(r) || stale(r)) && r.owner === st.user.uid).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    mine.forEach(r => FB.gmDelete(r.id).catch(() => {}));
-    rs = rs.filter(r => live(r) && !stale(r) && !(r.players || []).includes(st.user.uid)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    // Roʻyxat ekranida turgan boʻlsam, men yozilgan xona — "arvoh": ilova yopilgan/uzilgan. Oʻzimni chiqaraman.
+    if (!busyEnter) rs.filter(r => (r.players || []).includes(me) && r.id !== RID && !leavingRooms.has(r.id)).forEach(r => { leavingRooms.add(r.id); FB.gmLeave(r.id).catch(() => {}).finally(() => setTimeout(() => leavingRooms.delete(r.id), 8000)); });
+    // Boʻsh qolgan xona 25 soniya saqlanadi (adashib chiqib ketgan qaytib kirishi mumkin), keyin yashiriladi/oʻchiriladi.
+    const graceOver = r => now - (r.humanLeftAt || r.updatedAt || 0) > ROOM_GRACE;
+    const stale = r => now - (r.updatedAt || 0) > ROOM_STALE;
+    const dead = r => live(r) ? stale(r) : graceOver(r);
+    rs.filter(r => dead(r) && r.owner === me).forEach(r => FB.gmDelete(r.id).catch(() => {}));
+    rs = rs.filter(r => !dead(r) && !(r.players || []).includes(me)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    clearTimeout(listT); if (rs.some(r => !live(r))) listT = setTimeout(() => { if (view === "list") drawList(lastRs); }, ROOM_GRACE + 1500);
+    const keep = { t: ($("gmT") || {}).value || "", m: ($("gmM") || {}).value || "", b: $("gmB") ? $("gmB").checked : true };
     const row = r => `<div class="gm-room" onclick="gmEnter('${r.id}')"><div><b>${esc(r.title)}</b><small>${live(r) ? r.players.filter(u => !isBot(r, u)).map(u => esc(pn(r, u))).slice(0, 3).join(", ") : "Hozircha boʻsh · kirishingiz mumkin"}</small></div><span>👩 ${hCnt(r, "f")}/${r.max / 2}<br>👨 ${hCnt(r, "m")}/${r.max / 2}${r.owner === st.user.uid ? `<br><b onclick="event.stopPropagation();gmDel('${r.id}')" style="font-size:16px">🗑</b>` : ""}</span></div>`;
     layer(`<div class="gm-top"><button class="gm-ic" onclick="gmCloseAll()">←</button><b>🎲 Guruhli oʻyinlar</b></div>
 <div class="gm-body"><p class="gm-sub">Ovozli oʻyin: shisha aylanadi, savolga javob berasiz, yoqsangiz — gul yuborasiz. Hammasi ovoz orqali.</p>
-<div class="gm-new"><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><label class="gm-chk"><input type="checkbox" id="gmB" checked> Odam yetmasa 1 daqiqadan keyin yordamchi oʻyinchilar toʻldirsin</label><button class="go" onclick="gmCreate()">Xona ochish</button></div>
+<button class="go" id="gmNewBtn" type="button" style="width:100%;margin-bottom:12px" onclick="gmToggleNew()">➕ Yangi xona ochish</button>
+<div class="gm-new" id="gmNew" hidden><input id="gmT" maxlength="40" placeholder="Xona nomi (masalan: Andijon davrasi)"><select id="gmM"><option value="4">4 kishi (2 qiz + 2 yigit)</option><option value="6" selected>6 kishi (3 qiz + 3 yigit)</option><option value="8">8 kishi (4 qiz + 4 yigit)</option></select><label class="gm-chk"><input type="checkbox" id="gmB" checked> Odam yetmasa 1 daqiqadan keyin yordamchi oʻyinchilar toʻldirsin</label><button class="go" onclick="gmCreate()">Xona ochish</button></div>
 ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona yoʻq. Birinchi boʻlib xona oching!</p>'}</div>`);
+    if ($("gmT")) { $("gmT").value = keep.t; if (keep.m && $("gmM")) $("gmM").value = keep.m; if ($("gmB")) $("gmB").checked = keep.b; }
+    applyNew();
   }
+  function applyNew() { const f = $("gmNew"), b = $("gmNewBtn"); if (f) f.hidden = !newOpen; if (b) b.textContent = newOpen ? "✕ Bekor qilish" : "➕ Yangi xona ochish"; }
+  window.gmToggleNew = function () { newOpen = !newOpen; applyNew(); if (newOpen) setTimeout(() => $("gmT") && $("gmT").focus(), 50); };
   window.gmDel = function (id) { if (confirm("Bu xonani butunlay oʻchirasizmi?")) FB.gmDelete(id).catch(e => uiAlert("Oʻchirilmadi: " + (e.message || e))); };
   window.gmCreate = async function () {
     const t = ($("gmT") || {}).value || "", m = ($("gmM") || {}).value || 6;
@@ -411,14 +422,20 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
 
   // ---------- Chiqish ----------
-  window.gmLeave = async function (silent) {
+  window.gmLeave = function (silent) {
     const id = RID; closing = true;
-    await stopVoice();
-    try { id && await FB.gmLeave(id); } catch (e) { console.warn(e); }
+    if (id) { leavingRooms.add(id); setTimeout(() => leavingRooms.delete(id), 10000); stopVoice().catch(() => {}); FB.gmLeave(id).catch(e => console.warn("gmLeave:", e)); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };
   function cleanup() { clearInterval(pingT); pingT = null; vstate = "off"; vmsg = ""; unW && unW(); unG && unG(); clearInterval(tick); clearTimeout(animTimer); unW = unG = null; RID = null; R = null; }
-  window.gmCloseAll = function () { stopVoice(); unL && unL(); unL = null; if (RID) { const id = RID; FB.gmLeave(id).catch(() => {}); } cleanup(); view = ""; drop(); };
+  window.gmCloseAll = function () { stopVoice().catch(() => {}); unL && unL(); unL = null; clearTimeout(listT); if (RID) { const id = RID; leavingRooms.add(id); setTimeout(() => leavingRooms.delete(id), 10000); FB.gmLeave(id).catch(() => {}); } cleanup(); view = ""; drop(); };
+  // Telefon "ortga" tugmasi (app.js popstate chaqiradi): avval ochiq oynacha, keyin xona -> roʻyxat -> yopish
+  window.gmBackHandler = function () {
+    if (!$("gm")) return false;
+    const sh = $("gmSheet") || $("gmQuestionTemplates"); if (sh) { sh.remove(); return true; }
+    if (view === "room") { window.gmLeave(); return true; }
+    window.gmCloseAll(); return true;
+  };
 
   // ---------- Guruhlar sahifasiga kirish tugmasi ----------
   const base = window.groupsV;

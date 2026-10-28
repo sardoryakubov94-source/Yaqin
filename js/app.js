@@ -473,6 +473,7 @@ let backPressedAt=0,allowExitBack=false;
 function armYaqinBack(){try{history.pushState({yaqinBackTrap:true},"",location.href)}catch(e){}}
 addEventListener("popstate",()=>{
  if(allowExitBack){allowExitBack=false;return}
+ if(window.gmBackHandler&&window.gmBackHandler()){armYaqinBack();return}
  const now=Date.now();
  if(st.form||st.chat||st.swProfile||st.sw){
   if(st.chat)closeChat();
