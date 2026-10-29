@@ -287,6 +287,21 @@ export default {
       return out({ appId: appIdOf(env), channel: gch, uid: gauid, token: gtoken, expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL });
     }
 
+    // ---- WebRTC (Agora'siz ovoz): ICE/TURN serverlar ----
+    if (path === "/api/rtc/ice") {
+      const chk = await fs("/gamerooms/_ping"); // token haqiqiyligini Firestore tekshiradi (404 = ruxsat bor, hujjat yoʻq)
+      if (chk.status === 401 || chk.status === 403) return fail("Sessiya yaroqsiz. Qayta kiring.", 401);
+      const ice = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }];
+      let turn = false;
+      if (env.TURN_KEY_ID && env.TURN_API_TOKEN) {
+        try {
+          const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${enc(env.TURN_KEY_ID)}/credentials/generate`, { method: "POST", headers: { Authorization: "Bearer " + env.TURN_API_TOKEN, "Content-Type": "application/json" }, body: JSON.stringify({ ttl: 86400 }) });
+          if (r.ok) { const j = await r.json(); const is = j.iceServers; (Array.isArray(is) ? is : [is]).filter(Boolean).forEach(x => ice.push(x)); turn = true; }
+        } catch (_) {}
+      }
+      return out({ iceServers: ice, turn });
+    }
+
     // ---- Agora: shaxsiy (1:1) qoʻngʻiroq tokeni ----
     if (path === "/api/call/token") {
       if (!env.AGORA_APP_CERT) return fail("AGORA_APP_CERT server siri sozlanmagan.", 500);

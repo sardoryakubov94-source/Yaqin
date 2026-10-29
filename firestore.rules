@@ -159,6 +159,18 @@ service cloud.firestore {
           && request.resource.data.name is string && request.resource.data.name.size() <= 60
           && request.resource.data.t is number;
       }
+      // WebRTC ovoz signali (offer/answer/ICE): faqat xona aʼzolari oʻrtasida, qabul qiluvchi oʻqiydi va oʻchiradi
+      match /rtc/{sid} {
+        allow read: if signed() && request.auth.uid in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
+          && resource.data.to == request.auth.uid;
+        allow create: if signed() && request.auth.uid in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
+          && request.resource.data.from == request.auth.uid
+          && request.resource.data.to in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
+          && request.resource.data.type in ['offer','answer','cand','hello']
+          && request.resource.data.data is string && request.resource.data.data.size() <= 12000
+          && request.resource.data.t is number;
+        allow delete: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      }
       match /gifts/{gid} {
         allow read: if signed();
         allow create: if signed() && request.resource.data.from == request.auth.uid
