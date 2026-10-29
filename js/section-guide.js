@@ -1,0 +1,34 @@
+/* Yaqin in-app, first-visit guides. Each section is explained once per browser profile. */
+(function(){
+"use strict";
+var KEY="yq_section_guide_v1";
+var copy={
+ home:{title:"Filtr bo‘limi",text:"Bu yerda nomzodlarni o‘zingiz istagandek sozlang: kelin yoki kuyov, tanishuv maqsadi va hududni tanlang. Kerak bo‘lsa «Filtrlar»ni ochib, qo‘shimcha mezonlarni belgilang. So‘ng «Qidirish» tugmasini bosing.",target:".box"},
+ open:{title:"Ochiq e’lonlar",text:"Bu bo‘limda Yaqin sizning qiziqishlaringiz va hududingizga mos nomzodlarni tavsiya qiladi. Profilni ko‘ring, yoqqan nomzodni tanlang va suhbatni boshlang. O‘zingiz haqingizdagi ma’lumotlar va qiziqishlarni to‘ldirsangiz, mos tavsiyalar olish osonlashadi.",target:".swipe-hero"},
+ msg:{title:"Xabarlar bo‘limi",text:"Nomzodlar bilan yozishmalaringiz shu yerda saqlanadi. Suhbatni tanlab, xabar yuborishingiz mumkin. Shaxsiy ma’lumotlaringizni faqat ishonch hosil qilganingizdan keyin ulashing.",target:null},
+ fav:{title:"Sevimlilar bo‘limi",text:"Siz yoqtirgan va keyin yana ko‘rmoqchi bo‘lgan nomzodlar shu yerda jamlanadi. Yurak belgisini bosib, nomzodni sevimlilarga qo‘shing yoki ro‘yxatdan olib tashlang.",target:null},
+ map:{title:"Xarita bo‘limi",text:"Xaritada hududlarni tanlab, shu joylardagi e’lonlarni ko‘rishingiz mumkin. Viloyat yoki tumanni tanlang va «Hududni chizish»ni bosing. Joylashuvni ko‘rsatish uchun telefon yoki brauzer ruxsati kerak bo‘lishi mumkin.",target:"#map"},
+ circ:{title:"Guruhlar bo‘limi",text:"Bu yerda qiziqishlaringizga mos guruhlarni topasiz yoki yangi guruh ochasiz. Guruhga kirish shartlarini tekshiring, suhbatlashing va qoidalarga rioya qiling.",target:null},
+ prof:{title:"Profil bo‘limi",text:"Profilingizda ism, yosh, hudud, qiziqishlar va e’lonlaringizni boshqarasiz. Ma’lumotlarni to‘liq kiriting — bu sizga mos nomzodlarni tavsiya qilishga yordam beradi.",target:null}
+};
+var styles=`#yqGuide{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(7,5,14,.78);backdrop-filter:blur(5px);font-family:system-ui,sans-serif;color:#f4f0ff}#yqGuide.show{display:flex;animation:yqg-in .18s ease}#yqGuide *{box-sizing:border-box}#yqGuide .yqg-card{width:min(100%,390px);padding:24px 22px 20px;border-radius:23px;background:linear-gradient(145deg,#30223e,#1e1a2e 72%);border:1px solid #ffffff25;box-shadow:0 22px 80px #0009}#yqGuide .yqg-step{font-size:11px;font-weight:800;letter-spacing:1.1px;color:#f0b34a;margin-bottom:9px}#yqGuide h2{font-size:23px;line-height:1.2;margin:0 0 12px}#yqGuide p{font-size:14px;line-height:1.65;color:#c5bdd8;margin:0 0 20px}#yqGuide .yqg-actions{display:flex;gap:9px}#yqGuide button{border-radius:13px;padding:12px 15px;font:700 14px system-ui;cursor:pointer}#yqGuide .yqg-skip{background:#ffffff10;color:#d2cbe1;border:1px solid #ffffff20}#yqGuide .yqg-ok{flex:1;background:linear-gradient(135deg,#ffd27a,#f0b34a);color:#21182a}#yqGuide .yqg-pointer{font-size:12px;color:#9e94ba;margin-top:12px;text-align:center}@keyframes yqg-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}@media(max-height:520px){#yqGuide .yqg-card{padding:17px;max-height:90dvh;overflow:auto}#yqGuide h2{font-size:20px}#yqGuide p{font-size:13px;line-height:1.45;margin-bottom:14px}}`;
+var root,style,seen={},queue=[],active=null;
+try{seen=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){seen={}}
+function getTab(){try{return window.st&&st.tab||"home"}catch(e){return"home"}}
+function getSeen(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){return{}}}
+function mark(k){seen=getSeen();seen[k]=1;try{localStorage.setItem(KEY,JSON.stringify(seen))}catch(e){}}
+function create(){if(root)return;style=document.createElement("style");style.textContent=styles;document.head.appendChild(style);root=document.createElement("div");root.id="yqGuide";root.setAttribute("role","dialog");root.setAttribute("aria-modal","true");root.innerHTML='<div class="yqg-card"><div class="yqg-step"></div><h2></h2><p></p><div class="yqg-actions"><button class="yqg-skip" type="button">Keyinroq</button><button class="yqg-ok" type="button">Tushundim</button></div><div class="yqg-pointer">Bu ko‘rsatma faqat birinchi kirishda ko‘rsatiladi</div></div>';document.body.appendChild(root);root.querySelector(".yqg-ok").addEventListener("click",next);root.querySelector(".yqg-skip").addEventListener("click",dismiss);root.addEventListener("click",function(e){if(e.target===root)dismiss()})}
+function stepsFor(tab){if(tab==="home")return[{key:"home",data:copy.home},{key:"open",data:copy.open}];return copy[tab]?[{key:tab,data:copy[tab]}]:[]}
+function eligible(){var intro=document.getElementById("yqIntro");if(intro&&intro.classList.contains("show"))return false;return !document.querySelector(".md,.ov:not(.yqg-card)")||(!document.querySelector(".md")&&!document.querySelector(".ov"))}
+function show(tab){if(active||!eligible())return;var list=stepsFor(tab).filter(x=>!getSeen()[x.key]);if(!list.length)return;queue=list;active=tab;create();render()}
+function render(){if(!root||!queue.length){finish();return}var item=queue[0],d=item.data;root.querySelector(".yqg-step").textContent=item.key==="home"?"1-QADAM · BOSHLASH":item.key==="open"?"2-QADAM · NOMZODLAR":"BO‘LIM BILAN TANISHING";root.querySelector("h2").textContent=d.title;root.querySelector("p").textContent=d.text;root.classList.add("show");document.body.style.overflow="hidden"}
+function next(){if(!queue.length)return;mark(queue[0].key);queue.shift();if(queue.length)render();else finish()}
+function dismiss(){queue.forEach(x=>mark(x.key));queue=[];finish()}
+function finish(){if(root)root.classList.remove("show");document.body.style.overflow="";active=null;queue=[]}
+function afterIntro(){if(active)return;var tab=getTab();show(tab)}
+function schedule(tab){if(active)return;window.setTimeout(function(){if(active)return;var intro=document.getElementById("yqIntro");if(intro&&intro.classList.contains("show"))return;show(tab)},450)}
+document.addEventListener("click",function(e){var b=e.target.closest("#nav button");if(!b||b.classList.contains("plus"))return;var tab=getTab();schedule(tab)},true);
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
+function boot(){var intro=document.getElementById("yqIntro");if(intro){var obs=new MutationObserver(function(){if(!intro.classList.contains("show"))schedule(getTab())});obs.observe(intro,{attributes:true,attributeFilter:["class"]});if(!intro.classList.contains("show"))schedule(getTab())}else schedule(getTab());}
+window.YaqinSectionGuide={show:function(tab){schedule(tab||getTab())},reset:function(){try{localStorage.removeItem(KEY)}catch(e){}seen={}}};
+})();
