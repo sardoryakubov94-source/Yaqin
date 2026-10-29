@@ -171,6 +171,11 @@
     try { await FB.groupCallLeave(call.gid); } catch (e) { console.warn("Guruh qoʻngʻirogʻidan chiqish:", e); }
     if (!silent && st?.chat?.id === call.gid) draw();
   }
+  window.groupCallMic = function () {
+    const c = GC; if (!c || !c.rtc) return;
+    c.muted = !c.muted; c.rtc.setMuted(c.muted); updateButtons(c);
+  };
+  window.groupCallCam = function () { if (GC) toggleCamera(GC); };
   window.addEventListener("pagehide", () => { try { GC && GC.rtc && GC.rtc.leave(); } catch (_) {} });
   window.startGroupCall = startGroupCall;
   window.leaveGroupCall = leaveGroupCall;

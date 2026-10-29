@@ -736,3 +736,6 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 @keyframes gmvp{0%{box-shadow:0 0 0 0 rgba(61,220,132,.7)}100%{box-shadow:0 0 0 9px rgba(61,220,132,0)}}
 
 .gm-new[hidden]{display:none}
+
+/* Guruh qoʻngʻirogʻi: yolgʻiz qolgan "Tugatish" tugmasi butun qatorni egallaydi */
+.yaqin-call-actions>.yaqin-call-end:last-child:nth-child(odd){grid-column:1/-1}
