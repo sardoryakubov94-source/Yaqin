@@ -10,7 +10,7 @@
 
   function create(o) {
     const me = String(o.myUid), peers = new Map(), early = new Map(), logs = [];
-    let iceServers = null, micTrack = null, localAn = null, muted = true, joined = false, unsub = null;
+    let iceServers = null, micTrack = null, camTrack = null, localAn = null, muted = true, joined = false, unsub = null;
     let ac = null, host = null, speakT = null, watchT = null, queue = Promise.resolve(), lastSet = [], gestureFn = null;
     const speaking = new Map();
     const log = (...a) => { logs.push(((typeof performance !== "undefined" ? performance.now() / 1000 : 0).toFixed(1) + "s " + a.join(" ")).slice(0, 240)); if (logs.length > 160) logs.shift(); };
@@ -34,13 +34,16 @@
       const pc = new RTCPeerConnection({ iceServers, bundlePolicy: "max-bundle" });
       // Taklif beruvchi transceiver yaratadi; javob beruvchi esa taklifdan kelgan transceiver'dan foydalanadi (aks holda mikrofon ishlatilmaydigan transceiver'ga ulanib qoladi).
       const tr = asInit ? pc.addTransceiver("audio", { direction: "sendrecv" }) : null;
-      const p = { uid: other, pc, id, tr, pend: [], remoteSet: false, t0: Date.now(), audio: null, an: null, closed: false };
+      const trv = asInit && o.video ? pc.addTransceiver("video", { direction: "sendrecv" }) : null;
+      const p = { uid: other, pc, id, tr, trv, pend: [], remoteSet: false, t0: Date.now(), audio: null, an: null, closed: false, vstream: null, vOn: false, sentConn: false };
       if (tr && micTrack && !muted) tr.sender.replaceTrack(micTrack).catch(() => {});
+      if (trv && camTrack) setSender(trv, camTrack);
       pc.onicecandidate = e => { if (e.candidate) send(other, id, "cand", JSON.stringify(e.candidate)); };
-      pc.ontrack = e => attach(p, (e.streams && e.streams[0]) || new MediaStream([e.track]));
+      pc.ontrack = e => { if (e.track.kind === "audio") attach(p, new MediaStream([e.track])); else if (e.track.kind === "video") { p.vstream = new MediaStream([e.track]); e.track.onunmute = () => refreshVideo(p); refreshVideo(p); } };
       pc.oniceconnectionstatechange = () => log(short(other), "ice", pc.iceConnectionState);
       pc.onconnectionstatechange = () => {
         log(short(other), "conn", pc.connectionState); notify();
+        if (pc.connectionState === "connected" && !p.sentConn) { p.sentConn = true; if (o.video) send(other, p.id, "vid", camTrack ? "1" : "0"); }
         if (pc.connectionState === "failed") setTimeout(() => { if (!p.closed && peers.get(other) === p && pc.connectionState === "failed") restart(other); }, 1200);
       };
       peers.set(other, p); notify(); return p;
@@ -51,7 +54,13 @@
       try { p.pc.onicecandidate = p.pc.ontrack = p.pc.onconnectionstatechange = null; p.pc.close(); } catch (_) {}
       try { if (p.audio) { p.audio.srcObject = null; p.audio.remove && p.audio.remove(); } } catch (_) {}
       try { p.an && p.an.src && p.an.src.disconnect(); } catch (_) {}
+      try { o.onRemoteVideo && o.onRemoteVideo(uid, null); } catch (_) {}
       setSpeak(uid, false); notify();
+    }
+
+    function refreshVideo(p) { try { o.onRemoteVideo && o.onRemoteVideo(p.uid, p.vOn && p.vstream ? p.vstream : null); } catch (_) {} }
+    async function setSender(t, track) {
+      try { await t.sender.replaceTrack(track || null); if (track) { const prm = t.sender.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}]; prm.encodings[0].maxBitrate = o.maxVideoBitrate || 700000; await t.sender.setParameters(prm); } } catch (e) { log("sender xato", e && e.message); }
     }
 
     async function connectTo(other) {
@@ -73,6 +82,7 @@
       if (!joined || !m || !m.from) return;
       if (m.t && Date.now() - m.t > SIG_MAX_AGE) return;
       const from = String(m.from);
+      if (m.type === "vid") { const p = peers.get(from); if (p) { p.vOn = m.data === "1"; refreshVideo(p); } else { early.set(from + "|vid", m.data); } return; }
       if (m.type === "hello") { if (isInit(from)) { const p = peers.get(from); if (!p || (p.pc.connectionState !== "connected" && Date.now() - p.t0 > 5000)) await connectTo(from); } return; }
       if (m.type === "offer") {
         if (isInit(from)) return; // faqat kichik uid taklif yuboradi
@@ -81,8 +91,12 @@
         p = makePeer(from, m.sid, false);
         const ek = from + "|" + m.sid; if (early.has(ek)) { p.pend.push(...early.get(ek)); early.delete(ek); }
         await p.pc.setRemoteDescription(JSON.parse(m.data)); p.remoteSet = true;
-        const tr = p.pc.getTransceivers().find(t => t.mid !== null && t.receiver && t.receiver.track && t.receiver.track.kind === "audio");
+        const pick = kind => p.pc.getTransceivers().find(t => t.mid !== null && t.receiver && t.receiver.track && t.receiver.track.kind === kind);
+        const tr = pick("audio");
         if (tr) { p.tr = tr; try { tr.direction = "sendrecv"; } catch (_) {} if (micTrack && !muted) tr.sender.replaceTrack(micTrack).catch(() => {}); }
+        const trv = o.video ? pick("video") : null;
+        if (trv) { p.trv = trv; try { trv.direction = "sendrecv"; } catch (_) {} if (camTrack) setSender(trv, camTrack); }
+        const ev = early.get(from + "|vid"); if (ev !== undefined) { p.vOn = ev === "1"; early.delete(from + "|vid"); }
         await flush(p);
         const ans = await p.pc.createAnswer(); await p.pc.setLocalDescription(ans);
         await send(from, m.sid, "answer", JSON.stringify({ type: ans.type, sdp: ans.sdp })); log("answer →", short(from));
@@ -163,6 +177,11 @@
           try { localAn && localAn.src && localAn.src.disconnect(); } catch (_) {} localAn = null; setSpeak(me, false);
         }
       },
+      async setVideo(track) {
+        camTrack = track || null;
+        for (const p of peers.values()) { if (p.trv) await setSender(p.trv, camTrack); send(p.uid, p.id, "vid", camTrack ? "1" : "0"); }
+      },
+      setMuted(m) { muted = !!m; if (micTrack) micTrack.enabled = !muted; if (muted) setSpeak(me, false); },
       isMuted: () => muted,
       leave() {
         if (!joined && !host) return; joined = false;

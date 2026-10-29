@@ -364,24 +364,37 @@
     const my = C; if (!my) return;
     ui("live"); status("Ulanmoqda…");
     try {
-      await loadSdk();
-      const myUid = uidFor(st.user.uid);
-      const d = await FB.callToken(my.id, myUid);
-      if (C !== my) return;
-      const client = my.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      client.on("user-joined", () => { if (!my.t0) { my.t0 = Date.now(); my.clock = setInterval(() => status(fmt((Date.now() - my.t0) / 1000)), 500); status("0:00"); } });
-      client.on("user-published", async (u, type) => {
-        try { await client.subscribe(u, type); } catch (_) { return; }
-        if (type === "video") { const r = q("ycRemote"); if (r) { u.videoTrack.play(r); r.classList.add("on"); } q("yc").classList.add("hasv"); }
-        if (type === "audio") u.audioTrack.play();
+      if (!window.YQRtc) throw new Error("Ovoz moduli yuklanmadi. Sahifani yangilang.");
+      const clockStart = () => { if (!my.t0) { my.t0 = Date.now(); my.clock = setInterval(() => status(fmt((Date.now() - my.t0) / 1000)), 500); status("0:00"); } };
+      const r = my.rtc = YQRtc.create({
+        myUid: st.user.uid, video: true, maxVideoBitrate: 900000,
+        getIce: () => FB.rtcIce(),
+        send: m => FB.rtcSendC("calls", my.id, m),
+        listen: cb => FB.rtcListenC("calls", my.id, cb),
+        del: id => FB.rtcDelC("calls", my.id, id),
+        onStatus: ps => {
+          if (C !== my || my.ended) return;
+          const p = ps && ps[0];
+          if (p && p.state === "connected") { my.everConn = true; clearTimeout(my.failT); my.failT = null; clockStart(); }
+          else if (my.everConn && p && (p.state === "disconnected" || p.state === "failed")) {
+            if (!my.t0) status("Aloqa uzildi, qayta ulanmoqda…");
+            if (!my.failT) my.failT = setTimeout(() => { my.failT = null; if (C === my && !my.ended && my.rtc) { const s2 = my.rtc.status()[0]; if (!s2 || s2.state !== "connected") { status("Suhbatdosh uzildi"); setTimeout(() => { if (C === my) endLocal(true); }, 1200); } } }, 20000);
+          }
+        },
+        onRemoteVideo: (u, stream) => {
+          if (C !== my) return; const rem = q("ycRemote"); if (!rem) return;
+          let v = rem.querySelector("video");
+          if (stream) {
+            if (!v) { v = document.createElement("video"); v.autoplay = true; v.muted = true; v.setAttribute("playsinline", ""); v.style.cssText = "width:100%;height:100%;object-fit:cover"; rem.appendChild(v); }
+            v.srcObject = stream; v.play().catch(() => {}); rem.classList.add("on"); if (q("yc")) q("yc").classList.add("hasv");
+          } else { if (v) { v.srcObject = null; v.remove(); } rem.classList.remove("on"); if (q("yc")) q("yc").classList.remove("hasv"); }
+        },
       });
-      client.on("user-unpublished", (u, type) => { if (type === "video") { const r = q("ycRemote"); if (r) r.classList.remove("on"); q("yc") && q("yc").classList.remove("hasv"); } });
-      client.on("user-left", () => { if (C === my) { status("Suhbatdosh uzildi"); setTimeout(() => { if (C === my) endLocal(true); }, 1200); } });
-      client.on("token-privilege-will-expire", async () => { try { const n = await FB.callToken(my.id, myUid); await client.renewToken(n.token); } catch (_) {} });
-      await client.join(d.appId || APP_ID, d.channel, d.token, d.uid);
-      if (C !== my) { try { await client.leave(); } catch (_) {} return; }
-      my.mic = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
-      await client.publish([my.mic]);
+      await r.join();
+      if (C !== my) { try { r.leave(); } catch (_) {} return; }
+      r.syncPeers([my.peer]);
+      await r.setMic(true);
+      if (C !== my) return;
       if (my.mode === "video") await startVideo();
       status(my.t0 ? fmt((Date.now() - my.t0) / 1000) : (my.role === "caller" ? "Suhbatdosh ulanmoqda…" : "Ulanmoqda…"));
       try { if (navigator.wakeLock) my.wl = await navigator.wakeLock.request("screen"); } catch (_) {}
@@ -394,22 +407,20 @@
     const cam = await startCam("user");
     if (C !== my) { stopCam(cam); return; }
     my.cam = cam;
-    my.vtrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: cam.out, width: cam.w, height: cam.h, frameRate: 24, bitrateMin: 200, bitrateMax: 900, optimizationMode: "motion" });
-    await my.client.publish([my.vtrack]);
+    await my.rtc.setVideo(cam.out);
     renderPip(); renderFilters(); renderCtl();
   }
   async function stopVideo() {
     const my = C; if (!my || !my.cam) return;
-    try { await my.client.unpublish([my.vtrack]); } catch (_) {}
-    try { my.vtrack.close(); } catch (_) {}
+    try { await my.rtc.setVideo(null); } catch (_) {}
     stopCam(my.cam); my.cam = null; my.vtrack = null; my.filterOpen = false;
     renderPip(); renderFilters(); renderCtl();
   }
 
   // ---------- boshqaruv ----------
-  window.callMute = function () { const my = C; if (!my || !my.mic) return; my.muted = !my.muted; try { my.mic.setEnabled(!my.muted); } catch (_) {} renderCtl(); };
+  window.callMute = function () { const my = C; if (!my || !my.rtc) return; my.muted = !my.muted; try { my.rtc.setMuted(my.muted); } catch (_) {} renderCtl(); };
   window.callCamera = async function () {
-    const my = C; if (!my || !my.client) return;
+    const my = C; if (!my || !my.rtc) return;
     try { if (my.cam) await stopVideo(); else { await preflight("video"); await startVideo(); } }
     catch (e) { uiAlert("Kamerani yoqib boʻlmadi: " + (e.message || e)); }
   };
@@ -457,9 +468,8 @@
     my.ended = true; stopRing(); clearTimeout(my.tm); clearInterval(my.clock);
     try { my.unsub && my.unsub(); } catch (_) {}
     const secs = my.t0 ? (Date.now() - my.t0) / 1000 : 0;
-    try { my.client && my.client.leave(); } catch (_) {}
-    try { if (my.mic) { my.mic.stop(); my.mic.close(); } } catch (_) {}
-    try { my.vtrack && my.vtrack.close(); } catch (_) {}
+    clearTimeout(my.failT);
+    try { my.rtc && my.rtc.leave(); } catch (_) {}
     stopCam(my.cam); my.cam = null;
     try { my.wl && my.wl.release(); } catch (_) {}
     if (my.role === "caller" && my.chatId) {

@@ -1,13 +1,8 @@
-/* Agora RTC group calling for Yaqin. App ID is public; certificate stays server-side. */
+/* Yaqin: guruh ovozli/video qoʻngʻirogʻi — oddiy WebRTC (mesh), signal Firestore (groupCalls/{gid}/rtc) orqali.
+   Agora ishlatilmaydi. Fayl nomi eski; js/webrtc-voice.js (YQRtc) kerak. */
 (function () {
   "use strict";
-  const APP_ID = "868b06d16f0f43dc82dec0f4fefb23e9";
-  function channelFor(gid) { return ("yq_" + String(gid)).slice(0, 63); }
-  function uidFor(value) {
-    let h = 2166136261;
-    for (let i = 0; i < value.length; i++) { h ^= value.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return (h >>> 0) || 1;
-  }
+  const FRESH = 60000, BEAT = 20000, MAX_PEERS = 7;
   function node(uid, label) {
     const box = document.getElementById("callVideos");
     if (!box) return null;
@@ -19,7 +14,6 @@
       wrap.className = "yaqin-call-tile";
       const name = document.createElement("small");
       name.className = "agora-name";
-      name.textContent = label;
       const media = document.createElement("div");
       media.className = "agora-media";
       wrap.append(name, media);
@@ -27,6 +21,17 @@
     }
     wrap.querySelector(".agora-name").textContent = label;
     return wrap.querySelector(".agora-media");
+  }
+  function showVideo(media, stream, mirror) {
+    let v = media.querySelector("video");
+    if (!v) {
+      v = document.createElement("video");
+      v.autoplay = true; v.muted = true; v.setAttribute("playsinline", "");
+      v.style.cssText = "width:100%;height:100%;object-fit:cover" + (mirror ? ";transform:scaleX(-1)" : "");
+      media.appendChild(v);
+    }
+    v.srcObject = stream;
+    v.play().catch(() => {});
   }
   function setStatus(text) {
     const el = document.getElementById("callStatus");
@@ -36,21 +41,36 @@
     const mic = document.getElementById("callMuteBtn");
     const cam = document.getElementById("callVideoBtn");
     if (mic) mic.textContent = call.muted ? "🔇 Mikrofonni yoqish" : "🎙️ Mikrofonni oʻchirish";
-    if (cam) cam.textContent = call.videoTrack ? "📷 Videoni oʻchirish" : "📹 Videoni yoqish";
+    if (cam) cam.textContent = call.cam ? "📷 Videoni oʻchirish" : "📹 Videoni yoqish";
+  }
+  function refreshStatus(call) {
+    if (GC !== call || !call.rtc) return;
+    const ps = call.rtc.status(), ok = ps.filter(x => x.state === "connected").length;
+    const base = ps.length ? "Ovozli chat yoniq · ulangan: " + ok + "/" + ps.length : "Ovozli chat yoniq · guruh aʼzolari ulanishi kutilmoqda";
+    setStatus(base + (call.cam ? " · video yoqilgan" : ""));
   }
   function wireButtons(call) {
     const mic = document.getElementById("callMuteBtn");
     const cam = document.getElementById("callVideoBtn");
-    if (mic) mic.onclick = async () => {
-      if (GC !== call || !call.audioTrack) return;
-      try {
-        call.muted = !call.muted;
-        await call.audioTrack.setEnabled(!call.muted);
-        updateButtons(call);
-      } catch (e) { call.muted = !call.muted; uiAlert("Mikrofonni almashtirib boʻlmadi: " + (e?.message || e)); }
+    if (mic) mic.onclick = () => {
+      if (GC !== call || !call.rtc) return;
+      call.muted = !call.muted;
+      call.rtc.setMuted(call.muted);
+      updateButtons(call);
     };
     if (cam) cam.onclick = () => toggleCamera(call);
     updateButtons(call);
+  }
+  // Yangi (yaroqli) ishtirokchilar roʻyxatini hisoblab, ulanishlarni moslashtiradi
+  function refreshPeers(call) {
+    if (GC !== call || !call.rtc) return;
+    const now = Date.now(), live = [];
+    for (const p of call.parts || []) {
+      const ts = p.seen || p.joinedAt || 0;
+      if (p.uid !== st.user.uid && now - ts < FRESH) live.push(p.uid);
+    }
+    if (live.length > MAX_PEERS && !call.warned) { call.warned = true; toast("Qoʻngʻiroqda odam koʻp: sifat pasayishi mumkin"); }
+    call.rtc.syncPeers(live.slice(0, MAX_PEERS));
   }
   async function startGroupCall(mode) {
     const ch = st && st.chat;
@@ -59,106 +79,84 @@
     if (!g || Number(g.premiumUntil) <= Date.now()) {
       uiAlert("Ovozli chat va jonli video uchun faol Premium guruh kerak."); return;
     }
-    if (!window.AgoraRTC) {
-      try {
-        await new Promise((res, rej) => {
-          const sc = document.createElement("script");
-          sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.23.4.js";
-          sc.onload = res; sc.onerror = () => rej(new Error("x"));
-          document.head.appendChild(sc);
-        });
-      } catch (_) { uiAlert("Agora Web SDK yuklanmadi. Internet aloqasini tekshiring."); return; }
-    }
+    if (!window.YQRtc) { uiAlert("Ovoz moduli yuklanmadi. Sahifani yangilang."); return; }
     if (!navigator.mediaDevices?.getUserMedia) { uiAlert("Mikrofon/kamera uchun sayt HTTPS orqali ochilishi kerak."); return; }
     if (GC) {
       if (GC.gid === ch.id) {
-        if (mode === "video" && !GC.videoTrack) return toggleCamera(GC);
+        if (mode === "video" && !GC.cam) return toggleCamera(GC);
         uiAlert("Siz allaqachon ovozli chatdasiz."); return;
       }
       await leaveGroupCall(true);
     }
     let call = null;
     try {
-      const channel = channelFor(ch.id);
-      const uid = uidFor(st.user.uid);
-      const credentials = await FB.agoraToken(channel, uid);
-      if (!credentials || !credentials.token || !credentials.appId) throw new Error("Agora token xizmati sozlanmagan.");
-      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      call = { gid: ch.id, mode: "audio", channel, uid, client, audioTrack: null, videoTrack: null, muted: false, videoEnabled: false, leaving: false };
+      const gid = ch.id;
+      call = { gid, rtc: null, cam: null, muted: false, names: {}, parts: [], beat: null, unsubNames: null, warned: false };
       GC = call;
-      const renewToken = async () => {
-        try {
-          const c = await FB.agoraToken(channel, uid);
-          await client.renewToken(c.token);
-        } catch (e) { console.warn("Agora token yangilanmadi:", e); }
-      };
-      client.on("token-privilege-will-expire", renewToken);
-      client.on("token-privilege-did-expire", renewToken);
-      client.on("user-published", async (user, mediaType) => {
+      call.rtc = YQRtc.create({
+        myUid: st.user.uid, video: true, maxVideoBitrate: 500000,
+        getIce: () => FB.rtcIce(),
+        send: m => FB.rtcSendC("groupCalls", gid, m),
+        listen: cb => FB.rtcListenC("groupCalls", gid, cb),
+        del: id => FB.rtcDelC("groupCalls", gid, id),
+        onStatus: () => refreshStatus(call),
+        onRemoteVideo: (uid, stream) => {
+          if (GC !== call) return;
+          if (stream) { const el = node(uid, call.names[uid] || "Guruh aʼzosi"); if (el) showVideo(el, stream, false); }
+          else document.getElementById("agora_" + uid)?.remove();
+        },
+      });
+      await call.rtc.join();
+      await call.rtc.setMic(true);
+      await FB.groupCallEnter(gid, "audio");
+      FB.groupCallBeat(gid);
+      call.unsubNames = FB.groupCallParticipants(gid, ps => {
         if (GC !== call) return;
-        await client.subscribe(user, mediaType);
-        if (mediaType === "audio" && user.audioTrack) user.audioTrack.play();
-        if (mediaType === "video" && user.videoTrack) {
-          const el = node(user.uid, (call.names && call.names[user.uid]) || ("Guruh aʼzosi " + String(user.uid).slice(-5)));
-          if (el) user.videoTrack.play(el);
-        }
-      });
-      client.on("user-unpublished", user => document.getElementById("agora_" + user.uid)?.querySelector(".agora-media")?.replaceChildren());
-      client.on("user-left", user => document.getElementById("agora_" + user.uid)?.remove());
-      await client.join(credentials.appId || APP_ID, channel, credentials.token, uid);
-      call.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      await client.publish([call.audioTrack]);
-      await FB.groupCallEnter(ch.id, "audio");
-      call.names = {};
-      call.unsubNames = FB.groupCallParticipants(ch.id, ps => {
+        call.parts = ps;
         for (const p of ps) {
-          const k = uidFor(p.uid);
-          call.names[k] = p.name || "Aʼzo";
-          const el = document.querySelector("#agora_" + k + " .agora-name");
-          if (el) el.textContent = call.names[k];
+          call.names[p.uid] = p.name || "Aʼzo";
+          const el = document.querySelector("#agora_" + p.uid + " .agora-name");
+          if (el) el.textContent = call.names[p.uid];
         }
+        refreshPeers(call);
       });
+      call.beat = setInterval(() => { if (GC !== call) return; FB.groupCallBeat(gid); refreshPeers(call); }, BEAT);
       draw();
       const panel = document.getElementById("groupCallPanel");
       if (panel) panel.style.display = "block";
       wireButtons(call);
-      setStatus("Ovozli chat yoniq · guruh aʼzolari ulanishi kutilmoqda");
+      refreshStatus(call);
       toast("Ovozli chat boshlandi");
       if (mode === "video") await toggleCamera(call);
     } catch (e) {
-      console.error("Agora group call:", e);
+      console.error("Guruh qoʻngʻirogʻi:", e);
       if (call) {
-        try { call.audioTrack?.close(); call.videoTrack?.close(); await call.client?.leave(); } catch (_) {}
+        try { call.rtc && call.rtc.leave(); } catch (_) {}
+        try { clearInterval(call.beat); call.unsubNames && call.unsubNames(); } catch (_) {}
         if (GC === call) GC = null;
       }
       try { if (ch?.id) await FB.groupCallLeave(ch.id); } catch (_) {}
-      uiAlert("Qoʻngʻiroq boshlanmadi: " + (e?.message || e) + ". Agora tokeni va mikrofon/kamera ruxsatini tekshirish kerak.");
+      uiAlert("Qoʻngʻiroq boshlanmadi: " + (e?.message || e) + ". Mikrofon/kamera ruxsatini va internetni tekshiring.");
     }
   }
   async function toggleCamera(call) {
-    if (GC !== call) return;
+    if (GC !== call || !call.rtc) return;
     try {
-      if (call.videoTrack) {
-        await call.client.unpublish(call.videoTrack);
-        call.videoTrack.stop();
-        call.videoTrack.close();
-        call.videoTrack = null;
-        document.getElementById("agora_local")?.querySelector(".agora-media")?.replaceChildren();
-        setStatus("Ovozli chat yoniq · video oʻchirilgan");
+      if (call.cam) {
+        const s = call.cam; call.cam = null;
+        s.getTracks().forEach(t => t.stop());
+        await call.rtc.setVideo(null);
+        document.getElementById("agora_local")?.remove();
       } else {
-        call.videoTrack = await AgoraRTC.createCameraVideoTrack({ encoderConfig: "360p_7" });
-        await call.client.publish(call.videoTrack);
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24 } }, audio: false });
+        call.cam = s;
+        await call.rtc.setVideo(s.getVideoTracks()[0]);
         const el = node("local", "Siz");
-        if (el) call.videoTrack.play(el);
-        setStatus("Ovozli chat yoniq · video ham yoqilgan");
+        if (el) showVideo(el, s, true);
       }
-      call.videoEnabled = !!call.videoTrack;
+      refreshStatus(call);
       updateButtons(call);
     } catch (e) {
-      if (call.videoTrack && !call.videoEnabled) {
-        try { call.videoTrack.close(); } catch (_) {}
-        call.videoTrack = null;
-      }
       uiAlert("Videoni yoqib/oʻchirib boʻlmadi: " + (e?.message || e) + ". Kamera ruxsatini tekshiring.");
     }
   }
@@ -166,15 +164,14 @@
     const call = GC;
     if (!call) return;
     GC = null;
-    try { call.unsubNames && call.unsubNames(); } catch (_) {}
-    try { call.audioTrack?.stop(); call.audioTrack?.close(); } catch (_) {}
-    try { call.videoTrack?.stop(); call.videoTrack?.close(); } catch (_) {}
-    try { await call.client?.leave(); } catch (e) { console.warn("Agora leave:", e); }
+    try { clearInterval(call.beat); call.unsubNames && call.unsubNames(); } catch (_) {}
+    try { call.cam && call.cam.getTracks().forEach(t => t.stop()); } catch (_) {}
+    try { call.rtc && call.rtc.leave(); } catch (e) { console.warn("rtc leave:", e); }
     document.getElementById("callVideos")?.replaceChildren();
     try { await FB.groupCallLeave(call.gid); } catch (e) { console.warn("Guruh qoʻngʻirogʻidan chiqish:", e); }
     if (!silent && st?.chat?.id === call.gid) draw();
   }
-  window.addEventListener("pagehide", () => { try { GC && GC.client && GC.client.leave(); } catch (_) {} });
+  window.addEventListener("pagehide", () => { try { GC && GC.rtc && GC.rtc.leave(); } catch (_) {} });
   window.startGroupCall = startGroupCall;
   window.leaveGroupCall = leaveGroupCall;
 })();

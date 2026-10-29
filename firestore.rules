@@ -137,6 +137,18 @@ service cloud.firestore {
       allow update: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endedAt', 'acceptedAt'])
         && request.resource.data.status in ['ringing', 'accepted', 'declined', 'ended', 'missed'];
+      // 1:1 qoʻngʻiroq WebRTC signali: faqat shu qoʻngʻiroqning ikki ishtirokchisi oʻrtasida
+      match /rtc/{sid} {
+        allow read: if signed() && request.auth.uid in get(/databases/$(db)/documents/calls/$(id)).data.members
+          && resource.data.to == request.auth.uid;
+        allow create: if signed() && request.auth.uid in get(/databases/$(db)/documents/calls/$(id)).data.members
+          && request.resource.data.from == request.auth.uid
+          && request.resource.data.to in get(/databases/$(db)/documents/calls/$(id)).data.members
+          && request.resource.data.type in ['offer','answer','cand','hello','vid']
+          && request.resource.data.data is string && request.resource.data.data.size() <= 12000
+          && request.resource.data.t is number;
+        allow delete: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      }
     }
 
     match /gamerooms/{rid} {
@@ -166,7 +178,7 @@ service cloud.firestore {
         allow create: if signed() && request.auth.uid in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
           && request.resource.data.from == request.auth.uid
           && request.resource.data.to in get(/databases/$(db)/documents/gamerooms/$(rid)).data.players
-          && request.resource.data.type in ['offer','answer','cand','hello']
+          && request.resource.data.type in ['offer','answer','cand','hello','vid']
           && request.resource.data.data is string && request.resource.data.data.size() <= 12000
           && request.resource.data.t is number;
         allow delete: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
@@ -278,6 +290,18 @@ service cloud.firestore {
           && get(/databases/$(db)/documents/groups/$(gid)).data.get('premiumUntil', 0) > request.time.toMillis()
           && request.resource.data.uid == uid && request.resource.data.mode in ['audio','video'];
         allow delete: if signed() && request.auth.uid == uid && member(gid);
+      }
+      // Guruh qoʻngʻirogʻi WebRTC signali (ovoz/video): faqat guruh aʼzolari oʻrtasida
+      match /rtc/{sid} {
+        allow read: if signed() && member(gid) && resource.data.to == request.auth.uid;
+        allow create: if signed() && member(gid)
+          && request.resource.data.from == request.auth.uid
+          && request.resource.data.to is string
+          && exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.resource.data.to))
+          && request.resource.data.type in ['offer','answer','cand','hello','vid']
+          && request.resource.data.data is string && request.resource.data.data.size() <= 12000
+          && request.resource.data.t is number;
+        allow delete: if signed() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
       }
       match /signals/{sid} {
         allow read: if signed() && member(gid);
