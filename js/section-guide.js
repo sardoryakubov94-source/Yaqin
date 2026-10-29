@@ -26,8 +26,8 @@ function next(){if(!queue.length)return;mark(queue[0].key);queue.shift();if(queu
 function dismiss(){queue.forEach(x=>mark(x.key));queue=[];finish()}
 function finish(){if(root)root.classList.remove("show");document.body.style.overflow="";active=null;queue=[]}
 function afterIntro(){if(active)return;var tab=getTab();show(tab)}
-function schedule(tab){if(active)return;window.setTimeout(function(){if(active)return;var intro=document.getElementById("yqIntro");if(intro&&intro.classList.contains("show"))return;show(tab)},450)}
-document.addEventListener("click",function(e){var b=e.target.closest("#nav button");if(!b||b.classList.contains("plus"))return;var tab=getTab();schedule(tab)},true);
+function schedule(tab){if(active)return;window.setTimeout(function(){if(active)return;var intro=document.getElementById("yqIntro");if(intro&&intro.classList.contains("show"))return;show(tab||getTab())},450)}
+document.addEventListener("click",function(e){var b=e.target.closest("#nav button");if(!b||b.classList.contains("plus"))return;schedule()},true);
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
 function boot(){var intro=document.getElementById("yqIntro");if(intro){var obs=new MutationObserver(function(){if(!intro.classList.contains("show"))schedule(getTab())});obs.observe(intro,{attributes:true,attributeFilter:["class"]});if(!intro.classList.contains("show"))schedule(getTab())}else schedule(getTab());}
 window.YaqinSectionGuide={show:function(tab){schedule(tab||getTab())},reset:function(){try{localStorage.removeItem(KEY)}catch(e){}seen={}}};
