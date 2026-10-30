@@ -15,6 +15,17 @@ service cloud.firestore {
     function otherOf(cid) { return chatOf(cid).owner == request.auth.uid ? chatOf(cid).asker : chatOf(cid).owner; }
     function validAd(d) { return d.age is int && d.age >= 18 && d.age <= 80 && d.name is string && d.name.size() <= 40
       && d.about is string && d.about.size() <= 500 && d.g in ['kelin','kuyov'] && d.pur in ['oila','nikoh','tanish']; }
+    // Eʼlon faqat telefon, shaxs va 18+ tekshiruvlari admin/provider tomonidan tasdiqlangandan keyin yaratiladi.
+    function verifiedPublisher(uid) {
+      return request.auth.token.phone_number != null
+        && exists(/databases/$(db)/documents/verification/$(uid))
+        && get(/databases/$(db)/documents/verification/$(uid)).data.status == 'approved'
+        && get(/databases/$(db)/documents/verification/$(uid)).data.phoneVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.identityVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.selfieVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.ageVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.verifiedAge is int;
+    }
     function member(gid) { return exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.auth.uid)); }
 
     match /admins/{uid} { allow get: if signed() && request.auth.uid == uid; }
@@ -29,10 +40,28 @@ service cloud.firestore {
       allow delete: if signed() && request.auth.uid == uid;
     }
 
+    match /verification/{uid} {
+      allow get: if signed() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      // Foydalanuvchi faqat tekshiruv soʻrovini ochishi mumkin; tasdiq maydonlarini oʻzi oʻzgartira olmaydi.
+      allow create: if signed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid','status','phoneVerified','identityVerified','selfieVerified','ageVerified','provider','createdAt','updatedAt'])
+        && request.resource.data.uid == uid && request.resource.data.status == 'pending'
+        && request.resource.data.phoneVerified == true && request.auth.token.phone_number != null
+        && request.resource.data.identityVerified == false
+        && request.resource.data.selfieVerified == false && request.resource.data.ageVerified == false;
+      allow update: if isAdmin() || (signed() && request.auth.uid == uid
+        && resource.data.status == 'pending' && request.resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phoneVerified','updatedAt'])
+        && request.resource.data.phoneVerified == true && request.auth.token.phone_number != null);
+      allow delete: if isAdmin();
+    }
+
     match /ads/{id} {
       allow read: if true;
-      allow create: if signed() && request.resource.data.uid == request.auth.uid
+      allow create: if signed() && verifiedPublisher(request.auth.uid) && request.resource.data.uid == request.auth.uid
         && request.resource.data.age is int && request.resource.data.age >= 18 && request.resource.data.age <= 80
+        && request.resource.data.age == get(/databases/$(db)/documents/verification/$(request.auth.uid)).data.verifiedAge
         && request.resource.data.name is string && request.resource.data.name.size() <= 40
         && request.resource.data.about is string && request.resource.data.about.size() <= 500
         && request.resource.data.g in ['kelin','kuyov'] && request.resource.data.pur in ['oila','nikoh','tanish']
@@ -45,7 +74,10 @@ service cloud.firestore {
       allow update: if isAdmin() || (signed() && resource.data.uid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','age','reg','vil','about','ava','img','ints','pur','g','anon','profileDetails'])
         && (!('profileDetails' in request.resource.data) || (request.resource.data.profileDetails is map && request.resource.data.profileDetails.keys().hasOnly(['housing','living','work','car','education'])))
-        && validAd(request.resource.data));
+        && validAd(request.resource.data)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['age'])
+          || (verifiedPublisher(request.auth.uid)
+            && request.resource.data.age == get(/databases/$(db)/documents/verification/$(request.auth.uid)).data.verifiedAge)));
       allow delete: if signed() && (resource.data.uid == request.auth.uid || isAdmin());
     }
     match /ads/{id}/priv/{d} {
@@ -60,7 +92,17 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
     match /auditLogs/{id} { allow create: if isAdmin() && request.resource.data.by == request.auth.uid; allow read: if isAdmin(); }
-    match /reports/{id} { allow create: if signed() && request.resource.data.by == request.auth.uid; allow read, delete: if isAdmin(); }
+    match /reports/{id} {
+      allow create: if signed() && request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().hasOnly(['by','t','reason','chat','ad','adName','adOwner'])
+        && request.resource.data.t is int
+        && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 500))
+        && (!('chat' in request.resource.data) || (request.resource.data.chat is string && request.resource.data.chat.size() <= 120))
+        && (!('ad' in request.resource.data) || (request.resource.data.ad is string && request.resource.data.ad.size() <= 120))
+        && (!('adName' in request.resource.data) || (request.resource.data.adName is string && request.resource.data.adName.size() <= 40))
+        && (!('adOwner' in request.resource.data) || (request.resource.data.adOwner is string && request.resource.data.adOwner.size() <= 128));
+      allow read, delete: if isAdmin();
+    }
     match /priv/{uid} { allow read, write: if signed() && request.auth.uid == uid; }
     match /swipes/{id} {
       allow read: if signed() && resource.data.uid == request.auth.uid;
