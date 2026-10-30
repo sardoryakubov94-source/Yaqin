@@ -311,8 +311,12 @@ async function handleWebhook(request, env) {
     }, env);
   } else if (event.status === "Resubmitted") {
     await firestorePatch(uid, { status: "pending", updatedAt: now }, env);
-  } else if (["In Progress", "Awaiting User", "Abandoned", "Expired", "Not Started"].includes(event.status)) {
+  } else if (["In Progress", "Awaiting User", "Not Started"].includes(event.status)) {
     await firestorePatch(uid, { status: "in_progress", provider: "didit", updatedAt: now }, env);
+  } else if (event.status === "Abandoned") {
+    await firestorePatch(uid, { status: "abandoned", provider: "didit", updatedAt: now }, env);
+  } else if (event.status === "Expired") {
+    await firestorePatch(uid, { status: "expired", identityVerified: false, selfieVerified: false, ageVerified: false, provider: "didit", updatedAt: now }, env);
   }
   await saveWebhookEvent(String(event.event_id), env);
   return new Response("ok", { status: 200 });
