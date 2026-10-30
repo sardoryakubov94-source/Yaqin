@@ -15,6 +15,16 @@ service cloud.firestore {
     function otherOf(cid) { return chatOf(cid).owner == request.auth.uid ? chatOf(cid).asker : chatOf(cid).owner; }
     function validAd(d) { return d.age is int && d.age >= 18 && d.age <= 80 && d.name is string && d.name.size() <= 40
       && d.about is string && d.about.size() <= 500 && d.g in ['kelin','kuyov'] && d.pur in ['oila','nikoh','tanish']; }
+    // Eʼlon faqat telefon, shaxs va 18+ tekshiruvlari admin/provider tomonidan tasdiqlangandan keyin yaratiladi.
+    function verifiedPublisher(uid) {
+      return request.auth.token.phone_number != null
+        && exists(/databases/$(db)/documents/verification/$(uid))
+        && get(/databases/$(db)/documents/verification/$(uid)).data.status == 'approved'
+        && get(/databases/$(db)/documents/verification/$(uid)).data.phoneVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.identityVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.selfieVerified == true
+        && get(/databases/$(db)/documents/verification/$(uid)).data.ageVerified == true;
+    }
     function member(gid) { return exists(/databases/$(db)/documents/groups/$(gid)/members/$(request.auth.uid)); }
 
     match /admins/{uid} { allow get: if signed() && request.auth.uid == uid; }
@@ -29,9 +39,22 @@ service cloud.firestore {
       allow delete: if signed() && request.auth.uid == uid;
     }
 
+    match /verification/{uid} {
+      allow get: if signed() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      // Foydalanuvchi faqat tekshiruv soʻrovini ochishi mumkin; tasdiq maydonlarini oʻzi oʻzgartira olmaydi.
+      allow create: if signed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid','status','phoneVerified','identityVerified','selfieVerified','ageVerified','provider','createdAt','updatedAt'])
+        && request.resource.data.uid == uid && request.resource.data.status == 'pending'
+        && request.resource.data.phoneVerified == false && request.resource.data.identityVerified == false
+        && request.resource.data.selfieVerified == false && request.resource.data.ageVerified == false;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
     match /ads/{id} {
       allow read: if true;
-      allow create: if signed() && request.resource.data.uid == request.auth.uid
+      allow create: if signed() && verifiedPublisher(request.auth.uid) && request.resource.data.uid == request.auth.uid
         && request.resource.data.age is int && request.resource.data.age >= 18 && request.resource.data.age <= 80
         && request.resource.data.name is string && request.resource.data.name.size() <= 40
         && request.resource.data.about is string && request.resource.data.about.size() <= 500
