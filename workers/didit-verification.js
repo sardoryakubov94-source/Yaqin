@@ -196,15 +196,20 @@ function calculateAge(dateOfBirth) {
   return age;
 }
 
+function moduleApproved(items) {
+  // Fail closed: an array being present is not proof that a check passed.
+  // Didit V3 decision modules must explicitly report Approved.
+  return Array.isArray(items) && items.length > 0 &&
+    items.every(item => item && String(item.status || "").toLowerCase() === "approved");
+}
+
 function hasApprovedModules(decision) {
-  // Didit workflow must include OCR/ID Verification, PASSIVE LIVENESS and FACE MATCH.
-  // Do not store document numbers, raw images or biometric templates in Yaqin.
-  return !!(
-    decision &&
-    Array.isArray(decision.id_verifications) && decision.id_verifications.length &&
-    Array.isArray(decision.liveness_checks) && decision.liveness_checks.length &&
-    Array.isArray(decision.face_matches) && decision.face_matches.length
-  );
+  // Require explicit successful ID, liveness and face-match decisions.
+  // Missing, pending, declined or unknown module statuses never approve a user.
+  return !!decision &&
+    moduleApproved(decision.id_verifications) &&
+    moduleApproved(decision.liveness_checks) &&
+    moduleApproved(decision.face_matches);
 }
 
 async function handleSession(request, env) {
