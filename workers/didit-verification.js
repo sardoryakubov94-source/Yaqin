@@ -113,8 +113,18 @@ async function firestorePatch(uid, values, env) {
   if (!response.ok) throw new Error("Firestore verification yozuvi yangilanmadi: " + (await response.text()).slice(0, 500));
 }
 
+async function webhookEventExists(eventId, env) {
+  const token = await serviceAccountToken(env);
+  const url = "https://firestore.googleapis.com/v1/projects/" +
+    encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+    "/databases/(default)/documents/diditEvents/" + encodeURIComponent(eventId);
+  const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error("Webhook event tekshirilmadi: " + (await response.text()).slice(0, 400));
+  return true;
+}
+
 async function saveWebhookEvent(eventId, env) {
-  // Firestore createDocument returns 409 if this event_id was already processed.
   const token = await serviceAccountToken(env);
   const response = await fetch(
     "https://firestore.googleapis.com/v1/projects/" +
@@ -232,9 +242,10 @@ async function handleWebhook(request, env) {
 
   if (!event.event_id || !event.vendor_data || !event.status) return new Response("Invalid event", { status: 400 });
 
-  // Duplicate events are harmless because the status write is idempotent; record only after success.
-  const wasSeen = false;
-  if (wasSeen) return new Response("ok", { status: 200 });
+  // Avoid processing webhook deliveries that have already been recorded.
+  if (await webhookEventExists(String(event.event_id), env)) {
+    return new Response("ok", { status: 200 });
+  }
 
   const uid = String(event.vendor_data);
   const now = Date.now();
