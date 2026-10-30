@@ -124,8 +124,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="yaqin-call-controls" id="gmCall"></div></div>
-<div class="gm-vbar" id="gmVoiceBar" hidden></div><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div>`);
+<div class="gm-vbar" id="gmVoiceBar" hidden></div><div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><div class="gm-vs" id="gmVs">Ovozli aloqa ulanmoqda…</div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Render ----------
@@ -185,7 +185,9 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
         ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
         ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
-    } else if (!sp.open) card.hidden = true;
+      const cs = (sp.seq || 0) + "|" + (sp.customQ || "");
+      if (card.dataset.seen !== cs) { card.dataset.seen = cs; setTimeout(() => { try { card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {} }, 60); }
+    } else if (!sp.open) { card.hidden = true; delete card.dataset.seen; }
     if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
     if (sp.open && Date.now() - (sp.at || 0) >= 35000 && !botT.timeout) {
       const seq = sp.seq; botT.timeout = seq;

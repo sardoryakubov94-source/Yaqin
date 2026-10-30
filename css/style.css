@@ -847,3 +847,44 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
   .gm-card:not([hidden]) { bottom:220px; max-height:27vh; }
   .gm-room-messages { height:145px; min-height:110px; max-height:145px; }
 }
+
+/* ---- O'yin xonasi (telefon): savol/javob va chat bir-birini yopmasin; shriftlar ixcham ----
+   Oʻrta qism (shisha, savol, "Keyingi navbat") alohida aylantiriladi, chat esa uning tagida oʻz joyini egallaydi. */
+.gm-mid{display:contents}
+@media(max-width:899px){
+.gm .gm-mid{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.gm .gm-room-chat{position:relative;left:auto;bottom:auto;transform:none;z-index:auto;flex:0 0 auto;width:calc(100% - 12px);max-width:640px;margin:4px auto 30px;padding:7px 9px 8px;border-radius:14px;box-shadow:0 -4px 14px rgba(0,0,0,.2)}
+.gm .gm-ring{width:min(72vw,29vh,290px)}
+.gm .gm-stage{padding:24px 8px 30px}
+.gm:has(#gmCard:not([hidden])) .gm-stage{padding:20px 8px 26px}
+.gm:has(#gmCard:not([hidden])) .gm-ring{width:min(48vw,17vh,170px)}
+.gm:has(#gmCard:not([hidden])) .gm-av{width:36px;height:36px}.gm:has(#gmCard:not([hidden])) .gm-seat{width:46px}.gm:has(#gmCard:not([hidden])) .gm-seat small{font-size:9px;max-width:46px}
+.gm .gm-bottle{width:44px;height:44px;margin:-22px 0 0 -22px;font-size:38px;line-height:44px}
+.gm .gm-seat{width:54px}.gm .gm-av{width:44px;height:44px}.gm .gm-seat small{font-size:10px;max-width:54px}
+.gm .gm-info{padding:2px 10px;min-height:0}.gm .gm-info p{font-size:13px;margin:2px 0 5px}
+.gm .gm-info button{padding:9px 16px;font-size:14px}
+/* savol kartochkasi: ekran ustida suzmaydi, oqimning oʻzida turadi */
+.gm .gm-card:not([hidden]){position:static;transform:none;left:auto;bottom:auto;z-index:auto;width:auto;max-width:none;max-height:none;overflow:visible;margin:3px 10px 5px;padding:7px 9px;gap:5px;border-radius:14px;box-shadow:none;background:var(--c);flex-flow:row wrap;align-items:stretch}
+.gm .gm-card>.gm-q,.gm .gm-card>.gm-text-chat,.gm .gm-card>.gm-hint,.gm .gm-card>.gm-match{flex:1 1 100%}
+.gm .gm-card>button{flex:1 1 42%}
+.gm .gm-q{font-size:14px;line-height:1.3}
+.gm .gm-card button{padding:8px 10px;font-size:13px}
+.gm .gm-hint{font-size:11px}
+.gm .gm-match{padding:7px;gap:6px;font-size:13px}
+.gm .gm-text-chat{gap:4px}.gm .gm-text-messages{max-height:104px;gap:3px}
+.gm .gm-text-msg{padding:4px 8px}.gm .gm-text-msg b{font-size:10px}.gm .gm-text-msg span{font-size:12.5px;line-height:1.3}
+.gm .gm-vs{flex:0 0 auto;padding:2px 10px 4px;font-size:11px}
+.gm .gm-room-chat-title{font-size:12px;margin-bottom:3px}
+.gm .gm-room-messages{height:clamp(150px,32vh,260px);min-height:0;max-height:none;gap:4px;margin-bottom:6px;padding:3px}
+.gm .gm-room-msg{padding:4px 7px;max-width:96%}
+.gm .gm-room-msg b{font-size:10.5px}
+.gm .gm-room-msg span{font-size:12px;line-height:1.28}
+.gm .gm-room-msg.gm-room-question{padding:6px 8px;border-radius:11px}
+.gm .gm-room-question-text{font-size:12.5px;line-height:1.3}
+.gm .gm-room-question-hint{font-size:9.5px;margin-top:3px}
+.gm .gm-room-author{gap:5px;margin-bottom:3px}.gm .gm-room-author img{width:22px;height:22px;flex:0 0 22px}
+.gm .gm-room-author b{font-size:11px}.gm .gm-room-author small{font-size:9px}
+.gm .gm-room-msg .gm-room-qa-question{font-size:11.5px;margin-bottom:2px}.gm .gm-room-msg .gm-room-qa-answer{font-size:12px}
+.gm .gm-room-send input{padding:7px 9px;font-size:13px}.gm .gm-room-send button{padding:7px 10px;font-size:13px}
+}
+@media(max-width:899px) and (max-height:640px){.gm .gm-ring{width:min(66vw,26vh,250px)}.gm .gm-room-messages{height:clamp(100px,26vh,170px)}.gm .gm-room-chat{margin-bottom:24px}}
