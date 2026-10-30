@@ -87,7 +87,17 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
     match /auditLogs/{id} { allow create: if isAdmin() && request.resource.data.by == request.auth.uid; allow read: if isAdmin(); }
-    match /reports/{id} { allow create: if signed() && request.resource.data.by == request.auth.uid; allow read, delete: if isAdmin(); }
+    match /reports/{id} {
+      allow create: if signed() && request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().hasOnly(['by','t','reason','chat','ad','adName','adOwner'])
+        && request.resource.data.t is int
+        && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 500))
+        && (!('chat' in request.resource.data) || (request.resource.data.chat is string && request.resource.data.chat.size() <= 120))
+        && (!('ad' in request.resource.data) || (request.resource.data.ad is string && request.resource.data.ad.size() <= 120))
+        && (!('adName' in request.resource.data) || (request.resource.data.adName is string && request.resource.data.adName.size() <= 40))
+        && (!('adOwner' in request.resource.data) || (request.resource.data.adOwner is string && request.resource.data.adOwner.size() <= 128));
+      allow read, delete: if isAdmin();
+    }
     match /priv/{uid} { allow read, write: if signed() && request.auth.uid == uid; }
     match /swipes/{id} {
       allow read: if signed() && resource.data.uid == request.auth.uid;
