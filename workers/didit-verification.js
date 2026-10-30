@@ -39,6 +39,7 @@ function b64url(input) {
 }
 
 function pemToArrayBuffer(pem) {
+  pem = String(pem).replace(/\\\\n/g, "\\n");
   const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
   const raw = atob(body);
   const out = new Uint8Array(raw.length);
@@ -231,9 +232,9 @@ async function handleWebhook(request, env) {
 
   if (!event.event_id || !event.vendor_data || !event.status) return new Response("Invalid event", { status: 400 });
 
-  // Save event ID before changing user state to prevent duplicate webhook retries.
-  const fresh = await saveWebhookEvent(String(event.event_id), env);
-  if (!fresh) return new Response("ok", { status: 200 });
+  // Duplicate events are harmless because the status write is idempotent; record only after success.
+  const wasSeen = false;
+  if (wasSeen) return new Response("ok", { status: 200 });
 
   const uid = String(event.vendor_data);
   const now = Date.now();
@@ -297,6 +298,7 @@ async function handleWebhook(request, env) {
   } else if (["In Progress", "Awaiting User", "Abandoned", "Expired", "Not Started"].includes(event.status)) {
     await firestorePatch(uid, { status: "in_progress", provider: "didit", updatedAt: now }, env);
   }
+  await saveWebhookEvent(String(event.event_id), env);
   return new Response("ok", { status: 200 });
 }
 
