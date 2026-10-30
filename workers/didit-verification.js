@@ -92,6 +92,25 @@ async function firebaseUserFromIdToken(idToken, env) {
   return { uid: user.localId, phoneNumber: user.phoneNumber || "" };
 }
 
+async function firestoreGet(uid, env) {
+  const token = await serviceAccountToken(env);
+  const url = "https://firestore.googleapis.com/v1/projects/" +
+    encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+    "/databases/(default)/documents/verification/" + encodeURIComponent(uid);
+  const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Firestore verification oʻqilmadi: " + (await response.text()).slice(0, 400));
+  const data = await response.json();
+  const fields = data.fields || {};
+  const out = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value.stringValue !== undefined) out[key] = value.stringValue;
+    else if (value.booleanValue !== undefined) out[key] = value.booleanValue;
+    else if (value.integerValue !== undefined) out[key] = Number(value.integerValue);
+  }
+  return out;
+}
+
 async function firestorePatch(uid, values, env) {
   const token = await serviceAccountToken(env);
   const fields = {};
@@ -237,6 +256,16 @@ async function handleSession(request, env) {
   if (!response.ok || !data.url || !data.session_id) {
     return json({ error: "didit_session_failed", detail: data.detail || data.message || "Didit session yaratilmadi" }, 502);
   }
+  await firestorePatch(user.uid, {
+    status: "pending",
+    phoneVerified: true,
+    identityVerified: false,
+    selfieVerified: false,
+    ageVerified: false,
+    provider: "didit",
+    diditSessionId: String(data.session_id),
+    updatedAt: Date.now()
+  }, env);
   return json({ url: data.url, session_id: data.session_id });
 }
 
@@ -254,6 +283,11 @@ async function handleWebhook(request, env) {
 
   const uid = String(event.vendor_data);
   const now = Date.now();
+  const verification = await firestoreGet(uid, env);
+  if (!verification || !verification.diditSessionId ||
+      String(event.session_id || "") !== String(verification.diditSessionId)) {
+    return new Response("Session mismatch", { status: 409 });
+  }
 
   if (event.status === "Approved") {
     const decision = event.decision || {};
@@ -263,7 +297,6 @@ async function handleWebhook(request, env) {
         provider: "didit",
         updatedAt: now
       }, env);
-      return new Response("ok", { status: 200 });
     }
     const idv = decision.id_verifications[0];
     const age = calculateAge(idv.date_of_birth);
