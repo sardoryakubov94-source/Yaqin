@@ -31,10 +31,15 @@ service cloud.firestore {
     match /settings/{id} { allow read: if signed(); allow write: if isAdmin(); }
 
     match /users/{uid} {
+      // User profile documents are private: only the owner and admins can read them.
       allow get: if signed() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
-      allow create: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed']) && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.matches('^\\+[1-9][0-9]{7,14};
-      allow update: if request.auth.uid == uid && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed'])
+      allow create: if signed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed'])
+        && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.matches('^\\+[1-9][0-9]{7,14}$')));
+      allow update: if signed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name','phone','email','img','t','groups','prefs','favs','freeUsed'])
+        && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.matches('^\\+[1-9][0-9]{7,14}$')))
         && (!resource.data.get('freeUsed', false) || request.resource.data.get('freeUsed', false) == true);
       allow delete: if signed() && request.auth.uid == uid;
     }
