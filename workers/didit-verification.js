@@ -39,8 +39,22 @@ function b64url(input) {
 }
 
 function pemToArrayBuffer(pem) {
-  pem = String(pem).replace(/\\\\n/g, "\\n");
-  const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
+  // Normalize real newlines and escaped newline sequences from Cloudflare Secrets.
+  const normalized = String(pem || "")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .trim();
+
+  const body = normalized
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s/g, "");
+
+  if (!body || !/^[A-Za-z0-9+/]+={0,2}$/.test(body) || body.length % 4 !== 0) {
+    throw new Error("FIREBASE_PRIVATE_KEY PEM formati notoʻgʻri. Cloudflare Secret ichidagi private_key qiymatini tekshiring.");
+  }
+
   const raw = atob(body);
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
