@@ -71,7 +71,7 @@ function yqFocusVerify(){setTimeout(()=>{const e=$("yq-vf");if(e&&e.scrollIntoVi
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&st.user){let f=null;try{f=sessionStorage.getItem("yqDidit")}catch(e){}if(f){yqRefresh(false);yqWatch()}}});
 try{if(sessionStorage.getItem("yqDidit"))yqWatch()}catch(e){}
 function price(){return `<div class="price"><b>Narxlar</b><p style="color:var(--m);margin-top:6px">1-eʼlon: <b style="color:var(--a)">BEPUL</b><br>Keyingi eʼlonlar: 10 000 soʻm<br>VIP TOP eʼlon: 20 000 soʻm<br>Eski eʼlonni yuqoriga koʻtarish: 10 000 soʻm</p></div>`}
-function need(){if(st.user)return true;st.am="in";st.form="auth";draw();return false}
+function need(){if(st.user){if(st.user._pending){toast("Hisobingiz yuklanmoqda…");return false}return true}st.am="in";st.form="auth";draw();return false}
 function postBtn(){if(!need())return;const v=st.user.verification||{};if(!st.user.phone||v.status!=="approved"||v.identityVerified!==true||v.selfieVerified!==true||v.ageVerified!==true){st.tab="prof";draw();yqFocusVerify();uiAlert("Eʼlon joylash uchun telefon, shaxs va 18+ verifikatsiyasidan oʻtishingiz kerak. Profil → Verifikatsiya boʻlimini oching.");return}st.form="post";draw()}
 
 async function editMyName(){const v=await uiPrompt("Profilingizdagi ism","Ismingizni kiriting",st.user.name||"");if(v===null)return;const name=v.trim();if(!name){uiAlert("Ism boʻsh boʻlmasin.");return}if(name.length>40){uiAlert("Ism 40 belgidan oshmasin.");return}const f=fb();if(!f)return;try{await f.saveUser({name});st.user.name=name;try{const k="yqProfile:"+st.user.uid,c=JSON.parse(localStorage.getItem(k)||"{}");c.name=name;localStorage.setItem(k,JSON.stringify(c))}catch(_){}draw();toast("Ism yangilandi")}catch(e){uiAlert("Ism oʻzgartirilmadi: "+(e.message||e))}}
@@ -185,9 +185,9 @@ function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("
 function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.uid&&!a.isDemo}))}
 let UC,UG,UM,UP,GROOM,GPART,GC=null;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
-addEventListener("fb-ready",()=>{FB.onUser(u=>{const was=st.user&&st.user.uid;st.user=u;if(!u&&st.form=="logout")st.form=null;if(u&&st.form=="auth")st.form=null;syncAds();
+addEventListener("fb-ready",()=>{FB.onUser(u=>{const was=st.user&&!st.user._pending&&st.user.uid;st.user=u;yqHint(u);if(!u&&st.form=="logout")st.form=null;if(u&&st.form=="auth")st.form=null;syncAds();
  if(!u){stopAll();st.chat=null}else if(was!=u.uid){stopAll();UC=FB.chats(u.uid,l=>{st.chats=l.sort((a,b)=>b.lastT-a.lastT);syncShared();if(st.chat&&st.chat.t=="c")draw();else if(st.tab=="msg"&&!st.form)draw()});UG=FB.groups(l=>{st.groups=l;if(st.tab=="circ"&&!st.form&&!st.chat)draw()});FB.mySwipes().then(m=>{st.swiped=m}).catch(()=>{});if(!u.prefs&&!u._profileLoading&&!st.skipSv){st.skipSv=1;st.sv=null;st.form="survey"}FB.priv().then(x=>{st.priv=x;if(st.tab=="prof"&&!st.form)draw()}).catch(()=>{})}
- draw()});FB.ads(l=>{st.raw=l;syncAds();if(st.tab=="map"&&MAP&&!st.form&&!st.chat)drawMarkers();else if(!st.form&&!st.chat)draw()})});
+ draw()});FB.ads(l=>{st.raw=l;yqSaveAds(l);syncAds();if(st.tab=="map"&&MAP&&!st.form&&!st.chat)drawMarkers();else if(!st.form&&!st.chat)draw()})});
 
 st.dr={on:false,pts:[]};let MAP,DL,MYL,MYC;
 function distanceKm(lat1,lon1,lat2,lon2){const rad=x=>x*Math.PI/180,R=6371,dLat=rad(lat2-lat1),dLon=rad(lon2-lon1),a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(a)))}
@@ -493,6 +493,14 @@ async function delAcc(){const f=fb();if(!f)return;if(!await uiConfirm("Hisobingi
  try{await f.delAccount(pw);st.tab="home";toast("Hisob oʻchirildi");draw()}catch(x){uiAlert(/wrong-password|invalid-credential/.test(x.code||"")?"Parol notoʻgʻri":"Hisob oʻchirilmadi: "+(x.code||x.message))}}
 const oldProf3=prof;
 prof=function(){const h=oldProf3();if(!st.user)return h;return h+`<div style="text-align:center;margin:20px 0 6px;font-size:13px"><a href="privacy.html" target="_blank" style="color:var(--m)">Maxfiylik siyosati</a> · <a href="terms.html" target="_blank" style="color:var(--m)">Foydalanish shartlari</a></div><button class="ghost" style="width:100%;margin-top:8px;color:#e5554a;font-size:13px" onclick="delAcc()">Hisobni oʻchirish</button>`};
+/* Tez ishga tushish: oxirgi kirgan hisob va eʼlonlarni darhol koʻrsatamiz, Firebase esa fonda tasdiqlaydi */
+function yqHint(u){try{if(u)localStorage.setItem("yqHint",JSON.stringify({uid:u.uid,email:u.email||"",name:u.name||"",img:(u.img&&!String(u.img).startsWith("data:"))?u.img:""}));else localStorage.removeItem("yqHint")}catch(e){}}
+let _yqAdsT=null;
+function yqSaveAds(l){clearTimeout(_yqAdsT);_yqAdsT=setTimeout(()=>{try{const a=(l||[]).slice(0,50).map(x=>{if(x&&x.img&&String(x.img).startsWith("data:")&&x.img.length>20000){const y={...x};delete y.img;return y}return x});localStorage.setItem("yqAdsCache",JSON.stringify({t:Date.now(),a}))}catch(e){try{localStorage.removeItem("yqAdsCache")}catch(_){}}},1500)}
+try{const c=JSON.parse(localStorage.getItem("yqAdsCache")||"null");if(c&&Array.isArray(c.a)&&Date.now()-c.t<6048e5)st.raw=c.a}catch(e){}
+try{const h=JSON.parse(localStorage.getItem("yqHint")||"null");if(h&&h.uid){let c={};try{c=JSON.parse(localStorage.getItem("yqProfile:"+h.uid)||"{}")}catch(e){}st.user={...c,uid:h.uid,email:h.email||c.email||"",name:c.name||h.name||"Foydalanuvchi",phone:c.phone||"",verification:c.verification||{},groups:c.groups||[],img:c.img||h.img||"",_pending:true,_profileLoading:true}}}catch(e){}
+try{syncAds()}catch(e){}
+
 draw();
 
 /* Android/brauzer ortga tugmasi: avval oynani yopish, soʻng bosh sahifaga qaytish, bosh sahifada esa ikki marta bosib chiqish. */
