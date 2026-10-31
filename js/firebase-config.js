@@ -5,5 +5,7 @@ export default {
   projectId: "yaqin-3f9f9",
   storageBucket: "yaqin-3f9f9.firebasestorage.app",
   messagingSenderId: "56894163332",
-  appId: "1:56894163332:web:9c4a5019517280cd8175d1"
+  appId: "1:56894163332:web:9c4a5019517280cd8175d1",
+  // Google bilan kirish cookie'siz ishlashi uchun: Firebase Console → Authentication → Sign-in method → Google → Web client ID
+  googleClientId: ""
 };
