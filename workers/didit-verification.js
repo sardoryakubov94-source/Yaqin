@@ -89,10 +89,10 @@ async function firebaseUserFromIdToken(idToken, env) {
   const data = await response.json();
   const user = data.users && data.users[0];
   if (!response.ok || !user || !user.localId) return null;
-  return { uid: user.localId, phoneNumber: user.phoneNumber || "" };
+  return { uid: user.localId };
 }
 
-async function firestoreGet(uid, env) {
+async function firestoreGetUser(uid, env) {\n  const token = await serviceAccountToken(env);\n  const url = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) + "/databases/(default)/documents/users/" + encodeURIComponent(uid);\n  const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });\n  if (response.status === 404) return null;\n  if (!response.ok) throw new Error("Foydalanuvchi profili oʻqilmadi: " + (await response.text()).slice(0, 400));\n  const data = await response.json(); const fields = data.fields || {};\n  return { phone: fields.phone && fields.phone.stringValue || "" };\n}\n\nasync function firestoreGet(uid, env) {
   const token = await serviceAccountToken(env);
   const url = "https://firestore.googleapis.com/v1/projects/" +
     encodeURIComponent(env.FIREBASE_PROJECT_ID) +
@@ -238,7 +238,7 @@ async function handleSession(request, env) {
 
   const user = await firebaseUserFromIdToken(match[1], env);
   if (!user) return json({ error: "invalid_firebase_token" }, 401);
-  if (!user.phoneNumber) return json({ error: "phone_not_verified" }, 403);
+  const profile = await firestoreGetUser(user.uid, env);\n  if (!profile || !/^\\+[1-9]\\d{7,14}$/.test(String(profile.phone || ""))) return json({ error: "phone_required" }, 403);
 
   const response = await fetch("https://verification.didit.me/v3/session/", {
     method: "POST",
