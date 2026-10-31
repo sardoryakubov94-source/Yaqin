@@ -92,7 +92,18 @@ async function firebaseUserFromIdToken(idToken, env) {
   return { uid: user.localId };
 }
 
-async function firestoreGetUser(uid, env) {\n  const token = await serviceAccountToken(env);\n  const url = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) + "/databases/(default)/documents/users/" + encodeURIComponent(uid);\n  const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });\n  if (response.status === 404) return null;\n  if (!response.ok) throw new Error("Foydalanuvchi profili oʻqilmadi: " + (await response.text()).slice(0, 400));\n  const data = await response.json(); const fields = data.fields || {};\n  return { phone: fields.phone && fields.phone.stringValue || "" };\n}\n\nasync function firestoreGet(uid, env) {
+async function firestoreGetUser(uid, env) {
+  const token = await serviceAccountToken(env);
+  const url = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) + "/databases/(default)/documents/users/" + encodeURIComponent(uid);
+  const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Foydalanuvchi profili oʻqilmadi: " + (await response.text()).slice(0, 400));
+  const data = await response.json();
+  const fields = data.fields || {};
+  return { phone: fields.phone && fields.phone.stringValue || "" };
+}
+
+async function firestoreGet(uid, env) {
   const token = await serviceAccountToken(env);
   const url = "https://firestore.googleapis.com/v1/projects/" +
     encodeURIComponent(env.FIREBASE_PROJECT_ID) +
@@ -298,6 +309,8 @@ async function handleWebhook(request, env) {
         provider: "didit",
         updatedAt: now
       }, env);
+      await saveWebhookEvent(String(event.event_id), env);
+      return new Response("ok", { status: 200 });
     }
     const idv = decision.id_verifications[0];
     const age = calculateAge(idv.date_of_birth);
