@@ -104,6 +104,7 @@ ${row("camera", "c1", "Profil rasmi", "Avatarni oʻzgartirish", undefined, "$('p
 ${row("phone", "c2", "Telefon raqami", esc(u.phone || "Kiritilmagan"), undefined, "editPh()")}
 ${row("mail", "c3", "Email", esc(u.email || ""), "")}
 ${row("heart", "c4", "Qiziqish va mos nomzod", "Anketa sozlamalari", undefined, "st.sv=null;st.form='survey';draw()")}</div>
+<div class="ps-sec">Verifikatsiya</div><div class="ps-list ps-pad ps-verif">${typeof verificationV === "function" ? verificationV().replace('class="box" style="margin-top:12px"', 'class="ps-vbox"') : ""}</div>
 <div class="ps-sec">Profil rasmlari</div><div class="ps-list ps-pad">${privV().replace("<h3>Shaxsiy rasmlarim</h3>", '<b class="ps-mini">Shaxsiy rasmlarim</b>')}</div>
 <div class="ps-sec">Chat sozlamalari</div><div class="ps-list">
 ${row("phone", "c2", "Qoʻngʻiroqlar", CALLS[p.calls][0], undefined, "psCalls()")}
@@ -129,6 +130,22 @@ ${row("file", "c8", "Foydalanish shartlari", "", undefined, "window.open('terms.
 ${row("logout", "c5", "Tizimdan chiqish", "", "", "st.form='logout';draw()")}
 ${row("x", "c5 dng", "Hisobni oʻchirish", "", "", "delAcc()")}</div></div>`;
   };
+
+  // ---------- verifikatsiya natijasini avtomatik yangilash ----------
+  const VWAIT = ["pending", "pending_review", "in_review", "in review", "in_progress", "in progress", "awaiting_user", "processing", "created", "resubmitted", "manual_review", "manual review"];
+  let vBusy = false, vTries = 0;
+  setInterval(async () => {
+    try {
+      if (vBusy || document.hidden || !window.st || !st.user || st.tab !== "prof" || st.form || st.chat) { return; }
+      const raw = String((st.user.verification || {}).status || "").toLowerCase();
+      if (!VWAIT.includes(raw)) { vTries = 0; return; }
+      if (++vTries > 90) return;                       // ~12 daqiqadan keyin toʻxtaydi
+      if (!window.FB || !FB.getVerification) return;
+      vBusy = true;
+      const v = await FB.getVerification();
+      if (v && String(v.status || "").toLowerCase() !== raw) { st.user.verification = v; draw(); }
+    } catch (e) { /* tarmoq xatosi — keyingi urinishda */ } finally { vBusy = false; }
+  }, 8000);
 
   // ---------- chat menyusiga: qoʻngʻiroqqa ruxsat ----------
   const base = window.chatV;
