@@ -238,7 +238,8 @@ async function handleSession(request, env) {
 
   const user = await firebaseUserFromIdToken(match[1], env);
   if (!user) return json({ error: "invalid_firebase_token" }, 401);
-  const profile = await firestoreGetUser(user.uid, env);\n  if (!profile || !/^\\+[1-9]\\d{7,14}$/.test(String(profile.phone || ""))) return json({ error: "phone_required" }, 403);
+  const profile = await firestoreGetUser(user.uid, env);
+  if (!profile || !/^\+[1-9]\d{7,14}$/.test(String(profile.phone || ""))) return json({ error: "phone_required" }, 403);
 
   const response = await fetch("https://verification.didit.me/v3/session/", {
     method: "POST",
