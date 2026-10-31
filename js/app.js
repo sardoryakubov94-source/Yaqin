@@ -578,3 +578,21 @@ armYaqinBack();
   if(e.key!=="Escape")return;const menu=document.querySelector(".menu");if(menu){st.menu=false;menu.remove()}
  },true);
 })();
+
+/* Barcha tugmalar uchun bosilganini bildiradigan effekt (xiralashish + biroz kichrayish) */
+;(function(){
+const SEL='button,a[href],summary,[onclick],[role="button"]';
+let el=null,t=null,sx=0,sy=0;
+const clear=()=>{clearTimeout(t);t=null;if(el){el.classList.remove("yq-press");el=null}};
+addEventListener("pointerdown",e=>{
+clear();if(e.pointerType==="mouse"&&e.button!==0)return;
+const n=e.target&&e.target.closest?e.target.closest(SEL):null;
+if(!n||n.matches("input,textarea,select"))return;
+const r=n.getBoundingClientRect();if(r.width*r.height>innerWidth*innerHeight*0.5)return;
+el=n;sx=e.clientX;sy=e.clientY;t=setTimeout(()=>{t=null;n.classList.add("yq-press")},35);
+},{passive:true,capture:true});
+addEventListener("pointerup",()=>{if(!el)return;const n=el;el=null;if(t){clearTimeout(t);t=null;n.classList.add("yq-press")}setTimeout(()=>n.classList.remove("yq-press"),160)},true);
+addEventListener("pointercancel",clear,true);
+addEventListener("pointermove",e=>{if(el&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)clear()},{passive:true,capture:true});
+addEventListener("contextmenu",clear);
+})();

@@ -920,3 +920,7 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .vf-more summary::-webkit-details-marker{display:none}
 .vf-more p{margin:8px 0 0;line-height:1.5}
 .ps-verif .vf{margin:0;border:0;background:none;padding:0}
+
+/* Tugma bosilganda xiralashish effekti */
+:where(button,a[href],summary,[onclick],[role="button"]){-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:opacity .15s ease,scale .15s ease}
+.yq-press{opacity:.5!important;scale:.96}
