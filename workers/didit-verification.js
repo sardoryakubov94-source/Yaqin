@@ -41,6 +41,8 @@ function b64url(input) {
 function pemToArrayBuffer(pem) {
   // Normalize real newlines and escaped newline sequences from Cloudflare Secrets.
   const normalized = String(pem || "")
+    .replace(/\\\\r\\\\n/g, "\n")
+    .replace(/\\\\n/g, "\n")
     .replace(/\\r\\n/g, "\n")
     .replace(/\\n/g, "\n")
     .replace(/\r\n/g, "\n")
