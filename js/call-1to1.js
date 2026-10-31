@@ -276,20 +276,21 @@
       });
     });
   }
+  function dropBoot() { if (C && C.boot) closeUi(C); }
   async function gate(mode, peer, chatId, name) {
     let p = {};
     try { p = await FB.getPrefs(peer); } catch (_) {}
     const cm = p.calls || "approved";
-    if (cm === "none") { uiAlert("Bu foydalanuvchi qoʻngʻiroqlarni qabul qilmaydi."); return false; }
-    if (mode === "video" && p.video === false) { uiAlert("Bu foydalanuvchi video qoʻngʻiroqlarni qabul qilmaydi. Ovozli qoʻngʻiroq qilib koʻring."); return false; }
+    if (cm === "none") { dropBoot(); uiAlert("Bu foydalanuvchi qoʻngʻiroqlarni qabul qilmaydi."); return false; }
+    if (mode === "video" && p.video === false) { dropBoot(); uiAlert("Bu foydalanuvchi video qoʻngʻiroqlarni qabul qilmaydi. Ovozli qoʻngʻiroq qilib koʻring."); return false; }
     const allowed = st.peerState ? st.peerState.allowCalls === true : null;
-    if (cm !== "all" && allowed === false) { askPermission(chatId, name); return false; }
+    if (cm !== "all" && allowed === false) { dropBoot(); askPermission(chatId, name); return false; }
     return true;
   }
 
   window.callStart = async function (mode) {
     const ch = st.chat;
-    if (C && !C.ended) { uiAlert("Siz allaqachon qoʻngʻiroqdasiz."); return; }
+    if (C && !C.ended) { if (C.boot) return; uiAlert("Siz allaqachon qoʻngʻiroqdasiz."); return; }
     if (C) closeUi(C);
     if (!ch || ch.t !== "c" || !st.user) return;
     const chat = (st.chats || []).find(x => x.id === ch.id); if (!chat) return;
@@ -299,18 +300,22 @@
     const own = chat.owner === me;
     const name = own ? chat.askerName : ((st.csh && st.csh.name) || chat.ownerName);
     const ava = own ? ava2(chat.askerImg) : ava2(chat.ownerImg, chat.ownerAva);
-    if (!(await gate(mode, peer, ch.id, name))) return;
-    try { await preflight(mode); } catch (e) { uiAlert(e.message); return; }
-    if (C && !C.ended) return;
-    if (C) closeUi(C);
-    C = { role: "caller", mode, chatId: ch.id, peer, peerName: name, peerAva: ava, ended: false };
-    ui("calling"); status("Qoʻngʻiroq qilinmoqda…"); ring("out");
+    // Darhol "Ulanmoqda…" oynasini koʻrsatamiz (tekshiruvlar fonda ketadi), qayta bosish esa eʼtiborga olinmaydi
+    const boot = C = { role: "caller", mode, chatId: ch.id, peer, peerName: name, peerAva: ava, ended: false, boot: true };
+    ui("calling"); status("Ulanmoqda…");
+    const [gr, pr] = await Promise.allSettled([gate(mode, peer, ch.id, name), preflight(mode)]);
+    if (C !== boot || boot.ended) return;
+    if (gr.status === "fulfilled" && !gr.value) return;
+    if (pr.status === "rejected") { dropBoot(); uiAlert((pr.reason && pr.reason.message) || "Mikrofondan foydalanishga ruxsat bering."); return; }
+    boot.boot = false;
+    status("Qoʻngʻiroq qilinmoqda…"); ring("out");
     try { C.id = await FB.callCreate(ch.id, peer, mode, st.user.name); }
     catch (e) {
       const m = e && e.message ? e.message : e; closeUi(C);
       if (e && e.code === "permission-denied") askPermission(ch.id, name); else uiAlert("Qoʻngʻiroq boshlanmadi: " + m);
       return;
     }
+    if (C !== boot || boot.ended) { if (boot.id) FB.callSet(boot.id, "ended").catch(() => {}); return; }
     const my = C;
     my.unsub = FB.callWatch(my.id, d => {
       if (!d || C !== my || my.ended) return;

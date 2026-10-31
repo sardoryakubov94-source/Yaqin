@@ -924,3 +924,9 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 /* Tugma bosilganda xiralashish effekti */
 :where(button,a[href],summary,[onclick],[role="button"]){-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:opacity .15s ease,scale .15s ease}
 .yq-press{opacity:.5!important;scale:.96}
+
+/* Guruh ovozli chati ulanayotganda */
+.gc-boot{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);translate:-50% 0;z-index:9999;display:flex;align-items:center;gap:10px;background:var(--c2,#1b1b2e);color:var(--t,#fff);border:1px solid #ffffff22;border-radius:999px;padding:10px 16px;font-size:14px;box-shadow:0 6px 24px #0008}
+.gc-sp{width:16px;height:16px;border:2px solid #ffffff44;border-top-color:var(--a,#f0b34a);border-radius:50%;animation:gcspin .8s linear infinite}
+@keyframes gcspin{to{transform:rotate(360deg)}}
+body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}

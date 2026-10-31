@@ -72,7 +72,19 @@
     if (live.length > MAX_PEERS && !call.warned) { call.warned = true; toast("Qoʻngʻiroqda odam koʻp: sifat pasayishi mumkin"); }
     call.rtc.syncPeers(live.slice(0, MAX_PEERS));
   }
+  let booting = false;
+  function bootUi(on) {
+    document.body.classList.toggle("yq-gc-boot", on);
+    let e = document.getElementById("gcBoot");
+    if (on && !e) { e = document.createElement("div"); e.id = "gcBoot"; e.className = "gc-boot"; e.innerHTML = '<span class="gc-sp"></span><b>Ovozli chat ulanmoqda…</b>'; document.body.appendChild(e); }
+    else if (!on && e) e.remove();
+  }
   async function startGroupCall(mode) {
+    if (booting) return;
+    booting = true; bootUi(true);
+    try { await startGroupCallInner(mode); } finally { booting = false; bootUi(false); }
+  }
+  async function startGroupCallInner(mode) {
     const ch = st && st.chat;
     if (!ch || ch.t !== "g") return;
     const g = (st.groups || []).find(x => x.id === ch.id);
@@ -106,9 +118,7 @@
           else document.getElementById("agora_" + uid)?.remove();
         },
       });
-      await call.rtc.join();
-      await call.rtc.setMic(true);
-      await FB.groupCallEnter(gid, "audio");
+      await Promise.all([(async () => { await call.rtc.join(); await call.rtc.setMic(true); })(), FB.groupCallEnter(gid, "audio")]);
       FB.groupCallBeat(gid);
       call.unsubNames = FB.groupCallParticipants(gid, ps => {
         if (GC !== call) return;
