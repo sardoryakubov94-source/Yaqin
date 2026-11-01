@@ -930,3 +930,22 @@ select.in{pointer-events:none;-webkit-tap-highlight-color:transparent}
 .gc-sp{width:16px;height:16px;border:2px solid #ffffff44;border-top-color:var(--a,#f0b34a);border-radius:50%;animation:gcspin .8s linear infinite}
 @keyframes gcspin{to{transform:rotate(360deg)}}
 body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
+
+/* O'yin xonasi: ovozli chat belgisi tugmalar tagida ixcham; shisha doirasi kattaroq */
+.gm-room-top{align-items:flex-start}
+.gm-room-top .gm-top-right{flex:0 1 auto;max-width:72%;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.gm-room-top .gm-top-right .yaqin-call-controls{max-width:100%}
+.gm-top-right .gm-vbar{margin:0;padding:3px 8px;gap:6px;border-radius:8px;font-size:10.5px;line-height:1.2;white-space:nowrap;max-width:100%}
+.gm-top-right .gm-vbar .dot{width:7px;height:7px}
+.gm-top-right .gm-vbar button{padding:3px 9px;font-size:10px;border-radius:8px}
+@media(max-width:899px){
+.gm .gm-ring{width:min(88vw,40vh,370px)}
+.gm:has(#gmCard:not([hidden])) .gm-ring{width:min(62vw,25vh,230px)}
+.gm .gm-stage{padding:14px 8px 20px}
+.gm:has(#gmCard:not([hidden])) .gm-stage{padding:12px 8px 16px}
+.gm .gm-bottle{width:56px;height:56px;margin:-28px 0 0 -28px;font-size:48px;line-height:56px}
+.gm .gm-av{width:50px;height:50px}.gm .gm-seat{width:60px}.gm .gm-seat small{max-width:60px}
+.gm:has(#gmCard:not([hidden])) .gm-bottle{width:44px;height:44px;margin:-22px 0 0 -22px;font-size:38px;line-height:44px}
+.gm:has(#gmCard:not([hidden])) .gm-av{width:38px;height:38px}
+}
+@media(max-width:899px) and (max-height:640px){.gm .gm-ring{width:min(78vw,34vh,300px)}}
