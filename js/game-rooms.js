@@ -186,12 +186,12 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const f = inp.files && inp.files[0]; if (!f) return;
       if (!(/^audio\//.test(f.type) || /\.(mp3|m4a|aac|ogg|wav|opus)$/i.test(f.name))) { uiAlert("Faqat audio fayl (mp3, m4a, aac, ogg, wav) yuklash mumkin."); return; }
       if (f.size > SONG_MAX) { uiAlert("Fayl juda katta. Eng koʻpi 8 MB (" + (f.size / 1048576).toFixed(1) + " MB yuklamoqchisiz)."); return; }
-      const b = $("gmSongPick"); upBusy = true;
+      const b = $("gmSongPickBtn"); upBusy = true;
       try {
         await FB.gmRoomSong(RID, f, p => { if (b) b.textContent = Math.round(p * 100) + "%"; });
         lastUp = Date.now();
       } catch (e) { uiAlert("Qoʻshiq yuklanmadi: " + (e.message || e)); }
-      finally { upBusy = false; const b2 = $("gmSongPick"); if (b2) b2.textContent = "🎵"; }
+      finally { upBusy = false; const b2 = $("gmSongPickBtn"); if (b2) b2.textContent = "🎵"; }
     };
     inp.click();
   };
@@ -336,7 +336,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongSearch" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">🔍</button><button class="ghost gm-song-pick" id="gmSongPick" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">🎵</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">🔍</button><button class="ghost gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">🎵</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Render ----------
