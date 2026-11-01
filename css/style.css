@@ -1110,3 +1110,7 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm .gm-ring>.gm-info b{color:#fff}
 .gm .gm-ring>.gm-info button,.gm .gm-ring>.gm-info a{pointer-events:auto}
 .gm .gm-ring>.gm-info .go{width:auto;max-width:100%;padding:9px 16px;font-size:14px;margin:0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+
+/* "Guruhlar" katagi ham "Guruhli oʻyinlar" katagidek fonli */
+.gr-left{background:linear-gradient(135deg,#3a2150,#5b2a62);border:1px solid rgba(240,179,74,.35);border-radius:18px;padding:14px;box-sizing:border-box}
+.gr-left .sub{color:rgba(255,255,255,.72)}
