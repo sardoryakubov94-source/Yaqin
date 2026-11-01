@@ -969,3 +969,16 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-room-chat.gm-chat-full{position:fixed!important;inset:0!important;z-index:100000!important;width:100%!important;max-width:none!important;height:100dvh;margin:0!important;transform:none!important;border-radius:0!important;display:flex!important;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px))!important;background:var(--bg,#14111f)!important;box-sizing:border-box}
 .gm-room-chat.gm-chat-full .gm-room-messages{flex:1 1 auto;height:auto!important;min-height:0!important;max-height:none!important}
 .gm-room-chat.gm-chat-full .gm-room-send{flex:none}
+
+/* Chatga qoʻshiq: yuklash tugmasi va pleyer */
+.gm-song-pick{flex:none;min-width:40px;padding:8px 9px;border-radius:12px;font-size:16px;line-height:1}
+.gm .gm-room-msg.gm-song{align-self:stretch;max-width:100%;background:linear-gradient(135deg,rgba(150,80,200,.28),rgba(80,60,170,.22));border:1px solid rgba(180,120,255,.45)}
+.gm-song-row{display:flex;align-items:center;gap:8px}
+.gm-song-btn,.gm-song-all{flex:none;width:34px;height:34px;border-radius:50%;background:var(--c2);color:var(--t);font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+.gm-song-btn{background:var(--a,#f0b34a);color:#14111f}
+.gm-song-all.on{background:rgba(80,220,140,.35);box-shadow:0 0 0 2px rgba(80,220,140,.7)}
+.gm-song-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.gm .gm-room-msg .gm-song-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-song-bar{height:4px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+.gm-song-bar i{display:block;height:100%;width:0;background:var(--a,#f0b34a)}
+.gm-song-time{font-size:9.5px;color:var(--m);min-height:11px}

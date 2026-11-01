@@ -81,6 +81,90 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
 
   let chatMsgs = [], chatSig = "", chatKey = "";
+  // ---------- Qoʻshiq: chatga yuklash, eshitish, hammaga birga qoʻyish ----------
+  let songA = null, songMid = "", songPlaying = false, songSynced = false, seenCmd = null, upBusy = false, lastUp = 0;
+  const SONG_MAX = 8 * 1024 * 1024, SONG_GAP = 20000, fmtT = x => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ":" + String(x % 60).padStart(2, "0"); };
+  function songBar() {
+    if (!songMid) return;
+    const m = document.querySelector('.gm-song[data-mid="' + songMid + '"]'); if (!m || !songA) return;
+    const i = m.querySelector(".gm-song-bar i"), t = m.querySelector(".gm-song-time");
+    const d = songA.duration && isFinite(songA.duration) ? songA.duration : 0;
+    if (i) i.style.width = d ? Math.min(100, songA.currentTime / d * 100) + "%" : "0%";
+    if (t) t.textContent = fmtT(songA.currentTime) + (d ? " / " + fmtT(d) : "");
+  }
+  function songEl() {
+    if (songA) return songA;
+    songA = new Audio(); songA.preload = "none"; songA.setAttribute("playsinline", "");
+    songA.addEventListener("timeupdate", songBar);
+    songA.addEventListener("ended", () => { songPlaying = false; songSynced = false; renderChat(); });
+    songA.addEventListener("pause", () => { if (songPlaying) { songPlaying = false; renderChat(); } });
+    songA.addEventListener("error", () => { if (songA && songA.src) { songPlaying = false; songSynced = false; toast("Qoʻshiqni ochib boʻlmadi"); renderChat(); } });
+    return songA;
+  }
+  function songStop() {
+    songPlaying = false; songSynced = false;
+    if (songA) { try { songA.pause(); songA.removeAttribute("src"); songA.load(); } catch (_) {} }
+    songMid = "";
+  }
+  function songPlay(m, pos, synced) {
+    if (!m || !m.audioUrl) return;
+    const a = songEl();
+    if (songMid !== m.id || !a.src) { a.src = m.audioUrl; songMid = m.id; }
+    if (pos > 1) { const seek = () => { try { a.currentTime = pos; } catch (_) {} }; if (a.readyState >= 1) seek(); else a.addEventListener("loadedmetadata", seek, { once: true }); }
+    const pr = a.play();
+    const ok = () => {
+      songPlaying = true; songSynced = !!synced; renderChat();
+      if (call && !call.left && !call.muted) { window.gmMute().catch(() => {}); toast("🎵 Qoʻshiq vaqtida mikrofon oʻchirildi"); }
+    };
+    if (pr && pr.then) pr.then(ok, () => toast("Qoʻshiqni boshlash uchun ▶ tugmasini bosing")); else ok();
+  }
+  window.gmSongToggle = mid => {
+    const m = chatMsgs.find(x => x.id === mid); if (!m) return;
+    if (songPlaying && songMid === mid) { songEl().pause(); songSynced = false; renderChat(); return; }
+    songPlay(m, songMid === mid && songA ? songA.currentTime : 0, false);
+  };
+  window.gmSongAll = async mid => {
+    const m = chatMsgs.find(x => x.id === mid); if (!m || !RID) return;
+    try {
+      if (songPlaying && songMid === mid && songSynced) { songStop(); renderChat(); await FB.gmRoomCmd(RID, mid, "stop", 0); toast("Qoʻshiq hammada toʻxtatildi"); return; }
+      songPlay(m, 0, true);
+      await FB.gmRoomCmd(RID, mid, "play", 0); toast("📢 Qoʻshiq hammaga qoʻyildi");
+    } catch (e) { uiAlert("Yuborilmadi: " + (e.message || e)); }
+  };
+  window.gmSongPick = () => {
+    if (upBusy) { toast("Qoʻshiq yuklanmoqda…"); return; }
+    const wait = SONG_GAP - (Date.now() - lastUp);
+    if (wait > 0) { toast("Yana " + Math.ceil(wait / 1000) + " soniyadan keyin yuklang"); return; }
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "audio/*,.mp3,.m4a,.aac,.ogg,.wav";
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      if (!(/^audio\//.test(f.type) || /\.(mp3|m4a|aac|ogg|wav|opus)$/i.test(f.name))) { uiAlert("Faqat audio fayl (mp3, m4a, aac, ogg, wav) yuklash mumkin."); return; }
+      if (f.size > SONG_MAX) { uiAlert("Fayl juda katta. Eng koʻpi 8 MB (" + (f.size / 1048576).toFixed(1) + " MB yuklamoqchisiz)."); return; }
+      const b = $("gmSongPick"); upBusy = true;
+      try {
+        await FB.gmRoomSong(RID, f, p => { if (b) b.textContent = Math.round(p * 100) + "%"; });
+        lastUp = Date.now();
+      } catch (e) { uiAlert("Qoʻshiq yuklanmadi: " + (e.message || e)); }
+      finally { upBusy = false; const b2 = $("gmSongPick"); if (b2) b2.textContent = "🎵"; }
+    };
+    inp.click();
+  };
+  function songCmds(msgs) {
+    if (seenCmd === null) { seenCmd = new Set(msgs.filter(m => m.cmd).map(m => m.id)); return; }
+    for (const m of msgs) {
+      if (!m.cmd || seenCmd.has(m.id)) continue; seenCmd.add(m.id);
+      if (m.from === st.user.uid || Date.now() - (m.t || 0) > 15000) continue;
+      if (m.cmd.act === "stop") { if (songMid === m.cmd.mid) { songStop(); } continue; }
+      const song = msgs.find(x => x.id === m.cmd.mid); if (!song || !song.audioUrl) continue;
+      const el = Math.max(0, Math.min(15, (Date.now() - m.t) / 1000));
+      songPlay(song, (m.cmd.pos || 0) + el, true);
+    }
+  }
+  function songCard(m, me, avatar) {
+    const cur = songMid === m.id, on = cur && songPlaying, pct = cur && songA && songA.duration && isFinite(songA.duration) ? Math.min(100, songA.currentTime / songA.duration * 100) : 0;
+    const tm = cur && songA ? fmtT(songA.currentTime) + (songA.duration && isFinite(songA.duration) ? " / " + fmtT(songA.duration) : "") : "";
+    return `<div class="gm-room-msg gm-song${m.from === me ? " mine" : ""}" data-mid="${esc(m.id)}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><div class="gm-song-row"><button type="button" class="gm-song-btn" onclick="gmSongToggle('${esc(m.id)}')" aria-label="${on ? "Pauza" : "Qoʻyish"}">${on ? "⏸" : "▶"}</button><div class="gm-song-info"><span class="gm-song-name">🎵 ${esc(m.audio.name || "Qoʻshiq")}</span><div class="gm-song-bar"><i style="width:${pct}%"></i></div><small class="gm-song-time">${esc(tm)}</small></div><button type="button" class="gm-song-all${on && songSynced ? " on" : ""}" onclick="gmSongAll('${esc(m.id)}')" title="Hammaga qoʻyish" aria-label="Hammaga qoʻyish">📢</button></div></div>`;
+  }
   function renderChat() {
     const msgs = chatMsgs;
         const box = $("gmRoomMessages"); if (!box) return;
@@ -89,7 +173,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           ? `<div class="gm-room-msg gm-room-question gm-room-ask-prompt"><div class="gm-room-author">${pav(d, sp.to)}<b>${esc(pn(d, sp.to))}</b></div><div class="gm-room-question-text">💬 ${esc(pn(d, sp.to))} ga savolingizni bering</div><small class="gm-room-question-hint">Savolni pastdagi chat maydoniga yozing</small></div>` : "";
         const answerPrompt = d && sp && sp.open && sp.to === me && sp.by !== me && animDone
           ? `<div class="gm-room-msg gm-room-question"><div class="gm-room-author">${pav(d, sp.by)}<b>${esc(pn(d, sp.by))}</b><small>sizga savol berdi</small></div><div class="gm-room-question-text">❓ ${esc(sp.customQ || QS[sp.q % QS.length])}</div><small class="gm-room-question-hint">Javobni pastdagi chat maydoniga yozing</small></div>` : "";
+        songCmds(msgs);
         const rendered = msgs.map(m => {
+          if (m.cmd) return "";
+          if (m.audio && m.audioUrl) return songCard(m, me, d && d.pm && d.pm[m.from] ? pav(d, m.from) : "");
           const text = String(m.text || "");
           const isQA = text.startsWith("❓ Savol: ") && text.includes("\\n💬 Javob: ");
           const isQuestion = text.startsWith("❓ SAVOL → ");
@@ -111,7 +198,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      songStop(); seenCmd = null; RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
@@ -125,7 +212,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongPick" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">🎵</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Render ----------
@@ -433,7 +520,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   // ---------- Chiqish ----------
   window.gmLeave = function (silent) {
     const id = RID; closing = true;
-    document.body.classList.remove("gm-chat-open");
+    document.body.classList.remove("gm-chat-open"); songStop();
     if (id) { leavingRooms.add(id); setTimeout(() => leavingRooms.delete(id), 10000); stopVoice().catch(() => {}); FB.gmLeave(id).catch(e => console.warn("gmLeave:", e)); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };

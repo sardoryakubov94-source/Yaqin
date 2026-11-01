@@ -215,7 +215,9 @@ service cloud.firestore {
           && request.resource.data.from == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
           && request.resource.data.name is string && request.resource.data.name.size() <= 60
-          && request.resource.data.t is number;
+          && request.resource.data.t is number
+          && (!('audio' in request.resource.data) || (request.resource.data.audio is map && request.resource.data.audio.path is string && request.resource.data.audio.path.size() < 200 && request.resource.data.audio.name is string && request.resource.data.audio.name.size() <= 80))
+          && (!('cmd' in request.resource.data) || (request.resource.data.cmd is map && request.resource.data.cmd.act in ['play', 'stop'] && request.resource.data.cmd.mid is string && request.resource.data.cmd.mid.size() <= 40));
       }
       // WebRTC ovoz signali (offer/answer/ICE): faqat xona aʼzolari oʻrtasida, qabul qiluvchi oʻqiydi va oʻchiradi
       match /rtc/{sid} {
