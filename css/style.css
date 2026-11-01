@@ -1088,3 +1088,17 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-below{align-items:center}
 .gm.gm-yt-on .gm-below{position:relative;bottom:auto}
 .gm.gm-yt-on .gm-card{max-height:none;overflow:visible}
+
+/* Guruhlar sahifasi: chapda "Guruhlar" + yangi guruh tugmasi, oʻngda "Guruhli oʻyinlar" yonma-yon */
+.gr-top{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:stretch;margin:0 0 12px}
+.gr-left{display:flex;flex-direction:column;gap:8px;min-width:0}
+.gr-left h3{margin:0}
+.gr-left .sub{margin:0;font-size:12px;line-height:1.4;text-align:left}
+.gr-left .go{width:100%;margin:auto 0 0;padding:11px 8px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.gr-right{min-width:0;display:flex}
+.gr-right:empty{display:none}
+.gr-top:has(.gr-right:empty){grid-template-columns:1fr}
+.gr-right .gm-entry{flex:1;flex-direction:column;justify-content:center;align-items:center;text-align:center;margin:0;gap:6px;padding:14px 10px}
+.gr-right .gm-entry>span{font-size:46px;line-height:1}
+.gr-right .gm-entry b{font-size:15px}
+.gr-right .gm-entry small{display:block;margin-top:3px;font-size:11px;line-height:1.3}

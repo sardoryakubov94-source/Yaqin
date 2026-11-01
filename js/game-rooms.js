@@ -764,6 +764,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   if (typeof base === "function") window.groupsV = function () {
     const h = base.apply(this, arguments);
     if (!st.user) return h;
-    return `<button class="gm-entry" onclick="gmOpenList()"><span>🎲</span><div><b>Guruhli oʻyinlar</b></div></button>` + h;
+    const entry = `<button class="gm-entry" onclick="gmOpenList()"><span>🎲</span><div><b>Guruhli oʻyinlar</b><small>Shisha aylantirib tanishing</small></div></button>`;
+    return h.includes('<div class="gr-right"></div>') ? h.replace('<div class="gr-right"></div>', '<div class="gr-right">' + entry + "</div>") : entry + h;
   };
 })();
