@@ -508,7 +508,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     await startVoice(RID);
     if (call && !call.left && vmsg === "") {
       vstate = "on"; voiceUI(); startBeat(rid); syncRtc();
-      if (auto !== true) await window.gmMute();
+      // Mikrofon so'ralmaydi: avval faqat eshitish; gapirish uchun "Mikrofonni yoqish" tugmasi bosiladi
+      if (auto !== true) toast("🔊 Ovozli chatga ulandingiz (faqat eshitish). Gapirish uchun mikrofonni yoqing");
     } else vstate = "off";
     voiceUI();
   };
