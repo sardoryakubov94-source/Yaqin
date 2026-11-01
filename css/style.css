@@ -1073,3 +1073,32 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm.gm-yt-on .gm-ring,.gm.gm-yt-on:has(#gmCard:not([hidden])) .gm-ring{width:min(58vw,23vh,210px)}
 .gm.gm-yt-on .gm-card{max-height:none}
 }
+
+/* Oʻyin doirasi: radar uslubi (koʻzni charchatmaydigan yumshoq moviy-yashil ranglar) */
+.gm .gm-ring{
+  background:
+    radial-gradient(circle closest-side,#133634 0%,#0f2a2b 55%,#0c2023 92%,transparent 93%),
+    repeating-conic-gradient(from -.4deg,rgba(120,220,190,.42) 0 .8deg,transparent .8deg 6deg),
+    #0c2023;
+  border:2px solid rgba(94,214,176,.38);
+  box-shadow:inset 0 0 26px rgba(70,200,160,.10),0 0 22px rgba(70,200,160,.08);
+}
+.gm .gm-ring::before,.gm .gm-ring::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0}
+/* halqalar, toʻr va yoʻllar */
+.gm .gm-ring::before{
+  background:
+    radial-gradient(circle closest-side,transparent 0 24.5%,rgba(94,214,176,.22) 25%,transparent 25.5%,transparent 49.5%,rgba(94,214,176,.20) 50%,transparent 50.5%,transparent 74.5%,rgba(94,214,176,.18) 75%,transparent 75.5%),
+    linear-gradient(rgba(94,214,176,.20),rgba(94,214,176,.20)) center/1px 100% no-repeat,
+    linear-gradient(rgba(94,214,176,.20),rgba(94,214,176,.20)) center/100% 1px no-repeat,
+    linear-gradient(45deg,transparent calc(50% - .5px),rgba(94,214,176,.09) 50%,transparent calc(50% + .5px)),
+    linear-gradient(-45deg,transparent calc(50% - .5px),rgba(94,214,176,.09) 50%,transparent calc(50% + .5px));
+}
+/* sekin aylanadigan yumshoq nur (radar nuri) */
+.gm .gm-ring::after{
+  background:conic-gradient(from 0deg,rgba(94,214,176,0) 0deg,rgba(94,214,176,0) 305deg,rgba(94,214,176,.10) 340deg,rgba(94,214,176,.28) 360deg);
+  -webkit-mask:radial-gradient(circle closest-side,#000 92%,transparent 93%);mask:radial-gradient(circle closest-side,#000 92%,transparent 93%);
+  animation:gmRadar 8s linear infinite;
+}
+@keyframes gmRadar{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.gm .gm-ring::after{animation:none}}
+.gm .gm-seat{z-index:2}.gm .gm-bottle{z-index:3}
