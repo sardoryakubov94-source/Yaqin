@@ -1063,16 +1063,11 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-below{display:grid;position:relative}
 .gm-below>.gm-below-txt{grid-area:1/1;position:relative;z-index:2;min-width:0}
 .gm-below>.gm-yt-dock{grid-area:1/1;justify-self:center;align-self:center;margin:0;z-index:1}
-.gm.gm-yt-on .gm-below{position:sticky;bottom:0;z-index:6;align-items:center}
 .gm.gm-yt-on .gm-below-txt{align-self:center;pointer-events:none}
 .gm.gm-yt-on .gm-below-txt button,.gm.gm-yt-on .gm-below-txt a,.gm.gm-yt-on .gm-below-txt input,.gm.gm-yt-on .gm-below-txt textarea{pointer-events:auto}
 .gm.gm-yt-on .gm-info,.gm.gm-yt-on .gm-card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .gm.gm-yt-on .gm-info,.gm.gm-yt-on .gm-info p,.gm.gm-yt-on .gm-info b,.gm.gm-yt-on .gm-card,.gm.gm-yt-on .gm-q,.gm.gm-yt-on .gm-hint,.gm.gm-yt-on .gm-card p{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.85)}
 .gm.gm-yt-on .gm-card button{background:rgba(20,17,31,.55);backdrop-filter:blur(2px)}
-@media(max-width:899px){
-.gm.gm-yt-on .gm-ring,.gm.gm-yt-on:has(#gmCard:not([hidden])) .gm-ring{width:min(58vw,23vh,210px)}
-.gm.gm-yt-on .gm-card{max-height:none}
-}
 
 /* Oʻyin doirasi: yoʻl-yoʻl (burchakli yoʻllar), oʻyin ranglarida: toʻq binafsha, binafsha va yumshoq atirgul */
 .gm .gm-ring{
@@ -1088,3 +1083,8 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 /* Oʻyin chati: balandligi biroz kichraytirildi (toʻliq ekran rejimiga tegmaydi) */
 .gm .gm-room-messages{height:clamp(130px,28vh,230px)}
 @media(max-width:899px) and (max-height:640px){.gm .gm-room-messages{height:clamp(90px,23vh,150px)}}
+
+/* Video oʻyin boʻlimining pastida (surib koʻriladi); izohlar uning ustida, videoni pastga surmaydi */
+.gm-below{align-items:center}
+.gm.gm-yt-on .gm-below{position:relative;bottom:auto}
+.gm.gm-yt-on .gm-card{max-height:none;overflow:visible}
