@@ -323,7 +323,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      songStop(); seenCmd = null; RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      songStop(); seenCmd = null; kissFxInit = false; kissFlown = new Set(); kissMy = null; RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
@@ -342,61 +342,83 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
 
   // ---------- Oʻpich lahzasi: shisha ikki kishiga toʻgʻri kelganda 10 soniya (faqat shu ikkisiga koʻrinadi) ----------
   const KISS_SEC = 10, KISS_R = 22, KISS_C = 2 * Math.PI * KISS_R;
-  let kissSeq = 0, kissT0 = 0, kissResAt = 0, kissMy = null, kissKey = "", kissTmr = null, kissClosed = 0;
+  let kissSeq = 0, kissT0 = 0, kissMy = null, kissKey = "", kissTmr = null, kissClosed = 0, kissFlown = new Set(), kissFxInit = false;
   function kissOff(el, closed) {
     clearInterval(kissTmr); kissTmr = null; if (el) { el.hidden = true; el.innerHTML = ""; }
     kissKey = ""; if (closed) kissClosed = kissSeq;
   }
-  window.gmKiss = async yes => {
-    const sp = R && R.spin; if (!sp || !sp.open || kissMy || (sp.kiss && sp.kiss[st.user.uid])) return;
-    kissMy = yes ? "y" : "n"; kissUI();
-    try { await FB.gmKiss(RID, !!yes); } catch (e) { kissMy = null; kissKey = ""; kissUI(); uiAlert(e.message || e); }
-  };
-  function kissHtml(d, me, other, ph, my, ot) {
-    const nm = u => esc(pn(d, u).split(" ")[0]), mine = ph === "r" ? my : my;
-    const sent = (v) => v === "y" ? `<em class="gm-kiss-sent">${IC("heart", 11)} oʻpich yubordi</em>` : "";
-    const otSeen = ph === "r" ? ot : (ot === "y" ? "y" : "");
-    let mid, foot;
-    if (ph === "c" && !my) {
-      mid = `<button type="button" class="gm-kiss-ok" onclick="gmKiss(true)" aria-label="OK, oʻpich yuborish"><span class="gm-kiss-ok-ic">${IC("heart", 22)}</span><b>OK</b></button>`;
-      foot = `<button type="button" class="gm-kiss-no" onclick="gmKiss(false)">${IC("x", 14)} Yoʻq</button>`;
-    } else if (ph === "c") {
-      mid = `<div class="gm-kiss-ok gm-kiss-locked ${my === "y" ? "yes" : "no"}"><span class="gm-kiss-ok-ic">${IC(my === "y" ? "heart" : "x", 22)}</span><b>${my === "y" ? "OK" : "Yoʻq"}</b></div>`;
-      foot = `<p class="gm-kiss-wait">Tanlovingiz qabul qilindi. ${nm(other)} javobi kutilmoqda…</p>`;
-    } else {
-      const a = my === "y", b = ot === "y";
-      const msg = a && b ? "Bir-biringizga oʻpich yubordingiz!" : a ? `Oʻpichingiz yuborildi. ${nm(other)} bu safar yubormadi.` : b ? `${nm(other)} sizga oʻpich yubordi!` : "Bu safar oʻpishmadingiz.";
-      mid = `<div class="gm-kiss-ok gm-kiss-locked ${a && b ? "yes both" : a || b ? "yes" : "no"}"><span class="gm-kiss-ok-ic">${IC(a || b ? "heart" : "x", 22)}</span></div>`;
-      foot = `<p class="gm-kiss-res">${msg}</p>`;
+  // Oʻpich (yuraklar) bir avatardan ikkinchisiga uchib boradi
+  function kissFly(from, to) {
+    try {
+      const a = $("gs_" + from), b = $("gs_" + to); if (!a || !b) return;
+      const ea = a.querySelector(".gm-av") || a, eb = b.querySelector(".gm-av") || b, ra = ea.getBoundingClientRect(), rb = eb.getBoundingClientRect();
+      if (!ra.width || !rb.width) return;
+      const x0 = ra.left + ra.width / 2, y0 = ra.top + ra.height / 2, dx = rb.left + rb.width / 2 - x0, dy = rb.top + rb.height / 2 - y0, lift = -Math.min(80, Math.hypot(dx, dy) * 0.28);
+      for (let i = 0; i < 3; i++) {
+        const el = document.createElement("div"); el.className = "gm-kiss-fx"; el.innerHTML = IC("heart", i ? 22 : 32);
+        el.style.left = x0 + "px"; el.style.top = y0 + "px"; document.body.appendChild(el);
+        const sway = (i - 1) * 22;
+        const an = el.animate([
+          { transform: "translate(0,0) scale(.35)", opacity: 0 },
+          { transform: `translate(${dx * 0.5 + sway}px,${dy * 0.5 + lift}px) scale(1.15)`, opacity: 1, offset: 0.5 },
+          { transform: `translate(${dx}px,${dy}px) scale(.95)`, opacity: 1, offset: 0.88 },
+          { transform: `translate(${dx}px,${dy}px) scale(1.7)`, opacity: 0 }
+        ], { duration: 1150, delay: i * 150, easing: "cubic-bezier(.3,.6,.3,1)", fill: "both" });
+        an.onfinish = () => el.remove(); setTimeout(() => el.remove(), 2600);
+      }
+      setTimeout(() => {
+        const r2 = $("gs_" + to); const e2 = r2 && (r2.querySelector(".gm-av") || r2); if (!e2) return;
+        const rr = e2.getBoundingClientRect(), pop = document.createElement("div"); pop.className = "gm-kiss-pop";
+        pop.style.left = rr.left + rr.width / 2 + "px"; pop.style.top = rr.top + rr.height / 2 + "px"; pop.style.width = pop.style.height = rr.width + "px";
+        document.body.appendChild(pop); setTimeout(() => pop.remove(), 900);
+        try { navigator.vibrate && navigator.vibrate(25); } catch (_) {}
+      }, 1050);
+    } catch (_) {}
+  }
+  // Boshqa tomon OK bosganda uning oʻpichi menga uchib keladi (va men bosganimda ham ikkalamizga koʻrinadi)
+  function kissFx() {
+    const d = R, sp = d && d.spin, me = st.user && st.user.uid; if (!d || !sp || !sp.seq) return;
+    const kiss = sp.kiss || {};
+    if (!kissFxInit) { kissFxInit = true; Object.keys(kiss).forEach(u => kissFlown.add(sp.seq + "|" + u)); return; }
+    if (!sp.open || !animDone || !(sp.by === me || sp.to === me) || sp.by === sp.to) return;
+    for (const u of [sp.by, sp.to]) {
+      if (kiss[u] !== "y") continue; const key = sp.seq + "|" + u; if (kissFlown.has(key)) continue; kissFlown.add(key);
+      kissFly(u, u === sp.by ? sp.to : sp.by);
     }
-    return `<div class="gm-kiss-card ${ph === "r" ? "res" : ""}">
+  }
+  const kissMine = sp => !!kissMy && kissMy.split("|")[0] === String(sp.seq || 0);
+  window.gmKiss = async yes => {
+    const sp = R && R.spin, me = st.user.uid; if (!sp || !sp.open || kissMine(sp) || (sp.kiss && sp.kiss[me])) return;
+    kissMy = (sp.seq || 0) + "|" + (yes ? "y" : "n"); kissClosed = sp.seq || 0; kissOff($("gmKiss"), true);
+    if (yes) { const other = sp.by === me ? sp.to : sp.by; kissFlown.add((sp.seq || 0) + "|" + me); kissFly(me, other); }
+    try { await FB.gmKiss(RID, !!yes); } catch (e) { uiAlert(e.message || e); }
+  };
+  function kissHtml(d, me, other) {
+    const nm = u => esc(pn(d, u).split(" ")[0]);
+    return `<div class="gm-kiss-card">
       <div class="gm-kiss-timer"><svg viewBox="0 0 52 52" width="46" height="46" aria-hidden="true"><circle class="bg" cx="26" cy="26" r="${KISS_R}"/><circle class="fg" id="gmKissArc" cx="26" cy="26" r="${KISS_R}" stroke-dasharray="${KISS_C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 26 26)"/></svg><b id="gmKissSec">${KISS_SEC}</b></div>
       <div class="gm-kiss-pair">
-        <div class="gm-kiss-p${my === "y" ? " sent" : ""}"><div class="gm-av">${pav(d, me)}</div><small>Siz</small>${sent(my === "y" ? "y" : "")}</div>
-        ${mid}
-        <div class="gm-kiss-p${otSeen === "y" ? " sent" : ""}"><div class="gm-av">${pav(d, other)}</div><small>${nm(other)}</small>${sent(otSeen)}</div>
-      </div>${foot}</div>`;
+        <div class="gm-kiss-p"><div class="gm-av">${pav(d, me)}</div><small>Siz</small></div>
+        <button type="button" class="gm-kiss-ok" onclick="gmKiss(true)" aria-label="OK, oʻpich yuborish"><span class="gm-kiss-ok-ic">${IC("heart", 22)}</span><b>OK</b></button>
+        <div class="gm-kiss-p"><div class="gm-av">${pav(d, other)}</div><small>${nm(other)}</small></div>
+      </div>
+      <button type="button" class="gm-kiss-no" onclick="gmKiss(false)">${IC("x", 14)} Yoʻq</button></div>`;
   }
   function kissUI() {
     const el = $("gmKiss"); if (!el) return;
     const d = R, sp = d && d.spin, me = st.user && st.user.uid;
-    const ok = d && sp && sp.open && animDone && sp.by && sp.to && sp.by !== sp.to && (sp.by === me || sp.to === me) && gOf(d, sp.by) && gOf(d, sp.to) && gOf(d, sp.by) !== gOf(d, sp.to) && kissClosed !== (sp.seq || 0);
+    const my = sp && sp.kiss && sp.kiss[me];
+    const ok = d && sp && sp.open && animDone && sp.by && sp.to && sp.by !== sp.to && (sp.by === me || sp.to === me) && gOf(d, sp.by) && gOf(d, sp.to) && gOf(d, sp.by) !== gOf(d, sp.to) && kissClosed !== (sp.seq || 0) && !my && !kissMine(sp);
     if (!ok) { if (!el.hidden) kissOff(el, false); return; }
     const seq = sp.seq || 0;
-    if (kissSeq !== seq) { kissSeq = seq; kissT0 = Date.now(); kissResAt = 0; kissMy = null; kissKey = ""; }
-    const other = sp.by === me ? sp.to : sp.by, kiss = sp.kiss || {};
-    const my = kiss[me] || kissMy || "", ot = kiss[other] || "";
-    const left = Math.max(0, KISS_SEC - (Date.now() - kissT0) / 1000);
-    const done = (my && ot) || left <= 0;
-    if (done && !kissResAt) kissResAt = Date.now();
-    if (kissResAt && Date.now() - kissResAt > 4200) { kissOff(el, true); return; }
-    const ph = done ? "r" : "c";
-    const key = [seq, ph, my, ph === "r" ? ot : (ot === "y" ? "y" : "")].join("|");
-    if (key !== kissKey) { kissKey = key; el.innerHTML = kissHtml(d, me, other, ph, my, ot); }
+    if (kissSeq !== seq) { kissSeq = seq; kissT0 = Date.now(); kissKey = ""; }
+    const other = sp.by === me ? sp.to : sp.by, left = Math.max(0, KISS_SEC - (Date.now() - kissT0) / 1000);
+    if (left <= 0) { kissOff(el, true); return; }
+    if (kissKey !== String(seq)) { kissKey = String(seq); el.innerHTML = kissHtml(d, me, other); }
     el.hidden = false;
     const sec = $("gmKissSec"), arc = $("gmKissArc");
-    if (sec) sec.textContent = String(done ? 0 : Math.ceil(left));
-    if (arc) { arc.style.strokeDashoffset = String(KISS_C * (1 - (done ? 0 : left / KISS_SEC))); arc.classList.toggle("low", !done && left <= 3); }
+    if (sec) sec.textContent = String(Math.ceil(left));
+    if (arc) { arc.style.strokeDashoffset = String(KISS_C * (1 - left / KISS_SEC)); arc.classList.toggle("low", left <= 3); }
     if (!kissTmr) kissTmr = setInterval(kissUI, 250);
   }
 
@@ -466,7 +488,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
-    kissUI();
+    kissUI(); kissFx();
     voiceBar(); syncRtc();
     botTick();
   }
