@@ -1084,3 +1084,7 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 }
 .gm .gm-ring::before,.gm .gm-ring::after{content:none;animation:none}
 .gm .gm-seat{z-index:2}.gm .gm-bottle{z-index:3}
+
+/* Oʻyin chati: balandligi biroz kichraytirildi (toʻliq ekran rejimiga tegmaydi) */
+.gm .gm-room-messages{height:clamp(130px,28vh,230px)}
+@media(max-width:899px) and (max-height:640px){.gm .gm-room-messages{height:clamp(90px,23vh,150px)}}
