@@ -1052,3 +1052,9 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-kiss-fx .yi{fill:#ff4f8f;stroke:#ffd0e2}
 .gm-kiss-pop{position:fixed;z-index:100019;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #ff6aa2;box-shadow:0 0 22px rgba(255,106,162,.8);animation:gmKissPop .85s ease-out forwards}
 @keyframes gmKissPop{from{opacity:.95;transform:translate(-50%,-50%) scale(.9)}to{opacity:0;transform:translate(-50%,-50%) scale(1.9)}}
+
+/* Qoʻshiq qidirish/yuklash tugmalari chat sarlavhasida */
+.gm-room-chat-title{gap:8px}
+.gm-chat-tools{display:inline-flex;align-items:center;gap:6px;flex:none}
+.gm-chat-tools .gm-song-pick{min-width:34px;width:34px;height:34px;padding:0;border-radius:10px;background:var(--c2);color:var(--t);font-size:11px;display:flex;align-items:center;justify-content:center}
+.gm-room-chat-title small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;margin-left:0!important;margin-right:0!important}
