@@ -336,8 +336,68 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   };
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
-<div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
+<div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div><div class="gm-kiss" id="gmKiss" hidden></div></div>
 <div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">${IC("expand", 16)}</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">${IC("search", 18)}</button><button class="ghost gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">${IC("music", 18)}</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+  }
+
+  // ---------- Oʻpich lahzasi: shisha ikki kishiga toʻgʻri kelganda 10 soniya (faqat shu ikkisiga koʻrinadi) ----------
+  const KISS_SEC = 10, KISS_R = 22, KISS_C = 2 * Math.PI * KISS_R;
+  let kissSeq = 0, kissT0 = 0, kissResAt = 0, kissMy = null, kissKey = "", kissTmr = null, kissClosed = 0;
+  function kissOff(el, closed) {
+    clearInterval(kissTmr); kissTmr = null; if (el) { el.hidden = true; el.innerHTML = ""; }
+    kissKey = ""; if (closed) kissClosed = kissSeq;
+  }
+  window.gmKiss = async yes => {
+    const sp = R && R.spin; if (!sp || !sp.open || kissMy || (sp.kiss && sp.kiss[st.user.uid])) return;
+    kissMy = yes ? "y" : "n"; kissUI();
+    try { await FB.gmKiss(RID, !!yes); } catch (e) { kissMy = null; kissKey = ""; kissUI(); uiAlert(e.message || e); }
+  };
+  function kissHtml(d, me, other, ph, my, ot) {
+    const nm = u => esc(pn(d, u).split(" ")[0]), mine = ph === "r" ? my : my;
+    const sent = (v) => v === "y" ? `<em class="gm-kiss-sent">${IC("heart", 11)} oʻpich yubordi</em>` : "";
+    const otSeen = ph === "r" ? ot : (ot === "y" ? "y" : "");
+    let mid, foot;
+    if (ph === "c" && !my) {
+      mid = `<button type="button" class="gm-kiss-ok" onclick="gmKiss(true)" aria-label="OK, oʻpich yuborish"><span class="gm-kiss-ok-ic">${IC("heart", 22)}</span><b>OK</b></button>`;
+      foot = `<button type="button" class="gm-kiss-no" onclick="gmKiss(false)">${IC("x", 14)} Yoʻq</button>`;
+    } else if (ph === "c") {
+      mid = `<div class="gm-kiss-ok gm-kiss-locked ${my === "y" ? "yes" : "no"}"><span class="gm-kiss-ok-ic">${IC(my === "y" ? "heart" : "x", 22)}</span><b>${my === "y" ? "OK" : "Yoʻq"}</b></div>`;
+      foot = `<p class="gm-kiss-wait">Tanlovingiz qabul qilindi. ${nm(other)} javobi kutilmoqda…</p>`;
+    } else {
+      const a = my === "y", b = ot === "y";
+      const msg = a && b ? "Bir-biringizga oʻpich yubordingiz!" : a ? `Oʻpichingiz yuborildi. ${nm(other)} bu safar yubormadi.` : b ? `${nm(other)} sizga oʻpich yubordi!` : "Bu safar oʻpishmadingiz.";
+      mid = `<div class="gm-kiss-ok gm-kiss-locked ${a && b ? "yes both" : a || b ? "yes" : "no"}"><span class="gm-kiss-ok-ic">${IC(a || b ? "heart" : "x", 22)}</span></div>`;
+      foot = `<p class="gm-kiss-res">${msg}</p>`;
+    }
+    return `<div class="gm-kiss-card ${ph === "r" ? "res" : ""}">
+      <div class="gm-kiss-timer"><svg viewBox="0 0 52 52" width="46" height="46" aria-hidden="true"><circle class="bg" cx="26" cy="26" r="${KISS_R}"/><circle class="fg" id="gmKissArc" cx="26" cy="26" r="${KISS_R}" stroke-dasharray="${KISS_C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 26 26)"/></svg><b id="gmKissSec">${KISS_SEC}</b></div>
+      <div class="gm-kiss-pair">
+        <div class="gm-kiss-p${my === "y" ? " sent" : ""}"><div class="gm-av">${pav(d, me)}</div><small>Siz</small>${sent(my === "y" ? "y" : "")}</div>
+        ${mid}
+        <div class="gm-kiss-p${otSeen === "y" ? " sent" : ""}"><div class="gm-av">${pav(d, other)}</div><small>${nm(other)}</small>${sent(otSeen)}</div>
+      </div>${foot}</div>`;
+  }
+  function kissUI() {
+    const el = $("gmKiss"); if (!el) return;
+    const d = R, sp = d && d.spin, me = st.user && st.user.uid;
+    const ok = d && sp && sp.open && animDone && sp.by && sp.to && sp.by !== sp.to && (sp.by === me || sp.to === me) && gOf(d, sp.by) && gOf(d, sp.to) && gOf(d, sp.by) !== gOf(d, sp.to) && kissClosed !== (sp.seq || 0);
+    if (!ok) { if (!el.hidden) kissOff(el, false); return; }
+    const seq = sp.seq || 0;
+    if (kissSeq !== seq) { kissSeq = seq; kissT0 = Date.now(); kissResAt = 0; kissMy = null; kissKey = ""; }
+    const other = sp.by === me ? sp.to : sp.by, kiss = sp.kiss || {};
+    const my = kiss[me] || kissMy || "", ot = kiss[other] || "";
+    const left = Math.max(0, KISS_SEC - (Date.now() - kissT0) / 1000);
+    const done = (my && ot) || left <= 0;
+    if (done && !kissResAt) kissResAt = Date.now();
+    if (kissResAt && Date.now() - kissResAt > 4200) { kissOff(el, true); return; }
+    const ph = done ? "r" : "c";
+    const key = [seq, ph, my, ph === "r" ? ot : (ot === "y" ? "y" : "")].join("|");
+    if (key !== kissKey) { kissKey = key; el.innerHTML = kissHtml(d, me, other, ph, my, ot); }
+    el.hidden = false;
+    const sec = $("gmKissSec"), arc = $("gmKissArc");
+    if (sec) sec.textContent = String(done ? 0 : Math.ceil(left));
+    if (arc) { arc.style.strokeDashoffset = String(KISS_C * (1 - (done ? 0 : left / KISS_SEC))); arc.classList.toggle("low", !done && left <= 3); }
+    if (!kissTmr) kissTmr = setInterval(kissUI, 250);
   }
 
   // ---------- Render ----------
@@ -406,6 +466,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
+    kissUI();
     voiceBar(); syncRtc();
     botTick();
   }
@@ -430,6 +491,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       if (botT.k2 !== k) {
         botT.k2 = k;
         const live = () => R && RID === id && R.spin && R.spin.seq === seq && R.spin.open;
+        if (!(isBot(d, by) && isBot(d, to))) [by, to].forEach(b => { if (isBot(d, b)) setTimeout(() => { if (live()) FB.gmKiss(id, Math.random() < 0.6, b).catch(() => {}); }, rnd(3500, 8500)); });
         if (isBot(d, to)) setTimeout(() => { if (live()) FB.gmBotSay(id, BOT_SAY[Math.floor(Math.random() * BOT_SAY.length)]).catch(() => {}); }, rnd(5500, 8500));
         if (isBot(d, by)) {
           setTimeout(() => { if (live()) FB.gmNext(id, false, by).catch(() => {}); }, rnd(14000, 22000));
@@ -646,7 +708,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   // ---------- Chiqish ----------
   window.gmLeave = function (silent) {
     const id = RID; closing = true;
-    document.body.classList.remove("gm-chat-open"); songStop(); srchStop(); { const ss = $("gmSongSheet"); if (ss) ss.remove(); }
+    document.body.classList.remove("gm-chat-open"); kissOff($("gmKiss"), false); kissSeq = 0; songStop(); srchStop(); { const ss = $("gmSongSheet"); if (ss) ss.remove(); }
     if (id) { leavingRooms.add(id); setTimeout(() => leavingRooms.delete(id), 10000); stopVoice().catch(() => {}); FB.gmLeave(id).catch(e => console.warn("gmLeave:", e)); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };
