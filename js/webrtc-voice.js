@@ -43,10 +43,24 @@
       pc.oniceconnectionstatechange = () => log(short(other), "ice", pc.iceConnectionState);
       pc.onconnectionstatechange = () => {
         log(short(other), "conn", pc.connectionState); notify();
+        if (pc.connectionState === "connected") tuneAudio(p);
         if (pc.connectionState === "connected" && !p.sentConn) { p.sentConn = true; if (o.video) send(other, p.id, "vid", camTrack ? "1" : "0"); }
+        if (pc.connectionState === "disconnected") setTimeout(() => { if (!p.closed && peers.get(other) === p && pc.connectionState === "disconnected") restart(other); }, 4000);
         if (pc.connectionState === "failed") setTimeout(() => { if (!p.closed && peers.get(other) === p && pc.connectionState === "failed") restart(other); }, 1200);
       };
       peers.set(other, p); notify(); return p;
+    }
+
+    // Nutq uchun 32 kbit/s yetarli: trafik va kechikish kamayadi, zaif internetda ham uzilmaydi
+    function tuneAudio(p) {
+      try {
+        for (const t of p.pc.getTransceivers()) {
+          if (!t.sender || !t.receiver || !t.receiver.track || t.receiver.track.kind !== "audio") continue;
+          const prm = t.sender.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}];
+          prm.encodings[0].maxBitrate = 32000; prm.encodings[0].priority = "high"; prm.encodings[0].networkPriority = "high";
+          t.sender.setParameters(prm).catch(() => {});
+        }
+      } catch (_) {}
     }
 
     function closePeer(uid) {
@@ -131,6 +145,7 @@
       } catch (e) { log("attach xato", e && e.message); }
     }
     function speakLoop() {
+      if (document.hidden) return;
       for (const p of peers.values()) if (p.an) { try { setSpeak(p.uid, level(p.an) > 5); } catch (_) {} }
       if (localAn) { try { setSpeak(me, !muted && level(localAn) > 5); } catch (_) {} }
     }
@@ -149,7 +164,7 @@
         host = document.createElement("div"); host.style.cssText = "position:fixed;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"; document.body.appendChild(host);
         try { const AC = root.AudioContext || root.webkitAudioContext; if (AC) { ac = new AC(); if (ac.state === "suspended") ac.resume().catch(() => {}); } } catch (_) {}
         gestureFn = () => { try { ac && ac.state === "suspended" && ac.resume(); } catch (_) {} for (const p of peers.values()) { try { p.audio && p.audio.paused && p.audio.play(); } catch (_) {} } };
-        document.addEventListener("pointerdown", gestureFn, true);
+        document.addEventListener("pointerdown", gestureFn, true); document.addEventListener("visibilitychange", gestureFn);
         joined = true; unsub = o.listen(handle);
         speakT = setInterval(speakLoop, 200); watchT = setInterval(watchdog, WATCH_EVERY);
         log("qoʻshildi, men:", short(me));
@@ -165,7 +180,7 @@
         if (on) {
           if (!micTrack) {
             if (!root.navigator || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Mikrofon uchun sayt HTTPS orqali ochilishi kerak");
-            const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+            const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000 } });
             micTrack = s.getAudioTracks()[0]; localAn = mkAnalyser(new MediaStream([micTrack]));
           }
           muted = false; micTrack.enabled = true;
@@ -189,7 +204,7 @@
         try { unsub && unsub(); } catch (_) {} unsub = null;
         for (const u of [...peers.keys()]) closePeer(u);
         if (micTrack) { try { micTrack.stop(); } catch (_) {} micTrack = null; }
-        try { document.removeEventListener("pointerdown", gestureFn, true); } catch (_) {}
+        try { document.removeEventListener("pointerdown", gestureFn, true); document.removeEventListener("visibilitychange", gestureFn); } catch (_) {}
         try { host && host.remove(); } catch (_) {} host = null;
         try { ac && ac.close(); } catch (_) {} ac = null; setSpeak(me, false); log("chiqdi");
       },
