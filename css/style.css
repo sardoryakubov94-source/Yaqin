@@ -1114,3 +1114,8 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 /* "Guruhlar" katagi ham "Guruhli oʻyinlar" katagidek fonli */
 .gr-left{background:linear-gradient(135deg,#3a2150,#5b2a62);border:1px solid rgba(240,179,74,.35);border-radius:18px;padding:14px;box-sizing:border-box}
 .gr-left .sub{color:rgba(255,255,255,.72)}
+
+/* "+" belgisi kattaroq va yozuvga yaqin; tugma oʻlchami oʻzgarmaydi */
+.gr-left .go{gap:8px;padding-left:10px;padding-right:10px}
+.gr-left .go svg{width:22px;height:22px;stroke-width:2.4;flex:none}
+.gr-left .go .gr-btxt{display:block;width:7.6em;text-align:center;line-height:1.2}
