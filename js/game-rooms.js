@@ -84,13 +84,53 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   // ---------- Qoʻshiq: chatga yuklash, eshitish, hammaga birga qoʻyish ----------
   let songA = null, songMid = "", songPlaying = false, songSynced = false, seenCmd = null, upBusy = false, lastUp = 0;
   const SONG_MAX = 8 * 1024 * 1024, SONG_GAP = 20000, fmtT = x => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ":" + String(x % 60).padStart(2, "0"); };
+  // ---------- YouTube (rasmiy pleyer): toʻliq qoʻshiq, mualliflik huquqi YouTube tomonida ----------
+  let ytP = null, ytMid = "", ytTimer = null, ytApiP = null, ytS = null;
+  const ytOn = () => !!(ytP && ytMid && ytMid === songMid);
+  const songPos = () => ytOn() ? (ytP.getCurrentTime ? ytP.getCurrentTime() : 0) : (songA ? songA.currentTime : 0);
+  const songDur = () => { const d = ytOn() ? (ytP.getDuration ? ytP.getDuration() : 0) : (songA ? songA.duration : 0); return d && isFinite(d) ? d : 0; };
+  function ytApi() {
+    if (window.YT && YT.Player) return Promise.resolve(true);
+    if (ytApiP) return ytApiP;
+    ytApiP = new Promise(res => {
+      const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { try { prev && prev(); } catch (_) {} res(true); };
+      const sc = document.createElement("script"); sc.src = "https://www.youtube.com/iframe_api"; sc.onerror = () => { ytApiP = null; res(false); }; document.head.appendChild(sc);
+      setTimeout(() => { if (!(window.YT && YT.Player)) { ytApiP = null; res(false); } }, 12000);
+    });
+    return ytApiP;
+  }
+  function ytDock(show) { const d = $("gmYtDock"); if (d) d.hidden = !show; }
+  function ytStop() {
+    clearInterval(ytTimer); ytTimer = null;
+    if (ytP) { try { ytP.destroy(); } catch (_) {} ytP = null; }
+    ytMid = ""; const d = $("gmYtDock"); if (d) { d.hidden = true; d.innerHTML = '<div id="gmYtHost"></div>'; }
+  }
+  async function ytPlay(m, pos, synced) {
+    try { if (songA) songA.pause(); } catch (_) {}
+    ytStop(); songMid = m.id; ytMid = m.id; songPlaying = false; songSynced = !!synced;
+    const d = $("gmYtDock"); if (!d) return;
+    d.innerHTML = '<button type="button" class="gm-yt-x" onclick="gmYtClose()" aria-label="Yopish">✕</button><div id="gmYtHost"></div>'; d.hidden = false;
+    if (!(await ytApi())) { toast("YouTube pleyeri yuklanmadi. Internetni tekshiring."); ytStop(); songMid = ""; renderChat(); return; }
+    if (ytMid !== m.id) return;
+    ytP = new YT.Player("gmYtHost", { width: "100%", height: "200", videoId: m.ytId, playerVars: { playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(pos || 0), autoplay: 1 }, events: {
+      onReady: e => { try { e.target.playVideo(); } catch (_) {} },
+      onStateChange: e => {
+        const st2 = e.data; if (ytMid !== m.id) return;
+        if (st2 === 1) { if (!songPlaying) { songPlaying = true; renderChat(); if (call && !call.left && !call.muted) { window.gmMute().catch(() => {}); toast("🎵 Qoʻshiq vaqtida mikrofon oʻchirildi"); } } }
+        else if (st2 === 2 || st2 === 0) { if (songPlaying) { songPlaying = false; if (st2 === 0) songSynced = false; renderChat(); } }
+      },
+      onError: () => { toast("Bu videoni xonada ijro etib boʻlmaydi (egasi taqiqlagan)."); songPlaying = false; songSynced = false; renderChat(); },
+    } });
+    clearInterval(ytTimer); ytTimer = setInterval(songBar, 500);
+  }
+  window.gmYtClose = () => { ytStop(); songMid = ""; songPlaying = false; songSynced = false; renderChat(); };
   function songBar() {
     if (!songMid) return;
-    const m = document.querySelector('.gm-song[data-mid="' + songMid + '"]'); if (!m || !songA) return;
+    const m = document.querySelector('.gm-song[data-mid="' + songMid + '"]'); if (!m) return;
     const i = m.querySelector(".gm-song-bar i"), t = m.querySelector(".gm-song-time");
-    const d = songA.duration && isFinite(songA.duration) ? songA.duration : 0;
-    if (i) i.style.width = d ? Math.min(100, songA.currentTime / d * 100) + "%" : "0%";
-    if (t) t.textContent = fmtT(songA.currentTime) + (d ? " / " + fmtT(d) : "");
+    const d = songDur(), c = songPos();
+    if (i) i.style.width = d ? Math.min(100, c / d * 100) + "%" : "0%";
+    if (t) t.textContent = fmtT(c) + (d ? " / " + fmtT(d) : "");
   }
   function songEl() {
     if (songA) return songA;
@@ -102,12 +142,14 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     return songA;
   }
   function songStop() {
-    songPlaying = false; songSynced = false;
+    songPlaying = false; songSynced = false; ytStop();
     if (songA) { try { songA.pause(); songA.removeAttribute("src"); songA.load(); } catch (_) {} }
     songMid = "";
   }
   function songPlay(m, pos, synced) {
+    if (m && m.ytId) { ytPlay(m, pos, synced); return; }
     if (!m || !m.audioUrl) return;
+    if (ytMid) ytStop();
     const a = songEl();
     if (songMid !== m.id || !a.src) { a.src = m.audioUrl; songMid = m.id; }
     if (pos > 1) { const seek = () => { try { a.currentTime = pos; } catch (_) {} }; if (a.readyState >= 1) seek(); else a.addEventListener("loadedmetadata", seek, { once: true }); }
@@ -120,6 +162,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
   window.gmSongToggle = mid => {
     const m = chatMsgs.find(x => x.id === mid); if (!m) return;
+    if (m.ytId) {
+      if (ytOn() && ytP.pauseVideo) { try { songPlaying ? ytP.pauseVideo() : ytP.playVideo(); } catch (_) {} songSynced = false; return; }
+      songPlay(m, 0, false); return;
+    }
     if (songPlaying && songMid === mid) { songEl().pause(); songSynced = false; renderChat(); return; }
     songPlay(m, songMid === mid && songA ? songA.currentTime : 0, false);
   };
@@ -161,11 +207,11 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       sc.src = url + "&callback=" + cb; document.head.appendChild(sc);
     });
   }
-  function srchStop() { if (srchA) { try { srchA.pause(); } catch (_) {} } srchId = ""; document.querySelectorAll("#gmSongSheet .gm-srch-play").forEach(b => { b.textContent = "▶"; }); }
+  function srchStop() { if (srchA) { try { srchA.pause(); } catch (_) {} } if (ytS) { try { ytS.destroy(); } catch (_) {} ytS = null; } { const pl = $("gmSrchPlayer"); if (pl) { pl.hidden = true; pl.innerHTML = ""; } } srchId = ""; document.querySelectorAll("#gmSongSheet .gm-srch-play").forEach(b => { b.textContent = "▶"; }); }
   window.gmSongSearch = () => {
     if ($("gmSongSheet")) return;
     const sh = document.createElement("div"); sh.className = "gm-sheet"; sh.id = "gmSongSheet"; sh.style.zIndex = "100010";
-    sh.innerHTML = `<div class="gm-sheet-in"><div class="gm-sheet-head"><b>🔍 Qoʻshiq qidirish</b><button class="gm-sheet-close" type="button" data-close>✕</button></div><form class="gm-srch-form"><input id="gmSrchInput" type="search" placeholder="Qoʻshiq yoki ijrochi nomi…" autocomplete="off" maxlength="80"><button class="go" type="submit">Qidirish</button></form><div id="gmSrchList" class="gm-srch-list"><p class="gm-hint">Istalgan qoʻshiq nomini yozing, ▶ bilan eshiting, ➕ bilan chatga qoʻying yoki 📢 bilan hammaga qoʻying.</p></div><small class="gm-srch-note">30 soniyalik namunalar · iTunes</small></div>`;
+    sh.innerHTML = `<div class="gm-sheet-in"><div class="gm-sheet-head"><b>🔍 Qoʻshiq qidirish</b><button class="gm-sheet-close" type="button" data-close>✕</button></div><div id="gmSrchPlayer" class="gm-srch-player" hidden></div><form class="gm-srch-form"><input id="gmSrchInput" type="search" placeholder="Qoʻshiq yoki ijrochi nomi…" autocomplete="off" maxlength="80"><button class="go" type="submit">Qidirish</button></form><div id="gmSrchList" class="gm-srch-list"><p class="gm-hint">Istalgan qoʻshiq nomini yozing, ▶ bilan eshiting, ➕ bilan chatga qoʻying yoki 📢 bilan hammaga qoʻying.</p></div><small class="gm-srch-note" id="gmSrchNote">${(window.CFG && CFG.YT_KEY) ? "To‘liq qo‘shiqlar · YouTube pleyeri" : "YouTube kaliti ulanmagan: hozircha 30 soniyalik namunalar (iTunes)"}</small></div>`;
     const close = () => { srchStop(); sh.remove(); };
     sh.addEventListener("click", e => {
       if (e.target === sh || e.target.closest("[data-close]")) { close(); return; }
@@ -174,6 +220,15 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const tr = row._tr; if (!tr) return;
       if (pb) {
         if (srchId === tr.id) { srchStop(); return; }
+        if (tr.kind === "yt") {
+          srchStop(); if (songPlaying) { try { songA && songA.pause(); ytP && ytP.pauseVideo(); } catch (_) {} }
+          const pl = $("gmSrchPlayer"); pl.hidden = false; pl.innerHTML = '<div id="gmSrchYt"></div>'; srchId = tr.id; pb.textContent = "⏸";
+          ytApi().then(ok => {
+            if (!ok) { toast("YouTube pleyeri yuklanmadi"); srchStop(); return; }
+            ytS = new YT.Player("gmSrchYt", { width: "100%", height: "200", videoId: tr.id, playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: 1 }, events: { onReady: e => { try { e.target.playVideo(); } catch (_) {} }, onError: () => { toast("Bu videoni ijro etib boʻlmaydi"); srchStop(); } } });
+          });
+          return;
+        }
         srchStop(); if (!srchA) { srchA = new Audio(); srchA.addEventListener("ended", srchStop); srchA.addEventListener("error", () => { toast("Namunani ochib boʻlmadi"); srchStop(); }); }
         if (songPlaying) { try { songEl().pause(); } catch (_) {} }
         srchA.src = tr.url; srchId = tr.id; pb.textContent = "⏸";
@@ -182,8 +237,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       }
       if (ab || al) {
         const btn = ab || al; if (btn.disabled) return; btn.disabled = true;
-        FB.gmRoomTrack(RID, tr).then(async ref => {
-          if (al) { songPlay({ id: ref.id, audioUrl: tr.url }, 0, true); await FB.gmRoomCmd(RID, ref.id, "play", 0); toast("📢 Qoʻshiq hammaga qoʻyildi"); }
+        (tr.kind === "yt" ? FB.gmRoomYt(RID, { id: tr.id, title: tr.title, channel: tr.artist }) : FB.gmRoomTrack(RID, tr)).then(async ref => {
+          if (al) { songPlay(tr.kind === "yt" ? { id: ref.id, ytId: tr.id } : { id: ref.id, audioUrl: tr.url }, 0, true); await FB.gmRoomCmd(RID, ref.id, "play", 0); toast("📢 Qoʻshiq hammaga qoʻyildi"); }
           else toast("🎵 Chatga qoʻshildi");
           close();
         }).catch(e => { btn.disabled = false; uiAlert("Qoʻshilmadi: " + (e.message || e)); });
@@ -194,8 +249,17 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       const q = String($("gmSrchInput").value || "").trim(); if (q.length < 2) return;
       const list = $("gmSrchList"); srchStop(); srchBusy = true; list.innerHTML = '<p class="gm-hint">Qidirilmoqda…</p>';
       try {
+        let items;
+        if (window.CFG && CFG.YT_KEY) {
+          const dec = t => { const x = document.createElement("textarea"); x.innerHTML = t; return x.value; };
+          const r = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoCategoryId=10&maxResults=15&q=" + encodeURIComponent(q) + "&key=" + encodeURIComponent(CFG.YT_KEY));
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) { const why = j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason; throw new Error(why === "quotaExceeded" || why === "dailyLimitExceeded" ? "Bugungi qidiruv limiti tugadi. Ertaga urinib koʻring." : "YouTube qidiruvi ishlamadi (" + (why || r.status) + ")."); }
+          items = (j.items || []).filter(v => v.id && /^[\w-]{11}$/.test(v.id.videoId || "")).map(v => ({ kind: "yt", id: v.id.videoId, title: dec(v.snippet.title || "Qoʻshiq"), artist: dec(v.snippet.channelTitle || ""), art: v.snippet.thumbnails && v.snippet.thumbnails.default && /^https:\/\//.test(v.snippet.thumbnails.default.url) ? v.snippet.thumbnails.default.url : "" }));
+        } else {
         const d = await jsonp("https://itunes.apple.com/search?term=" + encodeURIComponent(q) + "&media=music&entity=song&limit=20");
-        const items = (d.results || []).filter(r => r.previewUrl && /^https:\/\/[\w.-]+\.(mzstatic\.com|itunes\.apple\.com)\//.test(r.previewUrl)).map(r => ({ id: String(r.trackId), url: r.previewUrl, title: r.trackName || "Qoʻshiq", artist: r.artistName || "", art: /^https:\/\//.test(r.artworkUrl60 || "") ? r.artworkUrl60 : "" }));
+        items = (d.results || []).filter(r => r.previewUrl && /^https:\/\/[\w.-]+\.(mzstatic\.com|itunes\.apple\.com)\//.test(r.previewUrl)).map(r => ({ id: String(r.trackId), url: r.previewUrl, title: r.trackName || "Qoʻshiq", artist: r.artistName || "", art: /^https:\/\//.test(r.artworkUrl60 || "") ? r.artworkUrl60 : "" }));
+        }
         list.innerHTML = "";
         if (!items.length) { list.innerHTML = '<p class="gm-hint">Hech narsa topilmadi. Boshqacha yozib koʻring (masalan, ijrochi nomi bilan).</p>'; return; }
         items.forEach(tr => {
@@ -215,14 +279,14 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       if (!m.cmd || seenCmd.has(m.id)) continue; seenCmd.add(m.id);
       if (m.from === st.user.uid || Date.now() - (m.t || 0) > 15000) continue;
       if (m.cmd.act === "stop") { if (songMid === m.cmd.mid) { songStop(); } continue; }
-      const song = msgs.find(x => x.id === m.cmd.mid); if (!song || !song.audioUrl) continue;
+      const song = msgs.find(x => x.id === m.cmd.mid); if (!song || !(song.audioUrl || song.ytId)) continue;
       const el = Math.max(0, Math.min(15, (Date.now() - m.t) / 1000));
       songPlay(song, (m.cmd.pos || 0) + el, true);
     }
   }
   function songCard(m, me, avatar) {
-    const cur = songMid === m.id, on = cur && songPlaying, pct = cur && songA && songA.duration && isFinite(songA.duration) ? Math.min(100, songA.currentTime / songA.duration * 100) : 0;
-    const tm = cur && songA ? fmtT(songA.currentTime) + (songA.duration && isFinite(songA.duration) ? " / " + fmtT(songA.duration) : "") : "";
+    const cur = songMid === m.id, on = cur && songPlaying, dd = cur ? songDur() : 0, pct = dd ? Math.min(100, songPos() / dd * 100) : 0;
+    const tm = cur ? fmtT(songPos()) + (dd ? " / " + fmtT(dd) : "") : "";
     return `<div class="gm-room-msg gm-song${m.from === me ? " mine" : ""}" data-mid="${esc(m.id)}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><div class="gm-song-row"><button type="button" class="gm-song-btn" onclick="gmSongToggle('${esc(m.id)}')" aria-label="${on ? "Pauza" : "Qoʻyish"}">${on ? "⏸" : "▶"}</button><div class="gm-song-info"><span class="gm-song-name">🎵 ${esc(m.audio.name || "Qoʻshiq")}</span><div class="gm-song-bar"><i style="width:${pct}%"></i></div><small class="gm-song-time">${esc(tm)}</small></div><button type="button" class="gm-song-all${on && songSynced ? " on" : ""}" onclick="gmSongAll('${esc(m.id)}')" title="Hammaga qoʻyish" aria-label="Hammaga qoʻyish">📢</button></div></div>`;
   }
   function renderChat() {
@@ -236,7 +300,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         songCmds(msgs);
         const rendered = msgs.map(m => {
           if (m.cmd) return "";
-          if (m.audio && m.audioUrl) return songCard(m, me, d && d.pm && d.pm[m.from] ? pav(d, m.from) : "");
+          if (m.audio && (m.audioUrl || m.ytId)) return songCard(m, me, d && d.pm && d.pm[m.from] ? pav(d, m.from) : "");
           const text = String(m.text || "");
           const isQA = text.startsWith("❓ Savol: ") && text.includes("\\n💬 Javob: ");
           const isQuestion = text.startsWith("❓ SAVOL → ");
@@ -272,7 +336,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongSearch" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">🔍</button><button class="ghost gm-song-pick" id="gmSongPick" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">🎵</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-song-pick" id="gmSongSearch" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">🔍</button><button class="ghost gm-song-pick" id="gmSongPick" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">🎵</button><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Render ----------
