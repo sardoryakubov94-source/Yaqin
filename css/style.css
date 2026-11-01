@@ -1058,3 +1058,18 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-chat-tools{display:inline-flex;align-items:center;gap:6px;flex:none}
 .gm-chat-tools .gm-song-pick{min-width:34px;width:34px;height:34px;padding:0;border-radius:10px;background:var(--c2);color:var(--t);font-size:11px;display:flex;align-items:center;justify-content:center}
 .gm-room-chat-title small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;margin-left:0!important;margin-right:0!important}
+
+/* YouTube pleyeri: savol/izohlar bilan bir joyda, shaffof izohlar videoning ustida; video pastga tushib ketmaydi */
+.gm-below{display:grid;position:relative}
+.gm-below>.gm-below-txt{grid-area:1/1;position:relative;z-index:2;min-width:0}
+.gm-below>.gm-yt-dock{grid-area:1/1;justify-self:center;align-self:center;margin:0;z-index:1}
+.gm.gm-yt-on .gm-below{position:sticky;bottom:0;z-index:6;align-items:center}
+.gm.gm-yt-on .gm-below-txt{align-self:center;pointer-events:none}
+.gm.gm-yt-on .gm-below-txt button,.gm.gm-yt-on .gm-below-txt a,.gm.gm-yt-on .gm-below-txt input,.gm.gm-yt-on .gm-below-txt textarea{pointer-events:auto}
+.gm.gm-yt-on .gm-info,.gm.gm-yt-on .gm-card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.gm.gm-yt-on .gm-info,.gm.gm-yt-on .gm-info p,.gm.gm-yt-on .gm-info b,.gm.gm-yt-on .gm-card,.gm.gm-yt-on .gm-q,.gm.gm-yt-on .gm-hint,.gm.gm-yt-on .gm-card p{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.85)}
+.gm.gm-yt-on .gm-card button{background:rgba(20,17,31,.55);backdrop-filter:blur(2px)}
+@media(max-width:899px){
+.gm.gm-yt-on .gm-ring,.gm.gm-yt-on:has(#gmCard:not([hidden])) .gm-ring{width:min(58vw,23vh,210px)}
+.gm.gm-yt-on .gm-card{max-height:none}
+}

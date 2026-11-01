@@ -104,13 +104,13 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function ytStop() {
     clearInterval(ytTimer); ytTimer = null;
     if (ytP) { try { ytP.destroy(); } catch (_) {} ytP = null; }
-    ytMid = ""; const d = $("gmYtDock"); if (d) { d.hidden = true; d.innerHTML = '<div id="gmYtHost"></div>'; }
+    ytMid = ""; { const g = $("gm"); if (g) g.classList.remove("gm-yt-on"); } const d = $("gmYtDock"); if (d) { d.hidden = true; d.innerHTML = '<div id="gmYtHost"></div>'; }
   }
   async function ytPlay(m, pos, synced) {
     try { if (songA) songA.pause(); } catch (_) {}
     ytStop(); songMid = m.id; ytMid = m.id; songPlaying = false; songSynced = !!synced;
     const d = $("gmYtDock"); if (!d) return;
-    d.innerHTML = '<button type="button" class="gm-yt-x" onclick="gmYtClose()" aria-label="Yopish">' + IC("x", 14) + '</button><div id="gmYtHost"></div>'; d.hidden = false;
+    d.innerHTML = '<button type="button" class="gm-yt-x" onclick="gmYtClose()" aria-label="Yopish">' + IC("x", 14) + '</button><div id="gmYtHost"></div>'; d.hidden = false; { const g = $("gm"); if (g) g.classList.add("gm-yt-on"); }
     if (!(await ytApi())) { toast("YouTube pleyeri yuklanmadi. Internetni tekshiring."); ytStop(); songMid = ""; renderChat(); return; }
     if (ytMid !== m.id) return;
     ytP = new YT.Player("gmYtHost", { width: "100%", height: "200", videoId: m.ytId, playerVars: { playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(pos || 0), autoplay: 1 }, events: {
@@ -336,7 +336,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div><div class="gm-kiss" id="gmKiss" hidden></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <span class="gm-chat-tools"><button class="gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">${IC("search", 18)}</button><button class="gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">${IC("music", 18)}</button></span><small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">${IC("expand", 16)}</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-below"><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div><div class="gm-below-txt"><div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <span class="gm-chat-tools"><button class="gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">${IC("search", 18)}</button><button class="gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">${IC("music", 18)}</button></span><small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">${IC("expand", 16)}</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Oʻpich lahzasi: shisha ikki kishiga toʻgʻri kelganda 10 soniya (faqat shu ikkisiga koʻrinadi) ----------
