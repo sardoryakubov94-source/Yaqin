@@ -99,8 +99,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           return `<div class="gm-room-msg${m.from === me ? " mine" : ""}${isQuestion ? " gm-room-question" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
         }).join("");
         const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80, sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0);
-        box.innerHTML = askPrompt + answerPrompt + rendered;
-        if (near || sig !== chatSig) box.scrollTop = box.scrollHeight;
+        box.innerHTML = rendered + askPrompt + answerPrompt;
+        if (near || sig !== chatSig) { const go = () => { box.scrollTop = box.scrollHeight; }; go(); requestAnimationFrame(go); }
         chatSig = sig;
         const inp = $("gmRoomInput"); if (inp) inp.placeholder = askPrompt ? "Savolingizni yozing…" : answerPrompt ? "Javobingizni yozing…" : "Xabaringizni yozing...";
         }
@@ -125,7 +125,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div></div></div>
-<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-info" id="gmInfo"></div><div class="gm-card" id="gmCard" hidden></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">⤢</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Render ----------
@@ -253,6 +253,13 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     document.body.appendChild(sheet);
   };
 
+  window.gmChatFull = () => {
+    const sec = document.querySelector(".gm-room-chat"); if (!sec) return;
+    const on = sec.classList.toggle("gm-chat-full");
+    document.body.classList.toggle("gm-chat-open", on);
+    const b = $("gmChatExp"); if (b) { b.textContent = on ? "✕" : "⤢"; b.title = on ? "Kichraytirish" : "Chatni kattalashtirish"; b.setAttribute("aria-label", b.title); }
+    const box = $("gmRoomMessages"); if (box) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+  };
   window.gmSendRoomText = async () => {
     const input = $("gmRoomInput"); let text = String(input?.value || "").trim();
     if (!text) return;
@@ -426,6 +433,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   // ---------- Chiqish ----------
   window.gmLeave = function (silent) {
     const id = RID; closing = true;
+    document.body.classList.remove("gm-chat-open");
     if (id) { leavingRooms.add(id); setTimeout(() => leavingRooms.delete(id), 10000); stopVoice().catch(() => {}); FB.gmLeave(id).catch(e => console.warn("gmLeave:", e)); }
     cleanup(); if (silent === true) { drop(); return; } gmOpenList();
   };
@@ -435,6 +443,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   window.gmBackHandler = function () {
     if (!$("gm")) return false;
     const sh = $("gmSheet") || $("gmQuestionTemplates"); if (sh) { sh.remove(); return true; }
+    if (view === "room" && document.querySelector(".gm-room-chat.gm-chat-full")) { window.gmChatFull(); return true; }
     if (view === "room") { window.gmLeave(); return true; }
     window.gmCloseAll(); return true;
   };

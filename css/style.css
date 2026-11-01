@@ -955,3 +955,17 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm .gm-ring{width:min(80vw,33vh,300px)}
 .gm .gm-stage{padding:10px 8px 22px}
 }
+
+/* Xona chati: ixcham shrift, yangi xabar pastda, to'liq ekran rejimi */
+.gm .gm-room-msg{padding:3px 7px;gap:2px}
+.gm .gm-room-msg b{font-size:10px}
+.gm .gm-room-msg span{font-size:11px;line-height:1.25}
+.gm .gm-room-author{gap:5px;margin-bottom:3px}
+.gm .gm-room-author img,.gm .gm-room-author .gm-av{width:20px;height:20px;flex:0 0 20px}
+.gm .gm-room-msg .gm-room-qa-question{font-size:10.5px}.gm .gm-room-msg .gm-room-qa-answer{font-size:11px}
+.gm-room-chat-title small{margin-left:auto;margin-right:8px}
+.gm-chat-exp{flex:none;width:28px;height:28px;border-radius:8px;background:var(--c2);color:var(--t);font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+.gm-room-messages{scroll-behavior:auto;overscroll-behavior:contain}
+.gm-room-chat.gm-chat-full{position:fixed!important;inset:0!important;z-index:100000!important;width:100%!important;max-width:none!important;height:100dvh;margin:0!important;transform:none!important;border-radius:0!important;display:flex!important;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px))!important;background:var(--bg,#14111f)!important;box-sizing:border-box}
+.gm-room-chat.gm-chat-full .gm-room-messages{flex:1 1 auto;height:auto!important;min-height:0!important;max-height:none!important}
+.gm-room-chat.gm-chat-full .gm-room-send{flex:none}
