@@ -1000,3 +1000,14 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-yt-x{position:absolute;top:6px;right:6px;z-index:2;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
 .gm-srch-player{margin:8px 0;border-radius:12px;overflow:hidden;background:#000;min-height:200px}
 .gm-srch-player[hidden]{display:none}.gm-srch-player iframe{display:block;width:100%;height:200px;border:0}
+
+/* Ikonlar (SVG) va ixcham YouTube pleyeri */
+.gm-song-pick .yi,.gm-song-btn .yi,.gm-song-all .yi,.gm-srch-play .yi,.gm-srch-add .yi,.gm-srch-all .yi,.gm-chat-exp .yi,.gm-yt-x .yi{display:block;margin:auto}
+.gm-song-btn .yi,.gm-srch-play .yi{margin-left:auto;margin-right:auto}
+.gm-song-name .yi{display:inline-block;vertical-align:-2px;color:var(--a,#f0b34a)}
+.gm-sheet-head b .yi{display:inline-block;vertical-align:-3px}
+.gm-srch-noart .yi{color:var(--a,#f0b34a)}
+.gm-song-all .yi{color:var(--t)}
+.gm-song-all.on .yi{color:#6df0a8}
+.gm-yt-dock,.gm-srch-player{width:240px;max-width:100%;margin-left:auto;margin-right:auto}
+.gm-yt-dock,.gm-yt-dock iframe,.gm-srch-player,.gm-srch-player iframe{height:200px;min-height:200px}
