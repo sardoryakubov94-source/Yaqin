@@ -114,10 +114,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if (!(await ytApi())) { toast("YouTube pleyeri yuklanmadi. Internetni tekshiring."); ytStop(); songMid = ""; renderChat(); return; }
     if (ytMid !== m.id) return;
     ytP = new YT.Player("gmYtHost", { width: "100%", height: "200", videoId: m.ytId, playerVars: { playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(pos || 0), autoplay: 1 }, events: {
-      onReady: e => { try { e.target.playVideo(); } catch (_) {} },
+      onReady: e => { try { e.target.setVolume(60); e.target.playVideo(); } catch (_) {} },
       onStateChange: e => {
         const st2 = e.data; if (ytMid !== m.id) return;
-        if (st2 === 1) { if (!songPlaying) { songPlaying = true; renderChat(); if (call && !call.left && !call.muted) { window.gmMute().catch(() => {}); toast("🎵 Qoʻshiq vaqtida mikrofon oʻchirildi"); } } }
+        if (st2 === 1) { if (!songPlaying) { songPlaying = true; renderChat(); } }
         else if (st2 === 2 || st2 === 0) { if (songPlaying) { songPlaying = false; if (st2 === 0) songSynced = false; renderChat(); } }
       },
       onError: () => { toast("Bu videoni xonada ijro etib boʻlmaydi (egasi taqiqlagan)."); songPlaying = false; songSynced = false; renderChat(); },
@@ -135,7 +135,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   }
   function songEl() {
     if (songA) return songA;
-    songA = new Audio(); songA.preload = "none"; songA.setAttribute("playsinline", "");
+    songA = new Audio(); songA.preload = "none"; songA.volume = 0.6; songA.setAttribute("playsinline", "");
     songA.addEventListener("timeupdate", songBar);
     songA.addEventListener("ended", () => { songPlaying = false; songSynced = false; renderChat(); });
     songA.addEventListener("pause", () => { if (songPlaying) { songPlaying = false; renderChat(); } });
@@ -157,7 +157,6 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     const pr = a.play();
     const ok = () => {
       songPlaying = true; songSynced = !!synced; renderChat();
-      if (call && !call.left && !call.muted) { window.gmMute().catch(() => {}); toast("🎵 Qoʻshiq vaqtida mikrofon oʻchirildi"); }
     };
     if (pr && pr.then) pr.then(ok, () => toast("Qoʻshiqni boshlash uchun ▶ tugmasini bosing")); else ok();
   }
