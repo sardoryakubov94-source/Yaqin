@@ -395,6 +395,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       kissFly(u, u === c.by ? c.to : c.by);
     }
   }
+  window.gmActs = () => { noteT0 = Date.now(); setTimeout(() => { try { R && render(true); } catch (_) {} }, 10100); render(true); };
   const kissMine = c => !!kissMy && kissMy.split("|")[0] === String(c.seq);
   window.gmKiss = async yes => {
     const c = kissCtx(R), me = st.user.uid; if (!c || kissMine(c) || c.kiss[me]) return;
@@ -470,17 +471,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
       ? "Javobingizni yozing..." : "Xabaringizni yozing...";
     const templateBtn = $("gmTemplateBtn");
     if (templateBtn) templateBtn.hidden = !(sp.open && animDone && sp.by === me && sp.to !== me && !isBot(d, sp.to));
-    // savol kartochkasi
-    const card = $("gmCard");
-    if (sp.open && animDone) {
-      const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
-      const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
-      const parts = (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
-        (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
-        ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
-        ((sp.by === me || d.turn === me || sp.to === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
-      card.hidden = !parts; card.innerHTML = parts;
-    } else if (!sp.open) { card.hidden = true; delete card.dataset.seen; }
+    // harakat tugmalari doira ustida (pastdagi karta ishlatilmaydi, shuning uchun doira oʻlchami oʻzgarmaydi)
+    const card = $("gmCard"); if (card) { card.hidden = true; card.innerHTML = ""; }
     if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
     if (sp.open && Date.now() - (sp.at || 0) >= 35000 && !botT.timeout) {
       const seq = sp.seq; botT.timeout = seq;
@@ -488,14 +480,30 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     }
     { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || "") + "|" + (sp.bt ? 1 : 0); if (k !== chatKey) { chatKey = k; renderChat(); } }
     kissUI(); kissFx();
-    { // "Sizga savol yoʻllashdi" + "Keyingi aylanish" (javob bermayman): 10 soniyadan keyin oʻzi yoʻqoladi
-      const nOn = sp.open && animDone && sp.to === me && sp.by !== me && !sp.same;
+    { // Harakatlar (izoh, Yoqdi, Keyingi aylanish/navbat) doira ustida 10 soniya koʻrinadi; doira oʻlchami oʻzgarmaydi
+      const open = sp.open && animDone;
+      const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
+      const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
+      const asked = sp.to === me && sp.by !== me && !sp.same;
+      const canAct = open && (inv || d.turn === me);
       const kOpen = !!($("gmKiss") && !$("gmKiss").hidden);
-      if (!nOn) { noteSeq = 0; noteT0 = 0; }
+      if (!open) { noteSeq = 0; noteT0 = 0; }
       else {
         if (noteSeq !== sp.seq) { noteSeq = sp.seq; noteT0 = 0; }
-        if (!noteT0 && !kOpen) { noteT0 = Date.now(); setTimeout(() => { try { R && render(true); } catch (_) {} }, 10100); }
-        if (!noteT0 || Date.now() - noteT0 < 10000) info.innerHTML += `<div class="gm-note"><span>Sizga savol yoʻllashdi</span><button type="button" class="ghost gm-note-btn" onclick="gmNext()">Keyingi aylanish →</button></div>`;
+        if (!noteT0 && !kOpen && canAct) { noteT0 = Date.now(); setTimeout(() => { try { R && render(true); } catch (_) {} }, 10100); }
+      }
+      const timed = canAct && (!noteT0 || Date.now() - noteT0 < 10000);
+      let rows = "";
+      if (canAct && timed) {
+        if (asked) rows += `<div class="gm-note"><span>Sizga savol yoʻllashdi</span></div>`;
+        rows += `<div class="gm-acts">` + (inv && !botInv ? `<button type="button" class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi" : "🤍 Yoqdi"}</button>` : "") +
+          `<button type="button" class="ghost" onclick="gmNext()">${asked ? "Keyingi aylanish" : "Keyingi navbat"} →</button></div>`;
+      }
+      if (open && sp.by === me && sp.same && !sp.rr) rows += `<div class="gm-acts"><button type="button" class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button></div>`;
+      if (open && match && inv) rows += `<div class="gm-acts gm-match">🎉 Ikkalangizga ham yoqdi! <button type="button" class="go" onclick="gmChat('${other}')">Chat ochish</button></div>`;
+      if (rows) info.innerHTML += rows;
+      if (canAct && !timed) { // koʻrinmay qolsa: ism qatoriga bosib yana 10 soniya ochish mumkin
+        const np = info.querySelector("p"); if (np) { np.style.pointerEvents = "auto"; np.style.cursor = "pointer"; np.onclick = () => window.gmActs(); }
       }
     }
     voiceBar(); syncRtc();

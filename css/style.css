@@ -1124,3 +1124,10 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm .gm-ring>.gm-info .gm-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;margin-top:6px;animation:gmKissIn .3s both}
 .gm .gm-ring>.gm-info .gm-note span{color:#fff;font-size:13.5px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.8)}
 .gm .gm-ring>.gm-info .gm-note-btn{padding:7px 12px;font-size:12.5px;border-radius:12px;background:rgba(20,17,31,.72);color:#fff;border:1px solid rgba(255,255,255,.32);font-weight:700;pointer-events:auto}
+
+/* Harakatlar doira ustida (izoh va tugmalar ixcham) */
+.gm .gm-ring>.gm-info .gm-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:7px;animation:gmKissIn .3s both}
+.gm .gm-ring>.gm-info .gm-acts button{padding:7px 12px;font-size:12.5px;border-radius:12px;font-weight:700;pointer-events:auto;width:auto;margin:0}
+.gm .gm-ring>.gm-info .gm-acts .ghost{background:rgba(20,17,31,.72);color:#fff;border:1px solid rgba(255,255,255,.32)}
+.gm .gm-ring>.gm-info .gm-match{align-items:center;color:#fff;font-size:12.5px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.95)}
+.gm .gm-ring>.gm-info{top:66%}
