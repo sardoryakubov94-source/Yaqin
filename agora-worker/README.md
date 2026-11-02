@@ -6,6 +6,7 @@ Uchta ish qiladi:
 - `POST /api/openinary/sign` — guruhga rasm/video yuklash uchun imzo
 - `POST /api/call/token` — shaxsiy qoʻngʻiroq tokeni
 - `POST /api/push` — push bildirishnoma (FCM): yangi xabar, kiruvchi qoʻngʻiroq va "Sizga eng mos inson yangi eʼlon joyladi" (anketa asosida, kuniga 2 tagacha)
+  - yangi: `type:"game"` — oʻyin xonasi: "Sizga savol yoʻllashdi", "Navbat sizda!", "Sizga oʻpich yuborishdi", "Xonangizga yangi oʻyinchi qoʻshildi"
 
 ## Telefondan / brauzerdan deploy (buyruqsiz)
 1. Cloudflare → Workers & Pages → `yaqin-agora` → Edit code.
@@ -23,3 +24,10 @@ npm install
 npx wrangler login
 npx wrangler deploy
 ```
+
+## Telefonga push (bildirishnoma) ishlashi uchun 3 ta shart
+1. **VAPID kalit:** Firebase Console → Project settings → Cloud Messaging → *Web Push certificates* → *Generate key pair* → ochiq kalitni `js/config.js` dagi `VAPID:""` ichiga qoʻying.
+2. **Worker siri:** `FIREBASE_SA` (service account JSON) Worker'da Secret sifatida bor boʻlsin (yuqoridagi 3-qadam).
+3. **Worker'ni qayta deploy qiling:** shu papkadagi yangi `index.js` mazmunini Cloudflare → `yaqin-agora` → Edit code ga joylab Deploy qiling (oʻyin xonasi pushlari shu yangilanishda).
+
+Ilovada foydalanuvchi bir marta "Yoqish" ni bosadi (yoki Profil → Bildirishnomalar). Ilova ochiq va koʻrinib turganda tizim bildirishnomasi chiqmaydi (qoʻngʻiroqdan tashqari).

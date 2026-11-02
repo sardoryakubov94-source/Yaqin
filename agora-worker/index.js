@@ -211,6 +211,37 @@ export default {
         peer = f.to?.stringValue; kind = "call"; chatId = f.chatId?.stringValue || ""; tag = "call"; dedupe = "c_" + id;
         title = f.fromName?.stringValue || "Yaqin";
         text = f.mode?.stringValue === "video" ? "📹 Video qoʻngʻiroq qilmoqda…" : "📞 Qoʻngʻiroq qilmoqda…";
+      } else if (type === "game") {
+        // Oʻyin xonasi: savol yoʻllandi / navbat sizda / oʻpich / yangi oʻyinchi
+        const rid = String(body.roomId || ""), gk = String(body.kind || "");
+        if (!/^[A-Za-z0-9_-]{4,64}$/.test(rid) || !["ask", "turn", "kiss", "join"].includes(gk)) return fail("Soʻrov notoʻgʻri.", 400);
+        const r = await fs(`/gamerooms/${enc(rid)}`);
+        if (r.status === 401 || r.status === 403) return fail("Ruxsat yoʻq.", 403);
+        if (!r.ok) return fail("Xona topilmadi.", 404);
+        const f = (await r.json()).fields || {}, sv = v => v?.stringValue || "", nv = v => Number(v?.integerValue ?? v?.doubleValue ?? 0);
+        const players = (f.players?.arrayValue?.values || []).map(v => v.stringValue);
+        if (!players.includes(uid)) return fail("Ruxsat yoʻq.", 403);
+        const sp = f.spin?.mapValue?.fields || {}, by = sv(sp.by), to = sv(sp.to), seq = nv(sp.seq), open = !!sp.open?.booleanValue;
+        const nameOf = u => sv(f.pm?.mapValue?.fields?.[u]?.mapValue?.fields?.n) || "Oʻyinchi";
+        kind = "game"; chatId = ""; tag = "game-" + rid; title = "Yaqin · " + (sv(f.title) || "Oʻyin xonasi");
+        if (gk === "ask") {
+          if (!open || !to || !players.includes(to) || to === uid) return out({ sent: 0, skipped: "n/a" });
+          peer = to; dedupe = `g_${rid}_${seq}_ask`; title = "Sizga savol yoʻllashdi"; text = `${nameOf(by)} shishani sizga aylantirdi. Xonaga qayting!`;
+        } else if (gk === "turn") {
+          const tn = sv(f.turn), tAt = nv(f.turnAt);
+          if (!tn || tn === uid || !players.includes(tn)) return out({ sent: 0, skipped: "n/a" });
+          peer = tn; dedupe = `g_${rid}_t_${tAt}_${tn}`; title = "Navbat sizda!"; text = "Shishani aylantirish vaqti keldi.";
+        } else if (gk === "kiss") {
+          const ks = sp.kiss?.mapValue?.fields || {};
+          const ys = [by, to].filter(u => u && sv(ks[u]) === "y");
+          if (!open && !ys.length) return out({ sent: 0, skipped: "n/a" });
+          const from = ys.find(u => u === uid) || ys[0]; if (!from) return out({ sent: 0, skipped: "n/a" });
+          peer = from === by ? to : by; if (!peer || peer === uid || !players.includes(peer)) return out({ sent: 0, skipped: "n/a" });
+          dedupe = `g_${rid}_${seq}_k_${from}`; title = "💗 Sizga oʻpich yuborishdi"; text = `${nameOf(from)} sizga oʻpich yubordi.`;
+        } else {
+          const owner = sv(f.owner); if (!owner || owner === uid || !players.includes(owner)) return out({ sent: 0, skipped: "n/a" });
+          peer = owner; dedupe = `g_${rid}_j_${uid}`; title = "Xonangizga yangi oʻyinchi qoʻshildi"; text = `${nameOf(uid)} xonaga qoʻshildi.`;
+        }
       } else return fail("Push turi notoʻgʻri.", 400);
       if (!peer) return fail("Qabul qiluvchi topilmadi.", 404);
 
