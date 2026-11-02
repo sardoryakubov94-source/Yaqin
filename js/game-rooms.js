@@ -297,6 +297,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           ? `<div class="gm-room-msg gm-room-question gm-room-ask-prompt"><div class="gm-room-author">${pav(d, sp.to)}<b>${esc(pn(d, sp.to))}</b></div><div class="gm-room-question-text">💬 ${esc(pn(d, sp.to))} ga savolingizni bering</div><small class="gm-room-question-hint">Savolni pastdagi chat maydoniga yozing</small></div>` : "";
         const answerPrompt = d && sp && sp.open && sp.to === me && sp.by !== me && animDone
           ? `<div class="gm-room-msg gm-room-question"><div class="gm-room-author">${pav(d, sp.by)}<b>${esc(pn(d, sp.by))}</b><small>sizga savol berdi</small></div><div class="gm-room-question-text">❓ ${esc(sp.customQ || QS[sp.q % QS.length])}</div><small class="gm-room-question-hint">Javobni pastdagi chat maydoniga yozing</small></div>` : "";
+        const botReply = d && sp && sp.open && animDone && sp.by === me && sp.bt && isBot(d, sp.to)
+          ? `<div class="gm-room-msg"><div class="gm-room-author">${pav(d, sp.to)}<b>${esc(pn(d, sp.to))}</b></div><span>${esc(sp.bt)}</span></div>` : "";
         songCmds(msgs);
         const rendered = msgs.map(m => {
           if (m.cmd) return "";
@@ -309,8 +311,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           const avatar = d && d.pm && d.pm[m.from] ? pav(d, m.from) : "";
           return `<div class="gm-room-msg${m.from === me ? " mine" : ""}${isQuestion ? " gm-room-question" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
         }).join("");
-        const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80, sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0);
-        box.innerHTML = rendered + askPrompt + answerPrompt;
+        const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80, sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0) + (botReply ? 1 : 0);
+        box.innerHTML = rendered + askPrompt + answerPrompt + botReply;
         if (near || sig !== chatSig) { const go = () => { box.scrollTop = box.scrollHeight; }; go(); requestAnimationFrame(go); }
         chatSig = sig;
         const inp = $("gmRoomInput"); if (inp) inp.placeholder = askPrompt ? "Savolingizni yozing…" : answerPrompt ? "Javobingizni yozing…" : "Xabaringizni yozing...";
@@ -322,7 +324,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     try {
       if (!created) { if (!(await askGender())) return; await FB.gmJoin(id, myMeta()); }
       unL && unL(); unL = null; unChat && unChat(); unChat = null;
-      songStop(); seenCmd = null; kissFxInit = false; kissFlown = new Set(); kissMy = null; RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
+      songStop(); seenCmd = null; noteSeq = 0; noteT0 = 0; kissFxInit = false; kissFlown = new Set(); kissMy = null; RID = id; view = "room"; R = null; vInit = false; stopBeat(); chatMsgs = []; chatSig = ""; chatKey = ""; lastSeq = null; seenG = null; closing = false; animDone = true; rot = 0;
       buildRoom();
       unW = FB.gmWatch(id, d => { R = d; render(); });
       unG = FB.gmGifts(id, onGifts);
@@ -341,8 +343,10 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
 
   // ---------- Oʻpich lahzasi: shisha ikki kishiga toʻgʻri kelganda 10 soniya (faqat shu ikkisiga koʻrinadi) ----------
   const KISS_SEC = 10, KISS_R = 22, KISS_C = 2 * Math.PI * KISS_R;
-  let kissSeq = 0, kissT0 = 0, kissMy = null, kissKey = "", kissTmr = null, kissClosed = 0, kissFlown = new Set(), kissFxInit = false;
+  let noteSeq = 0, noteT0 = 0, kissSeq = 0, kissT0 = 0, kissMy = null, kissKey = "", kissTmr = null, kissClosed = 0, kissFlown = new Set(), kissFxInit = false;
   function kissOff(el, closed) {
+    const was = !!(el && !el.hidden);
+    if (was) setTimeout(() => { try { if (R && RID) render(true); } catch (_) {} }, 30);
     clearInterval(kissTmr); kissTmr = null; if (el) { el.hidden = true; el.innerHTML = ""; }
     kissKey = ""; if (closed) kissClosed = kissSeq;
   }
@@ -471,28 +475,29 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if (sp.open && animDone) {
       const ans = sp.ans || {}, inv = sp.by === me || sp.to === me, other = sp.by === me ? sp.to : sp.by;
       const botInv = isBot(d, sp.by) || isBot(d, sp.to), match = !botInv && ans[sp.by] && ans[sp.to];
-      card.hidden = false;
-      const msgs = sp.msgs || {};
-      const myMsg = msgs[me] || {};
-      const otherMsg = msgs[other] || {};
-      card.innerHTML = `<div class="gm-q">${esc(sp.customQ || QS[sp.q % QS.length])}</div>
-        <div class="gm-text-chat"><div class="gm-text-messages">${myMsg.text ? `<div class="gm-text-msg mine"><b>${esc(myMsg.name || "Siz")}</b><span>${esc(myMsg.text)}</span></div>` : ""}${otherMsg.text ? `<div class="gm-text-msg"><b>${esc(otherMsg.name || pn(d, other))}</b><span>${esc(otherMsg.text)}</span></div>` : ""}${(!myMsg.text && !otherMsg.text) ? '<p class="gm-hint">Javobni ovoz bilan ayting yoki xabar yozing.</p>' : ""}</div>
-        </div>
-        ${isBot(d, sp.to) ? `<p class="gm-hint">${esc(pn(d, sp.to))}: ${sp.bt ? esc(sp.bt) : "javob yozmoqda…"}</p>` : `<p class="gm-hint">Ovozli javob ham berishingiz mumkin.</p>`}` +
-        (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
+      const parts = (inv && !botInv ? `<button class="${ans[me] ? "go" : "ghost"}" onclick="gmLike(${ans[me] ? "false" : "true"})">${ans[me] ? "❤️ Yoqdi (bekor qilish)" : "🤍 Yoqdi"}</button>` : "") +
         (match && inv ? `<div class="gm-match">🎉 Ikkalangizga ham yoqdi!<button class="go" onclick="gmChat('${other}')">Chat ochish</button></div>` : "") +
         ((sp.by === me && sp.same && !sp.rr) ? `<button class="go" onclick="gmRespin()">🔁 Shishani qayta aylantirish</button>` : "") +
-        ((sp.by === me || d.turn === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
-      const cs = (sp.seq || 0) + "|" + (sp.customQ || "");
-      if (card.dataset.seen !== cs) { card.dataset.seen = cs; setTimeout(() => { try { card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {} }, 60); }
+        ((sp.by === me || d.turn === me || sp.to === me) ? `<button class="ghost" onclick="gmNext()">Keyingi navbat →</button>` : "");
+      card.hidden = !parts; card.innerHTML = parts;
     } else if (!sp.open) { card.hidden = true; delete card.dataset.seen; }
     if (sp.open && Date.now() - (sp.at || 0) > 90000 && sp.by !== me) info.innerHTML += `<button class="ghost" onclick="gmSkip()">Oʻtkazib yuborish</button>`;
     if (sp.open && Date.now() - (sp.at || 0) >= 35000 && !botT.timeout) {
       const seq = sp.seq; botT.timeout = seq;
       FB.gmNext(RID, true).catch(() => {}).finally(() => { if (botT.timeout === seq) botT.timeout = 0; });
     }
-    { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || ""); if (k !== chatKey) { chatKey = k; renderChat(); } }
+    { const k = (sp.seq || 0) + "|" + (sp.open ? 1 : 0) + "|" + (animDone ? 1 : 0) + "|" + (sp.customQ || "") + "|" + (sp.by || "") + (sp.to || "") + "|" + (sp.bt ? 1 : 0); if (k !== chatKey) { chatKey = k; renderChat(); } }
     kissUI(); kissFx();
+    { // "Sizga savol yoʻllashdi" + "Keyingi aylanish" (javob bermayman): 10 soniyadan keyin oʻzi yoʻqoladi
+      const nOn = sp.open && animDone && sp.to === me && sp.by !== me && !sp.same;
+      const kOpen = !!($("gmKiss") && !$("gmKiss").hidden);
+      if (!nOn) { noteSeq = 0; noteT0 = 0; }
+      else {
+        if (noteSeq !== sp.seq) { noteSeq = sp.seq; noteT0 = 0; }
+        if (!noteT0 && !kOpen) { noteT0 = Date.now(); setTimeout(() => { try { R && render(true); } catch (_) {} }, 10100); }
+        if (!noteT0 || Date.now() - noteT0 < 10000) info.innerHTML += `<div class="gm-note"><span>Sizga savol yoʻllashdi</span><button type="button" class="ghost gm-note-btn" onclick="gmNext()">Keyingi aylanish →</button></div>`;
+      }
+    }
     voiceBar(); syncRtc();
     botTick();
   }
