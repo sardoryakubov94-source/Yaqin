@@ -273,6 +273,36 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     document.body.appendChild(sh);
     setTimeout(() => { const i = $("gmSrchInput"); if (i) i.focus(); }, 50);
   };
+  // ---------- Chatga rasm yuklash ----------
+  let imgBusy = false, imgLast = 0;
+  window.gmImgPick = () => {
+    if (imgBusy) { toast("Rasm yuklanmoqda…"); return; }
+    const wait = 6000 - (Date.now() - imgLast);
+    if (wait > 0) { toast("Yana " + Math.ceil(wait / 1000) + " soniyadan keyin yuboring"); return; }
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = async () => {
+      let f = inp.files && inp.files[0]; if (!f) return;
+      if (!/^image\//.test(f.type) && !/\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name)) { uiAlert("Faqat rasm fayli yuborish mumkin."); return; }
+      if (f.size > 12 * 1024 * 1024) { uiAlert("Rasm juda katta (12 MB dan oshmasin)."); return; }
+      const b = $("gmImgPickBtn"); imgBusy = true; if (b) b.textContent = "…";
+      try {
+        try { if (typeof GM_COMPRESS === "function") f = await GM_COMPRESS(f); } catch (_) {}
+        await FB.gmRoomImg(RID, f, p => { const bb = $("gmImgPickBtn"); if (bb) bb.textContent = Math.round(p * 100) + "%"; });
+        imgLast = Date.now();
+      } catch (e) { uiAlert("Rasm yuborilmadi: " + (e.message || e)); }
+      finally { imgBusy = false; const b2 = $("gmImgPickBtn"); if (b2) b2.innerHTML = IC("image", 18); }
+    };
+    inp.click();
+  };
+  window.gmImgView = mid => {
+    const m = chatMsgs.find(x => x.id === mid); if (!m || !m.imgUrl) return;
+    const v = document.createElement("div"); v.className = "gm-imgview"; v.innerHTML = `<img src="${esc(m.imgUrl)}" alt=""><button type="button" aria-label="Yopish">${IC("x", 20)}</button>`;
+    v.addEventListener("click", () => v.remove()); document.body.appendChild(v);
+  };
+  window.gmChatBottom = () => { const b = $("gmRoomMessages"); if (b && b.dataset.near === "1") b.scrollTop = b.scrollHeight; };
+  function imgCard(m, me, avatar) {
+    return `<div class="gm-room-msg gm-img${m.from === me ? " mine" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><img src="${esc(m.imgUrl)}" alt="Rasm" loading="lazy" onload="gmChatBottom()" onclick="gmImgView('${esc(m.id)}')"></div>`;
+  }
   function songCmds(msgs) {
     if (seenCmd === null) { seenCmd = new Set(msgs.filter(m => m.cmd).map(m => m.id)); return; }
     for (const m of msgs) {
@@ -302,6 +332,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
         songCmds(msgs);
         const rendered = msgs.map(m => {
           if (m.cmd) return "";
+          if (m.img && m.imgUrl) return imgCard(m, me, d && d.pm && d.pm[m.from] ? pav(d, m.from) : "");
           if (m.audio && (m.audioUrl || m.ytId)) return songCard(m, me, d && d.pm && d.pm[m.from] ? pav(d, m.from) : "");
           const text = String(m.text || "");
           const isQA = text.startsWith("❓ Savol: ") && text.includes("\\n💬 Javob: ");
@@ -311,7 +342,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
           const avatar = d && d.pm && d.pm[m.from] ? pav(d, m.from) : "";
           return `<div class="gm-room-msg${m.from === me ? " mine" : ""}${isQuestion ? " gm-room-question" : ""}"><div class="gm-room-author">${avatar}<b>${esc(m.name || "Oʻyinchi")}</b></div><span>${body}</span></div>`;
         }).join("");
-        const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80, sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0) + (botReply ? 1 : 0);
+        const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80; box.dataset.near = near ? "1" : "0"; const sig = msgs.length + "|" + (askPrompt ? 1 : 0) + (answerPrompt ? 1 : 0) + (botReply ? 1 : 0);
         box.innerHTML = rendered + askPrompt + answerPrompt + botReply;
         if (near || sig !== chatSig) { const go = () => { box.scrollTop = box.scrollHeight; }; go(); requestAnimationFrame(go); }
         chatSig = sig;
@@ -338,7 +369,7 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   function buildRoom() {
     layer(`<div class="gm-top gm-room-top"><button class="gm-ic" onclick="gmLeave()">←</button><b id="gmTitle">Xona</b><div class="gm-top-right"><div class="yaqin-call-controls" id="gmCall"></div><div class="gm-vbar" id="gmVoiceBar" hidden></div></div></div>
 <div class="gm-mid"><div class="gm-stage"><div class="gm-ring" id="gmRing"><div class="gm-bottle" id="gmBottle">🍾</div><div id="gmSeats"></div><div class="gm-info" id="gmInfo"></div></div><div class="gm-kiss" id="gmKiss" hidden></div></div>
-<div class="gm-below"><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div><div class="gm-below-txt"><div class="gm-card" id="gmCard" hidden></div></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <span class="gm-chat-tools"><button class="gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">${IC("search", 18)}</button><button class="gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">${IC("music", 18)}</button></span><small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">${IC("expand", 16)}</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
+<div class="gm-below"><div class="gm-yt-dock" id="gmYtDock" hidden><div id="gmYtHost"></div></div><div class="gm-below-txt"><div class="gm-card" id="gmCard" hidden></div></div></div></div><section class="gm-room-chat"><div class="gm-room-chat-title">💬 Xona chati <span class="gm-chat-tools"><button class="gm-song-pick" id="gmImgPickBtn" type="button" onclick="window.gmImgPick()" aria-label="Rasm yuborish" title="Rasm yuborish">${IC("image", 18)}</button><button class="gm-song-pick" id="gmSongSearchBtn" type="button" onclick="gmSongSearch()" aria-label="Qoʻshiq qidirish" title="Qoʻshiq qidirish">${IC("search", 18)}</button><button class="gm-song-pick" id="gmSongPickBtn" type="button" onclick="gmSongPick()" aria-label="Qoʻshiq yuklash" title="Qoʻshiq yuklash">${IC("music", 18)}</button></span><small>Istalgan vaqtda yozing</small><button type="button" class="gm-chat-exp" id="gmChatExp" onclick="gmChatFull()" aria-label="Chatni kattalashtirish" title="Chatni kattalashtirish">${IC("expand", 16)}</button></div><div id="gmRoomMessages" class="gm-room-messages"></div><form class="gm-room-send" onsubmit="event.preventDefault();gmSendRoomText()"><input id="gmRoomInput" maxlength="500" placeholder="Xabaringizni yozing..." autocomplete="off"><button class="ghost gm-template-trigger" id="gmTemplateBtn" type="button" onclick="gmShowQuestionTemplates()" hidden>☷ Shablon</button><button class="go" type="submit">Yuborish</button></form></section>`);
   }
 
   // ---------- Oʻpich lahzasi: shisha ikki kishiga toʻgʻri kelganda 10 soniya (faqat shu ikkisiga koʻrinadi) ----------

@@ -218,6 +218,7 @@ service cloud.firestore {
           && request.resource.data.t is number
           && (!('audio' in request.resource.data) || (request.resource.data.audio is map && request.resource.data.audio.path is string && request.resource.data.audio.path.size() < 200 && request.resource.data.audio.name is string && request.resource.data.audio.name.size() <= 80))
           && (!('track' in request.resource.data) || (request.resource.data.track is map && request.resource.data.track.url is string && request.resource.data.track.url.size() < 300 && request.resource.data.track.title is string && request.resource.data.track.title.size() <= 80))
+          && (!('img' in request.resource.data) || (request.resource.data.img is map && request.resource.data.img.path is string && request.resource.data.img.path.size() < 200))
           && (!('yt' in request.resource.data) || (request.resource.data.yt is map && request.resource.data.yt.id is string && request.resource.data.yt.id.size() == 11 && request.resource.data.yt.title is string && request.resource.data.yt.title.size() <= 80))
           && (!('cmd' in request.resource.data) || (request.resource.data.cmd is map && request.resource.data.cmd.act in ['play', 'stop'] && request.resource.data.cmd.mid is string && request.resource.data.cmd.mid.size() <= 40));
       }
