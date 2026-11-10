@@ -185,6 +185,28 @@ function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',38)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m){if(st.chat&&st.cm&&st.cm.length&&typeof chatMsgs=="function")chatMsgs();m.scrollTop=m.scrollHeight}if(a==="q"&&$("q")){$("q").focus()}
  if(st.sw&&!st.form&&!st.chat&&!st.swProfile)renderDeck();if(mv!=null&&$("mi")){$("mi").value=mv;if(a==="mi"){try{$("mi").focus()}catch(e){}}if(typeof syncComposer=="function")syncComposer()}if(st.tab=="map")initMap();applyYaqinLang($("app"));applyYaqinLang($("nav"))}
+/* Guruhli oʻyin tugmasi: mobil WebView va oddiy brauzerda ishonchli bosish */
+if (!window.__yqGameEntryBound) {
+  window.__yqGameEntryBound = true;
+  document.addEventListener("click", function (e) {
+    const b = e.target && e.target.closest ? e.target.closest(".gm-entry") : null;
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (typeof window.gmOpenList !== "function") {
+        if (typeof uiAlert === "function") uiAlert("Oʻyin moduli yuklanmadi. Ilovani toʻliq yopib, qayta oching.");
+        else alert("Oʻyin moduli yuklanmadi. Ilovani qayta oching.");
+        return;
+      }
+      window.gmOpenList();
+    } catch (err) {
+      console.error("Yaqin game open:", err);
+      if (typeof uiAlert === "function") uiAlert("Oʻyin oynasi ochilmadi: " + (err && err.message ? err.message : err));
+      else alert("Oʻyin oynasi ochilmadi.");
+    }
+  }, true);
+}
 function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.uid&&!a.isDemo}))}
 let UC,UG,UM,UP,GROOM,GPART,GC=null;
 function stopAll(){[UC,UG].forEach(f=>f&&f());UC=UG=null;closeCh();st.chats=[];st.groups=[];st.priv=[]}
