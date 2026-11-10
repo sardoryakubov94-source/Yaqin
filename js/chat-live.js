@@ -157,7 +157,7 @@
   window.loadOlder = function () {
     const ch = st.chat; if (!ch) return;
     const m = q("ms"); if (m) st.keepScroll = { h: m.scrollHeight, t: m.scrollTop };
-    st.msgLimit = (st.msgLimit || 120) + 120;
+    st.msgLimit = (st.msgLimit || 60) + 60;
     try { if (typeof UM === "function") UM(); } catch (_) {}
     const colName = ch.t === "g" ? "groups" : "chats";
     UM = FB.msgs(colName, ch.id, list => { st.cm = list; chatMsgs(); if (ch.t === "c" && typeof seen === "function") seen(ch.id); });
@@ -203,7 +203,7 @@
   function loop() {
     if (!st || !st.user) return;
     const ch = st.chat, cid = ch ? ch.id : null;
-    if (cid !== curChat) { curChat = cid; st.msgLimit = 120; if (st.replyTo && st.replyCid !== cid) { st.replyTo = null; } }
+    if (cid !== curChat) { curChat = cid; st.msgLimit = 60; if (st.replyTo && st.replyCid !== cid) { st.replyTo = null; } }
     const want = ch && ch.t === "c" ? ch.id : null;
     if (want !== sub.id) {
       if (sub.unsub) { try { sub.unsub(); } catch (_) {} }
