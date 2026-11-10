@@ -2,7 +2,7 @@ const G="https://www.gstatic.com/firebasejs/10.14.1/";
 const [{initializeApp},A,D,S]=await Promise.all([import(G+"firebase-app.js"),import(G+"firebase-auth.js"),import(G+"firebase-firestore.js"),import(G+"firebase-storage.js")]);
 const cfg=(await import("./firebase-config.js?v=gsi-1")).default;
 try{
-const app=initializeApp(cfg),auth=A.getAuth(app),db=(()=>{try{return D.initializeFirestore(app,{localCache:D.memoryLocalCache(),experimentalForceLongPolling:true})}catch(e){console.warn("Firestore kesh yoqilmadi:",e);return D.getFirestore(app)}})(),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
+const app=initializeApp(cfg),auth=A.getAuth(app),db=(()=>{try{return D.initializeFirestore(app,{localCache:D.persistentLocalCache()})}catch(e){console.warn("Doimiy Firestore keshiga oʻtib boʻlmadi, vaqtinchalik kesh ishlatiladi:",e);try{return D.initializeFirestore(app,{localCache:D.memoryLocalCache()})}catch(e2){return D.getFirestore(app)}}})(),sto=(()=>{try{return S.getStorage(app)}catch(e){return null}})();auth.languageCode="uz";
 const U=()=>auth.currentUser,uref=u=>D.doc(db,"users",u);
 const OPENINARY_BASE="https://cdn.openinary.dev",OPENINARY_BUCKET="76b38502-642f-4fad-8b1f-0cc4c7b351e8";
 function openinaryUrl(path){let p=String(path||"");while(p.startsWith("/"))p=p.slice(1);return OPENINARY_BASE+"/b/"+OPENINARY_BUCKET+"/t/"+p}
