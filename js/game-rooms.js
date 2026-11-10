@@ -807,8 +807,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
   const base = window.groupsV;
   if (typeof base === "function") window.groupsV = function () {
     const h = base.apply(this, arguments);
-    if (!st.user) return h;
-    const entry = `<button class="gm-entry" onclick="gmOpenList()"><span>🎲</span><div><b>Guruhli oʻyinlar</b><small>Shisha aylantirib tanishing</small></div></button>`;
+    if (!st.user || h.includes('class="gm-entry"')) return h;
+    const entry = `<button class="gm-entry" type="button" onclick="gmOpenList()"><span>🎲</span><div><b>Guruhli oʻyinlar</b><small>Shisha aylantirib tanishing</small></div></button>`;
     return h.includes('<div class="gr-right"></div>') ? h.replace('<div class="gr-right"></div>', '<div class="gr-right">' + entry + "</div>") : entry + h;
   };
 })();
