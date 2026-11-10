@@ -212,7 +212,8 @@ ${rs.length ? rs.map(row).join("") : '<p class="gm-empty">Hozircha odam bor xona
     if ($("gmSongSheet")) return;
     const sh = document.createElement("div"); sh.className = "gm-sheet"; sh.id = "gmSongSheet"; sh.style.zIndex = "100010";
     sh.innerHTML = `<div class="gm-sheet-in"><div class="gm-sheet-head"><b>${IC("search", 16)} Qoʻshiq qidirish</b><button class="gm-sheet-close" type="button" data-close>${IC("x", 16)}</button></div><button type="button" class="gm-song-upload-in-search" id="gmSongUnifiedUpload">${IC("upload",16)} Telefondan musiqa yuklash</button><div id="gmSrchPlayer" class="gm-srch-player" hidden></div><form class="gm-srch-form"><input id="gmSrchInput" type="search" placeholder="Qoʻshiq yoki ijrochi nomi…" autocomplete="off" maxlength="80"><button class="go" type="submit">Qidirish</button></form><div id="gmSrchList" class="gm-srch-list"><p class="gm-hint">Istalgan qoʻshiq nomini yozing. ${IC("play", 13)} bilan eshiting, ${IC("plus", 13)} bilan chatga qoʻying yoki ${IC("broadcast", 13)} bilan hammaga qoʻying.</p></div><small class="gm-srch-note" id="gmSrchNote">${(window.CFG && CFG.YT_KEY) ? "To‘liq qo‘shiqlar · YouTube pleyeri" : "YouTube kaliti ulanmagan: hozircha 30 soniyalik namunalar (iTunes)"}</small></div>`;
-    const close = () => { srchStop(); sh.remove(); };\n    sh.querySelector("#gmSongUnifiedUpload").addEventListener("click", () => { close(); window.gmSongPick(); });
+    const close = () => { srchStop(); sh.remove(); };
+    sh.querySelector("#gmSongUnifiedUpload").addEventListener("click", () => { close(); window.gmSongPick(); });
     sh.addEventListener("click", e => {
       if (e.target === sh || e.target.closest("[data-close]")) { close(); return; }
       const pb = e.target.closest(".gm-srch-play"), ab = e.target.closest(".gm-srch-add"), al = e.target.closest(".gm-srch-all");
