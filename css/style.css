@@ -984,7 +984,7 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-song-time{font-size:9.5px;color:var(--m);min-height:11px}
 
 /* Qoʻshiq qidirish oynasi */
-.gm-srch-form{display:flex;gap:7px;margin:8px 0}.gm-srch-form input{flex:1;min-width:0;background:var(--bg);color:var(--t);border:1px solid var(--c2);border-radius:12px;padding:10px;font-size:14px}.gm-srch-form button{flex:none;padding:10px 14px;border-radius:12px}
+.gm-song-upload-in-search{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;margin:8px 0 10px;border:1px solid var(--a,#f0b34a);border-radius:12px;background:color-mix(in srgb,var(--a,#f0b34a) 12%,var(--bg));color:var(--t);font-weight:700;font-size:13px}\n.gm-srch-form{display:flex;gap:7px;margin:8px 0}.gm-srch-form input{flex:1;min-width:0;background:var(--bg);color:var(--t);border:1px solid var(--c2);border-radius:12px;padding:10px;font-size:14px}.gm-srch-form button{flex:none;padding:10px 14px;border-radius:12px}
 .gm-srch-list{display:flex;flex-direction:column;gap:6px;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}
 .gm-srch-row{display:flex;align-items:center;gap:7px;background:var(--c2);border-radius:12px;padding:6px 8px}
 .gm-srch-row img,.gm-srch-noart{flex:none;width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--bg);display:flex;align-items:center;justify-content:center}
