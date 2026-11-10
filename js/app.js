@@ -185,26 +185,67 @@ function draw(){const a=document.activeElement&&document.activeElement.id,mv=$("
  $("nav").innerHTML=N.map(n=>n[0]=="+"?`<button class="plus" onclick="postBtn()">${I('plus',38)}</button>`:`<button class="${st.tab==n[0]?"on":""}" onclick="st.tab='${n[0]}';st.chat=null;st.form=null;draw()"><i>${n[1]}</i>${n[2]}</button>`).join("");
  const m=$("ms");if(m){if(st.chat&&st.cm&&st.cm.length&&typeof chatMsgs=="function")chatMsgs();m.scrollTop=m.scrollHeight}if(a==="q"&&$("q")){$("q").focus()}
  if(st.sw&&!st.form&&!st.chat&&!st.swProfile)renderDeck();if(mv!=null&&$("mi")){$("mi").value=mv;if(a==="mi"){try{$("mi").focus()}catch(e){}}if(typeof syncComposer=="function")syncComposer()}if(st.tab=="map")initMap();applyYaqinLang($("app"));applyYaqinLang($("nav"))}
-/* Guruhli oʻyin tugmasi: mobil WebView va oddiy brauzerda ishonchli bosish */
+/* Guruhli oʻyin: modul hali yuklanmagan boʻlsa, avval mavjud scriptni kutadi,
+   yuklanmagan/xato boʻlgan boʻlsa yangi manzildan qayta yuklaydi. */
 if (!window.__yqGameEntryBound) {
   window.__yqGameEntryBound = true;
+  function yqGameOpen() {
+    if (typeof window.gmOpenList === "function") {
+      try { window.gmOpenList(); }
+      catch (err) {
+        console.error("Yaqin game open:", err);
+        if (typeof uiAlert === "function") uiAlert("Oʻyin oynasi ochilmadi: " + (err && err.message ? err.message : err));
+        else alert("Oʻyin oynasi ochilmadi.");
+      }
+      return;
+    }
+    if (window.__yqGameRetrying) return;
+    const retryLoad = function () {
+      if (window.__yqGameRetrying) return;
+      window.__yqGameRetrying = true;
+      const s = document.createElement("script");
+      s.src = "js/game-rooms.js?v=gm-recovery-20261110";
+      s.onload = function () {
+        window.__yqGameRetrying = false;
+        if (typeof window.gmOpenList === "function") yqGameOpen();
+        else {
+          console.error("Yaqin game module loaded but gmOpenList was not registered");
+          if (typeof uiAlert === "function") uiAlert("Oʻyin moduli ishga tushmadi. Iltimos, internetni tekshirib qayta urinib koʻring.");
+          else alert("Oʻyin moduli ishga tushmadi.");
+        }
+      };
+      s.onerror = function () {
+        window.__yqGameRetrying = false;
+        console.error("Yaqin game module could not be loaded");
+        if (typeof uiAlert === "function") uiAlert("Oʻyin modulini yuklab boʻlmadi. Internetni tekshirib qayta urinib koʻring.");
+        else alert("Oʻyin modulini yuklab boʻlmadi.");
+      };
+      document.head.appendChild(s);
+    };
+    const original = Array.from(document.scripts).find(s => s.src && s.src.indexOf("/js/game-rooms.js") !== -1);
+    if (original && !window.__yqGameScriptLoaded && !window.__yqGameScriptFailed) {
+      if (!window.__yqGameWaitingOriginal) {
+        window.__yqGameWaitingOriginal = true;
+        original.addEventListener("load", function () {
+          window.__yqGameWaitingOriginal = false;
+          if (typeof window.gmOpenList === "function") yqGameOpen();
+          else retryLoad();
+        }, { once: true });
+        original.addEventListener("error", function () {
+          window.__yqGameWaitingOriginal = false;
+          retryLoad();
+        }, { once: true });
+      }
+      return;
+    }
+    retryLoad();
+  }
   document.addEventListener("click", function (e) {
     const b = e.target && e.target.closest ? e.target.closest(".gm-entry") : null;
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    try {
-      if (typeof window.gmOpenList !== "function") {
-        if (typeof uiAlert === "function") uiAlert("Oʻyin moduli yuklanmadi. Ilovani toʻliq yopib, qayta oching.");
-        else alert("Oʻyin moduli yuklanmadi. Ilovani qayta oching.");
-        return;
-      }
-      window.gmOpenList();
-    } catch (err) {
-      console.error("Yaqin game open:", err);
-      if (typeof uiAlert === "function") uiAlert("Oʻyin oynasi ochilmadi: " + (err && err.message ? err.message : err));
-      else alert("Oʻyin oynasi ochilmadi.");
-    }
+    yqGameOpen();
   }, true);
 }
 function syncAds(){st.ads=st.raw.map(a=>({...a,mine:!!st.user&&a.uid==st.user.uid&&!a.isDemo}))}
