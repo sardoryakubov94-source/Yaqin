@@ -1017,7 +1017,7 @@ body.yq-gc-boot .yaqin-call-btn{pointer-events:none;opacity:.5}
 .gm-stage{position:relative}
 .gm-kiss{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(92%,310px)}
 .gm-kiss[hidden]{display:none}
-.gm-kiss-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 14px 14px;border-radius:24px;background:linear-gradient(160deg,rgba(46,36,84,.14),rgba(24,19,46,.14));border:1px solid rgba(255,120,170,.28);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;animation:gmKissIn .32s cubic-bezier(.2,.9,.3,1.2) both}
+.gm-kiss-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 14px 14px;border-radius:24px;background:linear-gradient(160deg,rgba(46,36,84,.45),rgba(24,19,46,.45));border:1px solid rgba(255,120,170,.28);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;animation:gmKissIn .32s cubic-bezier(.2,.9,.3,1.2) both}
 .gm-kiss-card.res{border-color:rgba(255,160,120,.5)}
 @keyframes gmKissIn{from{opacity:0;transform:scale(.86) translateY(8px)}to{opacity:1;transform:none}}
 .gm-kiss-timer{position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center}
